@@ -8,7 +8,7 @@ interface ActivityTimelineProps {
   taskId: string
 }
 
-export function ActivityTimeline({ taskId }: ActivityTimelineProps): JSX.Element {
+export function ActivityTimeline({ taskId }: ActivityTimelineProps): React.JSX.Element {
   const [entries, setEntries] = useState<ActivityEntry[]>([])
   const [noteText, setNoteText] = useState('')
   const [sending, setSending] = useState(false)

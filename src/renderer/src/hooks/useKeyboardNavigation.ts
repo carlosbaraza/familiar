@@ -2,7 +2,6 @@ import { useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import type { Task, TaskStatus, Priority } from '@shared/types'
-import { DEFAULT_COLUMNS } from '@shared/constants'
 
 interface UseKeyboardNavigationOptions {
   tasksByStatus: Record<string, Task[]>
@@ -25,7 +24,7 @@ export function useKeyboardNavigation({
     taskDetailOpen
   } = useUIStore()
 
-  const { updateTask, deleteTask, getTaskById } = useTaskStore()
+  const { updateTask, deleteTask } = useTaskStore()
 
   const getFocusedTask = useCallback((): Task | undefined => {
     const column = columnOrder[focusedColumnIndex]

@@ -19,10 +19,16 @@
     "sourceMap": true,
     "target": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@renderer/*": ["src/renderer/src/*"]
+    }
   },
   "include": [
     "src/renderer/src/**/*",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "tests/setup.ts"
   ]
 }

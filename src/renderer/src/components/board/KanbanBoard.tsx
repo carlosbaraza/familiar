@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +17,7 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
-import { LoadingSpinner, EmptyState } from '@renderer/components/common'
+import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'

@@ -14,7 +14,7 @@ interface ActivityEntryProps {
   entry: ActivityEntryType
 }
 
-export function ActivityEntryComponent({ entry }: ActivityEntryProps): JSX.Element {
+export function ActivityEntryComponent({ entry }: ActivityEntryProps): React.JSX.Element {
   return (
     <div className={styles.entry}>
       <div className={styles.iconWrapper}>{TYPE_ICONS[entry.type]}</div>

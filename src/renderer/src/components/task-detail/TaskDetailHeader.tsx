@@ -11,8 +11,8 @@ interface TaskDetailHeaderProps {
   onClose: () => void
 }
 
-export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderProps): JSX.Element {
-  const [editingTitle, setEditingTitle] = useState(false)
+export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderProps): React.JSX.Element {
+  const [_editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
   const [addingLabel, setAddingLabel] = useState(false)
   const [newLabel, setNewLabel] = useState('')

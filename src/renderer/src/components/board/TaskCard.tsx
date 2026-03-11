@@ -141,11 +141,11 @@ export function TaskCard({
         className={cardClass}
         onClick={onClick}
         onContextMenu={contextMenu.open}
-        role="button"
-        tabIndex={0}
         data-task-id={task.id}
         {...attributes}
         {...listeners}
+        role="button"
+        tabIndex={0}
       >
         <div className={styles.topRow}>
           <span

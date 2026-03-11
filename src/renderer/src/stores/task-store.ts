@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ProjectState, Task, TaskStatus, ActivityEntry } from '@shared/types'
+import type { ProjectState, Task, TaskStatus } from '@shared/types'
 
 interface TaskStore {
   // State
@@ -71,9 +71,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const now = new Date().toISOString()
     const existingTasks = projectState.tasks.filter(
-      (t) => t.status === (options?.status ?? 'backlog')
+      (t: Task) => t.status === (options?.status ?? 'backlog')
     )
-    const maxSort = existingTasks.reduce((max, t) => Math.max(max, t.sortOrder), -1)
+    const maxSort = existingTasks.reduce((max: number, t: Task) => Math.max(max, t.sortOrder), -1)
 
     const task: Task = {
       id: generateTaskId(),
@@ -112,7 +112,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await window.api.updateTask(updatedTask)
 
     // Update project state
-    const newTasks = projectState.tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+    const newTasks = projectState.tasks.map((t: Task) => (t.id === updatedTask.id ? updatedTask : t))
     const newState: ProjectState = { ...projectState, tasks: newTasks }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
@@ -126,7 +126,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await window.api.deleteTask(taskId)
 
     // Update project state
-    const newTasks = projectState.tasks.filter((t) => t.id !== taskId)
+    const newTasks = projectState.tasks.filter((t: Task) => t.id !== taskId)
     const newState: ProjectState = { ...projectState, tasks: newTasks }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
@@ -140,7 +140,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const { projectState, updateTask } = get()
     if (!projectState) throw new Error('Project not initialized')
 
-    const task = projectState.tasks.find((t) => t.id === taskId)
+    const task = projectState.tasks.find((t: Task) => t.id === taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
 
     await updateTask({
@@ -154,7 +154,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const { projectState, updateTask } = get()
     if (!projectState) throw new Error('Project not initialized')
 
-    const task = projectState.tasks.find((t) => t.id === taskId)
+    const task = projectState.tasks.find((t: Task) => t.id === taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
 
     await updateTask({
@@ -168,13 +168,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const { projectState } = get()
     if (!projectState) return []
     return projectState.tasks
-      .filter((t) => t.status === status)
-      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((t: Task) => t.status === status)
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
   },
 
   getTaskById: (taskId: string): Task | undefined => {
     const { projectState } = get()
     if (!projectState) return undefined
-    return projectState.tasks.find((t) => t.id === taskId)
+    return projectState.tasks.find((t: Task) => t.id === taskId)
   }
 }))

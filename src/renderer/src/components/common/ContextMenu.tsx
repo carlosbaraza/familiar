@@ -15,7 +15,7 @@ export interface ContextMenuProps {
   onClose: () => void
 }
 
-export function ContextMenu({ items, position, onClose }: ContextMenuProps): JSX.Element {
+export function ContextMenu({ items, position, onClose }: ContextMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
   const focusedIndexRef = useRef<number>(-1)
 

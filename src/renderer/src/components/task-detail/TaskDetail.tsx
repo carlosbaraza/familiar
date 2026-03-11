@@ -11,7 +11,7 @@ interface TaskDetailProps {
   onClose: () => void
 }
 
-export function TaskDetail({ taskId, onClose }: TaskDetailProps): JSX.Element {
+export function TaskDetail({ taskId, onClose }: TaskDetailProps): React.JSX.Element {
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
 

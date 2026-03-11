@@ -14,8 +14,11 @@ export function TerminalTabs({
   activePane,
   onSelectPane,
   onAddPane,
-  onClosePane
-}: TerminalTabsProps): JSX.Element {
+  onClosePane,
+  taskId: _taskId
+}: TerminalTabsProps): React.JSX.Element {
+  // taskId reserved for future per-task terminal naming
+  void _taskId
   return (
     <div style={styles.tabBar}>
       {panes.map((pane) => (

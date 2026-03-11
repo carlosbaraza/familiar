@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
 import '@blocknote/core/fonts/inter.css'
@@ -11,7 +11,7 @@ interface BlockEditorProps {
   onChange?: (markdown: string) => void
 }
 
-export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorProps): JSX.Element {
+export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorProps): React.JSX.Element {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const taskIdRef = useRef(taskId)
   taskIdRef.current = taskId

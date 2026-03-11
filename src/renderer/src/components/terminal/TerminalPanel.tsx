@@ -17,7 +17,7 @@ function createPane(index: number): TerminalPane {
   }
 }
 
-export function TerminalPanel({ taskId }: TerminalPanelProps): JSX.Element {
+export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element {
   const [panes, setPanes] = useState<TerminalPane[]>(() => [createPane(0)])
   const [activePane, setActivePane] = useState<string>(() => panes[0].id)
   const [sessions, setSessions] = useState<Record<string, string>>({})

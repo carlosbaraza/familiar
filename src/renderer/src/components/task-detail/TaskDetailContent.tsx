@@ -12,7 +12,7 @@ interface TaskDetailContentProps {
 
 type RightTab = 'terminal' | 'activity'
 
-export function TaskDetailContent({ taskId }: TaskDetailContentProps): JSX.Element {
+export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX.Element {
   const editorPanelWidth = useUIStore((s) => s.editorPanelWidth)
   const setEditorPanelWidth = useUIStore((s) => s.setEditorPanelWidth)
   const [rightTab, setRightTab] = useState<RightTab>('terminal')

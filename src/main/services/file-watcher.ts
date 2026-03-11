@@ -1,10 +1,10 @@
-import chokidar from 'chokidar'
+import { watch, type FSWatcher as ChokidarFSWatcher } from 'chokidar'
 import type { BrowserWindow } from 'electron'
 import path from 'path'
 import { DATA_DIR } from '../../shared/constants'
 
 export class FileWatcher {
-  private watcher: chokidar.FSWatcher | null = null
+  private watcher: ChokidarFSWatcher | null = null
   private projectRoot: string
   private mainWindow: BrowserWindow
   private debounceTimer: NodeJS.Timeout | null = null
@@ -17,7 +17,7 @@ export class FileWatcher {
 
   start(): void {
     const watchPath = path.join(this.projectRoot, DATA_DIR)
-    this.watcher = chokidar.watch(watchPath, {
+    this.watcher = watch(watchPath, {
       ignoreInitial: true,
       persistent: true,
       depth: 3,

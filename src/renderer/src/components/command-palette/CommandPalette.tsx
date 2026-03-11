@@ -13,7 +13,7 @@ const COLUMN_LABELS: { status: TaskStatus; label: string }[] = [
   { status: 'cancelled', label: 'Cancelled' }
 ]
 
-export function CommandPalette(): JSX.Element | null {
+export function CommandPalette(): React.JSX.Element | null {
   const open = useUIStore((s) => s.commandPaletteOpen)
   const toggleCommandPalette = useUIStore((s) => s.toggleCommandPalette)
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
@@ -124,7 +124,7 @@ export function CommandPalette(): JSX.Element | null {
   )
 }
 
-function StatusDot({ status }: { status: TaskStatus }): JSX.Element {
+function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
   const colorMap: Record<TaskStatus, string> = {
     backlog: '#5c5c6e',
     todo: '#f0f0f4',

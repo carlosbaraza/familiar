@@ -18,7 +18,7 @@ interface PrioritySelectProps {
   onChange: (priority: Priority) => void
 }
 
-export function PrioritySelect({ value, onChange }: PrioritySelectProps): JSX.Element {
+export function PrioritySelect({ value, onChange }: PrioritySelectProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 

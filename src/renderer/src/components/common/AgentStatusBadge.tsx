@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<
 export function AgentStatusBadge({
   status,
   showLabel = false
-}: AgentStatusBadgeProps): JSX.Element {
+}: AgentStatusBadgeProps): React.JSX.Element {
   const config = STATUS_CONFIG[status]
 
   return (

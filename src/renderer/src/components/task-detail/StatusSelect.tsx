@@ -17,7 +17,7 @@ interface StatusSelectProps {
   onChange: (status: TaskStatus) => void
 }
 
-export function StatusSelect({ value, onChange }: StatusSelectProps): JSX.Element {
+export function StatusSelect({ value, onChange }: StatusSelectProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 

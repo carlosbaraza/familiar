@@ -9,7 +9,7 @@ interface TerminalProps {
   onReady?: () => void
 }
 
-export function Terminal({ sessionId, onReady }: TerminalProps): JSX.Element {
+export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -56,7 +56,7 @@ export function Terminal({ sessionId, onReady }: TerminalProps): JSX.Element {
     try {
       const webglAddon = new WebglAddon()
       term.loadAddon(webglAddon)
-    } catch (e) {
+    } catch {
       console.warn('WebGL renderer not available, falling back to canvas')
     }
 
@@ -94,6 +94,7 @@ export function Terminal({ sessionId, onReady }: TerminalProps): JSX.Element {
       cleanup()
       term.dispose()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
   return (

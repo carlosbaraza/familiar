@@ -13,7 +13,6 @@ export function useGlobalShortcuts(): void {
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const commandPaletteOpen = useUIStore((s) => s.commandPaletteOpen)
-  const setFilter = useUIStore((s) => s.setFilter)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
 
@@ -92,7 +91,6 @@ export function useGlobalShortcuts(): void {
     commandPaletteOpen,
     addTask,
     projectState,
-    isInputFocused,
-    setFilter
+    isInputFocused
   ])
 }

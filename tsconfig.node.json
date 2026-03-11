@@ -19,7 +19,11 @@
     "target": "ESNext",
     "lib": ["ESNext"],
     "types": ["node"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
   },
   "include": [
     "src/main/**/*",

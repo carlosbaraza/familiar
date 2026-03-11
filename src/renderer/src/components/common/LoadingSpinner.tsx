@@ -8,7 +8,7 @@ export function LoadingSpinner({
   size = 24,
   color = 'var(--accent, #5e6ad2)',
   label
-}: LoadingSpinnerProps): JSX.Element {
+}: LoadingSpinnerProps): React.JSX.Element {
   return (
     <div style={spinnerStyles.container}>
       <svg

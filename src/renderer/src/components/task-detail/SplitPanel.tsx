@@ -17,7 +17,7 @@ export function SplitPanel({
   minLeftWidth = 20,
   maxLeftWidth = 80,
   onWidthChange
-}: SplitPanelProps): JSX.Element {
+}: SplitPanelProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const [leftWidth, setLeftWidth] = useState(defaultLeftWidth)
   const [dragging, setDragging] = useState(false)
