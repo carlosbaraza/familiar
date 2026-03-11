@@ -1,6 +1,13 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { ElectronTmuxManager } from './platform/electron-tmux'
+import { ElectronPtyManager } from './platform/electron-pty'
+import { registerPtyHandlers } from './ipc/pty-handlers'
+import { registerTmuxHandlers } from './ipc/tmux-handlers'
+
+const tmuxManager = new ElectronTmuxManager()
+const ptyManager = new ElectronPtyManager(tmuxManager)
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -33,6 +40,10 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Register IPC handlers for PTY and tmux
+  registerPtyHandlers(ptyManager, mainWindow)
+  registerTmuxHandlers(tmuxManager)
 }
 
 app.whenReady().then(() => {

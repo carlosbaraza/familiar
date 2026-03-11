@@ -7,14 +7,29 @@ const api = {
   // readFile: (path: string) => ipcRenderer.invoke('file:read', path),
   // writeFile: (path: string, data: string) => ipcRenderer.invoke('file:write', path, data),
 
-  // PTY operations (to be implemented)
-  // ptyCreate: (options: object) => ipcRenderer.invoke('pty:create', options),
-  // ptyWrite: (id: string, data: string) => ipcRenderer.invoke('pty:write', id, data),
-  // ptyResize: (id: string, cols: number, rows: number) => ipcRenderer.invoke('pty:resize', id, cols, rows),
-  // ptyKill: (id: string) => ipcRenderer.invoke('pty:kill', id),
-  // onPtyData: (callback: (id: string, data: string) => void) => {
-  //   ipcRenderer.on('pty:data', (_, id, data) => callback(id, data))
-  // },
+  // PTY operations
+  ptyCreate: (taskId: string, paneId: string, cwd: string): Promise<string> =>
+    ipcRenderer.invoke('pty:create', taskId, paneId, cwd),
+  ptyWrite: (sessionId: string, data: string): Promise<void> =>
+    ipcRenderer.invoke('pty:write', sessionId, data),
+  ptyResize: (sessionId: string, cols: number, rows: number): Promise<void> =>
+    ipcRenderer.invoke('pty:resize', sessionId, cols, rows),
+  ptyDestroy: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke('pty:destroy', sessionId),
+  onPtyData: (callback: (sessionId: string, data: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, sessionId: string, data: string): void => {
+      callback(sessionId, data)
+    }
+    ipcRenderer.on('pty:data', handler)
+    return () => {
+      ipcRenderer.removeListener('pty:data', handler)
+    }
+  },
+
+  // Tmux operations
+  tmuxList: (): Promise<string[]> => ipcRenderer.invoke('tmux:list'),
+  tmuxAttach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:attach', name),
+  tmuxDetach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:detach', name),
 
   // Notification operations (to be implemented)
   // notify: (title: string, body: string) => ipcRenderer.invoke('notification:send', title, body),
