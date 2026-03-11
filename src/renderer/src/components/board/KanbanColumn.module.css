@@ -16,6 +16,10 @@
   border-right: none;
 }
 
+.columnDragOver {
+  background-color: var(--accent-subtle);
+}
+
 /* ---- Header ---- */
 
 .header {
@@ -49,6 +53,31 @@
   line-height: 1.6;
   min-width: 18px;
   text-align: center;
+}
+
+/* ---- Add button ---- */
+
+.addButton {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.addButton:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-elevated);
 }
 
 /* ---- Create input ---- */

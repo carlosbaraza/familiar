@@ -12,9 +12,9 @@ import {
   appendActivity,
   ensureTaskDir,
   deleteTaskDir
-} from '../../../src/cli/lib/file-ops'
-import type { ProjectState, Task, ActivityEntry } from '../../../src/shared/types'
-import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../../src/shared/constants'
+} from './file-ops'
+import type { ProjectState, Task, ActivityEntry } from '../../shared/types'
+import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../shared/constants'
 
 describe('CLI file-ops', () => {
   let tmpDir: string

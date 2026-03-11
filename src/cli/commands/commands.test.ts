@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../../src/shared/constants'
-import type { ProjectState, Task } from '../../../src/shared/types'
+import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../shared/constants'
+import type { ProjectState, Task } from '../../shared/types'
 
 // We test CLI commands by invoking their action handlers indirectly.
 // For init, we replicate the logic; for add/list/status/delete/update/log/import
@@ -21,9 +21,9 @@ import {
   appendActivity,
   ensureTaskDir,
   deleteTaskDir
-} from '../../../src/cli/lib/file-ops'
-import { createTask } from '../../../src/shared/utils/task-utils'
-import { generateActivityId } from '../../../src/shared/utils/id-generator'
+} from '../lib/file-ops'
+import { createTask } from '../../shared/utils/task-utils'
+import { generateActivityId } from '../../shared/utils/id-generator'
 
 describe('CLI commands (via file-ops)', () => {
   let tmpDir: string

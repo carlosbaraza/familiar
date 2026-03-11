@@ -1,0 +1,48 @@
+/* SplitPanel — resizable horizontal split */
+.container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.left {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.right {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.handle {
+  flex-shrink: 0;
+  width: 5px;
+  cursor: col-resize;
+  background-color: transparent;
+  position: relative;
+  z-index: 10;
+  transition: background-color var(--transition-fast);
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background-color: var(--border);
+  transition: background-color var(--transition-fast);
+}
+
+.handle:hover::after,
+.handleActive::after {
+  background-color: var(--accent);
+  width: 2px;
+  left: 1px;
+}

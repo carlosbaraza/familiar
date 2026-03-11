@@ -35,6 +35,12 @@
   opacity: 0.9;
 }
 
+.cardFocused {
+  border-color: var(--accent);
+  background-color: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
 /* ---- Top row: priority + title ---- */
 
 .topRow {

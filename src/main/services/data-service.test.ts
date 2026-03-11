@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DataService } from '../../../src/main/services/data-service'
-import type { Task, ActivityEntry } from '../../../src/shared/types'
+import { DataService } from './data-service'
+import type { Task, ActivityEntry } from '../../shared/types'
 
 describe('DataService', () => {
   let tmpDir: string

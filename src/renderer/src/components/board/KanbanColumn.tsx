@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
-import { useBoardStore } from '@renderer/stores/board-store'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
 
@@ -11,6 +12,10 @@ interface KanbanColumnProps {
   onTaskClick: (taskId: string) => void
   onCreateTask: (title: string) => void
   selectedTaskId?: string | null
+  focusedTaskIndex?: number
+  isFocusedColumn?: boolean
+  showCreateInput?: boolean
+  onCreateInputShown?: () => void
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -27,46 +32,68 @@ export function KanbanColumn({
   tasks,
   onTaskClick,
   onCreateTask,
-  selectedTaskId
+  selectedTaskId,
+  focusedTaskIndex = -1,
+  isFocusedColumn = false,
+  showCreateInput = false,
+  onCreateInputShown
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const { draggedTaskId, dragOverColumn, setDragOverColumn } = useBoardStore()
+  const [isCreating, setIsCreating] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const isDragOver = dragOverColumn === status && draggedTaskId !== null
+  const { isOver, setNodeRef } = useDroppable({
+    id: `column-${status}`,
+    data: { type: 'column', status }
+  })
+
+  const taskIds = tasks.map((t) => t.id)
+
+  // Show create input when triggered externally (keyboard shortcut)
+  useEffect(() => {
+    if (showCreateInput && !isCreating) {
+      setIsCreating(true)
+      onCreateInputShown?.()
+    }
+  }, [showCreateInput, isCreating, onCreateInputShown])
+
+  // Auto-focus input when creating
+  useEffect(() => {
+    if (isCreating && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isCreating])
+
+  const handlePlusClick = useCallback(() => {
+    setIsCreating(true)
+  }, [])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && newTaskTitle.trim()) {
         onCreateTask(newTaskTitle.trim())
         setNewTaskTitle('')
+        // Keep input open for rapid creation
       }
       if (e.key === 'Escape') {
         setNewTaskTitle('')
+        setIsCreating(false)
         ;(e.target as HTMLInputElement).blur()
       }
     },
     [newTaskTitle, onCreateTask]
   )
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      if (dragOverColumn !== status) {
-        setDragOverColumn(status)
-      }
-    },
-    [status, dragOverColumn, setDragOverColumn]
-  )
-
-  const handleDragLeave = useCallback(() => {
-    setDragOverColumn(null)
-  }, [setDragOverColumn])
+  const handleBlur = useCallback(() => {
+    if (!newTaskTitle.trim()) {
+      setIsCreating(false)
+    }
+  }, [newTaskTitle])
 
   return (
     <div
-      className={styles.column}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      ref={setNodeRef}
+      className={`${styles.column} ${isOver ? styles.columnDragOver : ''}`}
     >
       <div className={styles.header}>
         <span
@@ -75,34 +102,48 @@ export function KanbanColumn({
         />
         <span className={styles.statusName}>{COLUMN_LABELS[status]}</span>
         <span className={styles.taskCount}>{tasks.length}</span>
+        <button
+          className={styles.addButton}
+          onClick={handlePlusClick}
+          title="Create task (c)"
+          aria-label={`Create task in ${COLUMN_LABELS[status]}`}
+        >
+          +
+        </button>
       </div>
 
-      <div className={styles.createArea}>
-        <input
-          className={styles.createInput}
-          type="text"
-          placeholder="Create task..."
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-      </div>
+      {isCreating && (
+        <div className={styles.createArea}>
+          <input
+            ref={inputRef}
+            className={styles.createInput}
+            type="text"
+            placeholder="Task title... (Enter to create, Esc to cancel)"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+          />
+        </div>
+      )}
 
-      <div className={`${styles.taskList} ${isDragOver ? styles.dropTarget : ''}`}>
-        {tasks.length === 0 ? (
-          <div className={styles.empty}>No tasks</div>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => onTaskClick(task.id)}
-              isDragging={draggedTaskId === task.id}
-              isSelected={selectedTaskId === task.id}
-            />
-          ))
-        )}
-      </div>
+      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+        <div className={`${styles.taskList} ${isOver ? styles.dropTarget : ''}`}>
+          {tasks.length === 0 && !isCreating ? (
+            <div className={styles.empty}>No tasks</div>
+          ) : (
+            tasks.map((task, index) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={() => onTaskClick(task.id)}
+                isSelected={selectedTaskId === task.id}
+                isFocused={isFocusedColumn && focusedTaskIndex === index}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
     </div>
   )
 }
