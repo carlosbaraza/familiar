@@ -15,6 +15,8 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const sessionIdRef = useRef(sessionId)
+  sessionIdRef.current = sessionId
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -127,6 +129,19 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
       const clipData = e.clipboardData
       if (!clipData) return
 
+      // Diagnostic: log clipboard content types so we can debug paste issues
+      const types = clipData.types ?? []
+      const fileCount = clipData.files?.length ?? 0
+      const itemCount = clipData.items?.length ?? 0
+      const itemDetails = clipData.items
+        ? Array.from({ length: clipData.items.length }, (_, i) => {
+            const it = clipData.items[i]
+            return `${it.kind}:${it.type}`
+          })
+        : []
+      const target = (e.target as HTMLElement)?.tagName ?? 'unknown'
+      console.debug(`[paste] target=${target} types=${types} files=${fileCount} items=[${itemDetails}]`)
+
       // Case 1: Files with paths (e.g. copied from Finder)
       const files = clipData.files
       if (files && files.length > 0) {
@@ -138,7 +153,8 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
         if (paths.length > 0) {
           e.preventDefault()
           e.stopImmediatePropagation()
-          window.api.ptyWrite(sessionId, paths.join(' '))
+          console.debug(`[paste] case 1: file paths → ${paths.join(' ')}`)
+          window.api.ptyWrite(sessionIdRef.current, paths.join(' '))
           return
         }
       }
@@ -157,9 +173,10 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
               try {
                 const arrayBuffer = await blob.arrayBuffer()
                 const savedPath = await window.api.clipboardSaveImage(arrayBuffer, item.type)
-                window.api.ptyWrite(sessionId, savedPath)
+                console.debug(`[paste] case 2: image saved → ${savedPath}`)
+                window.api.ptyWrite(sessionIdRef.current, savedPath)
               } catch (err) {
-                console.error('Failed to save clipboard image:', err)
+                console.error('[paste] Failed to save clipboard image:', err)
               }
               return
             }
@@ -167,6 +184,7 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
         }
       }
       // Text-only paste: let xterm.js handle it normally
+      console.debug('[paste] fallthrough: text-only, letting xterm handle')
     }
     containerRef.current.addEventListener('paste', handlePaste, { capture: true })
 

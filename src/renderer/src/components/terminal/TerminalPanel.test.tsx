@@ -269,4 +269,55 @@ describe('TerminalPanel', () => {
     expect(mockApi.ptyCreate).not.toHaveBeenCalled()
     expect(mockApi.getProjectRoot).not.toHaveBeenCalled()
   })
+
+  it('destroys old PTY session on unmount to prevent leaking attach processes', async () => {
+    const { unmount } = await renderActive()
+
+    expect(mockApi.ptyCreate).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      unmount()
+    })
+
+    expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
+
+  it('does NOT destroy PTY when task status changes between non-archived statuses', async () => {
+    const task = makeTask({ status: 'in-progress' })
+    useTaskStore.setState({ projectState: makeProjectState([task]) })
+
+    await renderActive()
+
+    expect(mockApi.ptyCreate).toHaveBeenCalledTimes(1)
+
+    // Simulate task status change (e.g. moved to "done")
+    const updatedTask = makeTask({ status: 'done' })
+    await act(async () => {
+      useTaskStore.setState({ projectState: makeProjectState([updatedTask]) })
+      await flushPromises()
+    })
+
+    // Session should NOT be destroyed — only archived status triggers session teardown
+    expect(mockApi.ptyDestroy).not.toHaveBeenCalled()
+    expect(mockApi.ptyCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('destroys PTY when task status changes to archived', async () => {
+    const task = makeTask({ status: 'in-progress' })
+    useTaskStore.setState({ projectState: makeProjectState([task]) })
+
+    await renderActive()
+
+    expect(mockApi.ptyCreate).toHaveBeenCalledTimes(1)
+
+    // Simulate task status change to archived
+    const updatedTask = makeTask({ status: 'archived' })
+    await act(async () => {
+      useTaskStore.setState({ projectState: makeProjectState([updatedTask]) })
+      await flushPromises()
+    })
+
+    // Session should be destroyed when task becomes archived
+    expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
 })

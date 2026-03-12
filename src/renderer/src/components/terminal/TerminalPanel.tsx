@@ -21,6 +21,7 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
   const [isRestarting, setIsRestarting] = useState(false)
   const sessionIdRef = useRef<string | null>(null)
   const task = useTaskStore((s) => s.getTaskById(taskId))
+  const isArchived = task?.status === 'archived'
   const updateTask = useTaskStore((s) => s.updateTask)
   const openSettings = useUIStore((s) => s.openSettings)
 
@@ -37,7 +38,7 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
 
   useEffect(() => {
     // Don't create terminal sessions for archived tasks
-    if (task?.status === 'archived') return
+    if (isArchived) return
 
     let cancelled = false
 
@@ -58,10 +59,16 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
 
     return () => {
       cancelled = true
-      // Do NOT destroy PTY on unmount — task details stay mounted but hidden
-      // for instant reopen. PTY is only destroyed via explicit "Stop Agent" action.
+      // Destroy the old PTY attach process to prevent leaking tmux client connections.
+      // The underlying tmux session survives (only the attach-session client is killed),
+      // so reconnection on re-mount is instant.
+      const oldSid = sessionIdRef.current
+      if (oldSid) {
+        window.api.ptyDestroy(oldSid).catch(console.error)
+        sessionIdRef.current = null
+      }
     }
-  }, [taskId, createSession, task?.status])
+  }, [taskId, createSession, isArchived])
 
   // Load snippets from settings
   useEffect(() => {
