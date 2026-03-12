@@ -206,13 +206,8 @@
 
 .descriptionPreview {
   padding: 4px 0;
-  cursor: pointer;
   border-radius: var(--radius-sm);
   overflow: hidden;
-}
-
-.descriptionPreview:hover {
-  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .descriptionLine {
