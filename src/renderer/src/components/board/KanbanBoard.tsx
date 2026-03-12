@@ -184,28 +184,6 @@ export function KanbanBoard(): React.JSX.Element {
     [addTask]
   )
 
-  // Find which column a task belongs to (uses arrangement during drag)
-  const findTaskColumn = useCallback(
-    (taskId: string): TaskStatus | null => {
-      // During drag, check the virtual arrangement first
-      if (dragArrangement) {
-        for (const status of columnOrder) {
-          if (dragArrangement[status]?.includes(taskId)) {
-            return status as TaskStatus
-          }
-        }
-      }
-      for (const status of columnOrder) {
-        const tasks = tasksByStatus[status] ?? []
-        if (tasks.some((t) => t.id === taskId)) {
-          return status
-        }
-      }
-      return null
-    },
-    [columnOrder, tasksByStatus, dragArrangement]
-  )
-
   // Find a task by ID across all columns
   const findTask = useCallback(
     (taskId: string): Task | undefined => {
@@ -249,18 +227,23 @@ export function KanbanBoard(): React.JSX.Element {
       const activeId = active.id as string
       const overId = over.id as string
 
-      // Determine target column
-      let targetStatus: TaskStatus
+      // Determine target column from tasksByStatus (stable, not arrangement)
+      // Only the active item moves between columns in the arrangement;
+      // the over item is always a non-dragged task, so its real column is correct.
+      let targetStatus: TaskStatus | null = null
 
       if (overId.startsWith('column-')) {
         targetStatus = overId.replace('column-', '') as TaskStatus
       } else {
-        // Over a task — find its column from the arrangement
-        const col = findTaskColumn(overId)
-        if (!col) return
-        targetStatus = col
+        for (const status of columnOrder) {
+          if ((tasksByStatus[status] ?? []).some((t) => t.id === overId)) {
+            targetStatus = status as TaskStatus
+            break
+          }
+        }
       }
 
+      if (!targetStatus) return
       setDragOverColumn(targetStatus)
 
       // Update the virtual arrangement to move the active item into the target column
@@ -277,22 +260,20 @@ export function KanbanBoard(): React.JSX.Element {
         }
         if (!sourceStatus) return prev
 
-        // Find the over index within the arrangement
         if (overId.startsWith('column-')) {
           // Hovering on empty column area — place at end
           if (sourceStatus === targetStatus) {
-            // Same column, move to end
             const ids = prev[sourceStatus].filter((id) => id !== activeId)
             ids.push(activeId)
             return { ...prev, [sourceStatus]: ids }
           }
           // Cross-column: remove from source, append to target
           const sourceIds = prev[sourceStatus].filter((id) => id !== activeId)
-          const targetIds = [...(prev[targetStatus] ?? []), activeId]
+          const targetIds = [...prev[targetStatus].filter((id) => id !== activeId), activeId]
           return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: targetIds }
         }
 
-        // Hovering over a specific task
+        // Hovering over a specific task — find its index in the arrangement
         const targetIds = prev[targetStatus] ?? []
         const overIdx = targetIds.indexOf(overId)
         if (overIdx === -1) return prev
@@ -311,7 +292,7 @@ export function KanbanBoard(): React.JSX.Element {
         return { ...prev, [sourceStatus]: sourceIds, [targetStatus]: newTargetIds }
       })
     },
-    [findTaskColumn, setDragOverColumn, columnOrder]
+    [setDragOverColumn, columnOrder, tasksByStatus]
   )
 
   const handleDragEnd = useCallback(
@@ -471,6 +452,7 @@ export function KanbanBoard(): React.JSX.Element {
             onCreateTask={(title) => handleCreateTask(status, title)}
             selectedTaskId={activeTaskId}
             multiSelectedIds={selectedTaskIds}
+            draggedTaskId={activeTask?.id ?? null}
             focusedTaskIndex={focusedTaskIndex}
             isFocusedColumn={focusedColumnIndex === colIndex}
             showCreateInput={createColumnIndex === colIndex}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { Task, TaskStatus } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
@@ -8,6 +9,22 @@ import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
+
+/** Minimal sortable placeholder for a dragged item in the target column.
+ *  Registers with dnd-kit so transforms/gap work, but renders as a thin bar. */
+function SortablePlaceholder({ id }: { id: string }): React.JSX.Element {
+  const { setNodeRef, transform, transition } = useSortable({ id })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'var(--accent)',
+    opacity: 0.6,
+    margin: '2px 0'
+  }
+  return <div ref={setNodeRef} style={style} />
+}
 
 interface KanbanColumnProps {
   status: TaskStatus
@@ -17,6 +34,7 @@ interface KanbanColumnProps {
   onCreateTask: (title: string) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
+  draggedTaskId?: string | null
   focusedTaskIndex?: number
   isFocusedColumn?: boolean
   showCreateInput?: boolean
@@ -40,6 +58,7 @@ export function KanbanColumn({
   onCreateTask,
   selectedTaskId,
   multiSelectedIds,
+  draggedTaskId,
   focusedTaskIndex = -1,
   isFocusedColumn = false,
   showCreateInput = false,
@@ -161,17 +180,21 @@ export function KanbanColumn({
               <span style={{ opacity: 0.6 }}>No tasks</span>
             </div>
           ) : (
-            tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onClick={() => onTaskClick(task.id)}
-                onMultiSelect={onMultiSelect}
-                isSelected={selectedTaskId === task.id}
-                isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
-                isFocused={isFocusedColumn && focusedTaskIndex === index}
-              />
-            ))
+            tasks.map((task, index) =>
+              task.id === draggedTaskId ? (
+                <SortablePlaceholder key={task.id} id={task.id} />
+              ) : (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onClick={() => onTaskClick(task.id)}
+                  onMultiSelect={onMultiSelect}
+                  isSelected={selectedTaskId === task.id}
+                  isMultiSelected={multiSelectedIds?.has(task.id) ?? false}
+                  isFocused={isFocusedColumn && focusedTaskIndex === index}
+                />
+              )
+            )
           )}
         </div>
       </SortableContext>
