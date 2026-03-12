@@ -39,12 +39,16 @@ vi.mock('./SplitPanel', () => ({
   )
 }))
 
+const mockWatchUnsub = vi.fn()
 const mockApi = {
-  readTaskDocument: vi.fn()
+  readTaskDocument: vi.fn(),
+  watchProjectDir: vi.fn().mockReturnValue(mockWatchUnsub)
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockWatchUnsub.mockClear()
+  mockApi.watchProjectDir.mockReturnValue(mockWatchUnsub)
   ;(window as any).api = { ...((window as any).api ?? {}), ...mockApi }
   mockApi.readTaskDocument.mockResolvedValue('# Hello')
   useUIStore.setState({
@@ -110,6 +114,42 @@ describe('TaskDetailContent', () => {
   it('renders inside a SplitPanel', () => {
     render(<TaskDetailContent taskId="tsk_abc" />)
     expect(screen.getByTestId('split-panel')).toBeInTheDocument()
+  })
+
+  it('subscribes to file watcher for external document changes', async () => {
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(mockApi.watchProjectDir).toHaveBeenCalled()
+    })
+  })
+
+  it('re-reads document when file watcher fires', async () => {
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('block-editor')).toBeInTheDocument()
+    })
+
+    // Simulate external change
+    mockApi.readTaskDocument.mockResolvedValue('# Updated externally')
+    const watchCallback = mockApi.watchProjectDir.mock.calls[0][0]
+    await watchCallback()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Updated externally/)).toBeInTheDocument()
+    })
+  })
+
+  it('unsubscribes from file watcher on unmount', async () => {
+    const { unmount } = render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(mockApi.watchProjectDir).toHaveBeenCalled()
+    })
+
+    unmount()
+    expect(mockWatchUnsub).toHaveBeenCalled()
   })
 
   it('re-loads document when taskId changes', async () => {

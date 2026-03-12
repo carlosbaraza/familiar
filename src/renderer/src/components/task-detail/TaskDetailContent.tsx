@@ -68,6 +68,19 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
     }
   }, [taskId])
 
+  // Re-read document when external file changes are detected
+  useEffect(() => {
+    const unsub = window.api.watchProjectDir(async () => {
+      try {
+        const content = await window.api.readTaskDocument(taskId)
+        setDocumentContent(content || '')
+      } catch {
+        // Ignore — task may have been deleted
+      }
+    })
+    return () => unsub()
+  }, [taskId])
+
   return (
     <div className={styles.container}>
       <SplitPanel
