@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { ElectronTmuxManager } from '../platform/electron-tmux'
 import type { DataService } from '../services/data-service'
+import { resolveClaudeSessionCommand } from '../services/claude-session'
 
 export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataService: DataService): void {
   ipcMain.handle('tmux:list', async () => {
@@ -50,7 +51,12 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
     try {
       const settings = await dataService.readSettings()
       if (settings.defaultCommand) {
-        await tmuxManager.sendKeys(sessionName, settings.defaultCommand)
+        const resolvedCommand = resolveClaudeSessionCommand(
+          settings.defaultCommand,
+          taskId,
+          projectRoot
+        )
+        await tmuxManager.sendKeys(sessionName, resolvedCommand)
       }
     } catch {
       // Settings not available — skip default command
