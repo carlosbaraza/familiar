@@ -52,6 +52,8 @@ declare global {
       tmuxDetach(name: string): Promise<void>
       tmuxKill(name: string): Promise<void>
       tmuxHas(name: string): Promise<boolean>
+      tmuxSendKeys(sessionName: string, keys: string, pressEnter: boolean): Promise<void>
+      warmupTmuxSession(taskId: string): Promise<void>
 
       // Notifications
       sendNotification(title: string, body: string): Promise<void>

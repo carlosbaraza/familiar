@@ -64,6 +64,10 @@ const api = {
   tmuxDetach: (name: string): Promise<void> => ipcRenderer.invoke('tmux:detach', name),
   tmuxKill: (name: string): Promise<void> => ipcRenderer.invoke('tmux:kill', name),
   tmuxHas: (name: string): Promise<boolean> => ipcRenderer.invoke('tmux:has', name),
+  tmuxSendKeys: (sessionName: string, keys: string, pressEnter: boolean): Promise<void> =>
+    ipcRenderer.invoke('tmux:send-keys', sessionName, keys, pressEnter),
+  warmupTmuxSession: (taskId: string): Promise<void> =>
+    ipcRenderer.invoke('tmux:warmup', taskId),
 
   // Notifications
   sendNotification: (title: string, body: string): Promise<void> =>
