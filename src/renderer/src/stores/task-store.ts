@@ -127,10 +127,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (!projectState) throw new Error('Project not initialized')
 
     const now = new Date().toISOString()
-    const existingTasks = projectState.tasks.filter(
-      (t: Task) => t.status === (options?.status ?? 'todo')
+    const targetStatus = options?.status ?? 'todo'
+
+    // Shift existing tasks in the target column down to make room at the top
+    const shiftedTasks = projectState.tasks.map((t: Task) =>
+      t.status === targetStatus ? { ...t, sortOrder: t.sortOrder + 1 } : t
     )
-    const maxSort = existingTasks.reduce((max: number, t: Task) => Math.max(max, t.sortOrder), -1)
 
     const task: Task = {
       id: generateTaskId(),
@@ -141,7 +143,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       agentStatus: 'idle',
       createdAt: now,
       updatedAt: now,
-      sortOrder: maxSort + 1,
+      sortOrder: 0,
       ...options
     }
 
@@ -151,7 +153,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Update project state
     const newState: ProjectState = {
       ...projectState,
-      tasks: [...projectState.tasks, task]
+      tasks: [...shiftedTasks, task]
     }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })

@@ -111,14 +111,17 @@ export function importCommand(): Command {
       let created = 0
 
       for (const parsed_task of parsed) {
-        const maxSort = state.tasks.length > 0
-          ? Math.max(...state.tasks.map((t) => t.sortOrder))
-          : -1
+        // Shift existing tasks in the target column down to make room at the top
+        for (const t of state.tasks) {
+          if (t.status === parsed_task.status) {
+            t.sortOrder += 1
+          }
+        }
 
         const task = createTask(parsed_task.title, {
           status: parsed_task.status,
           priority: parsed_task.priority,
-          sortOrder: maxSort + 1
+          sortOrder: 0
         })
 
         // Create task directory

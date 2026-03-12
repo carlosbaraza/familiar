@@ -56,14 +56,18 @@ export function addCommand(): Command {
         process.exit(1)
       }
 
-      const tasksInColumn = state.tasks.filter((t) => t.status === opts.status)
-      const maxSort = tasksInColumn.length > 0 ? Math.max(...tasksInColumn.map((t) => t.sortOrder)) : -1
+      // Shift existing tasks in the target column down to make room at the top
+      for (const t of state.tasks) {
+        if (t.status === opts.status) {
+          t.sortOrder += 1
+        }
+      }
 
       const task = createTask(title, {
         status: opts.status as TaskStatus,
         priority: opts.priority as Priority,
         labels,
-        sortOrder: maxSort + 1
+        sortOrder: 0
       })
 
       // Create task directory with files

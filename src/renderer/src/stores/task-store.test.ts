@@ -121,7 +121,7 @@ describe('useTaskStore', () => {
       await expect(useTaskStore.getState().addTask('Task')).rejects.toThrow('Project not initialized')
     })
 
-    it('calculates sort order based on existing tasks in column', async () => {
+    it('adds new task to the top of the column (sortOrder 0) and shifts existing tasks down', async () => {
       const existing = makeTask({ status: 'todo', sortOrder: 5 })
       const state = makeProjectState([existing])
       useTaskStore.setState({ projectState: state })
@@ -129,7 +129,12 @@ describe('useTaskStore', () => {
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
       const task = await useTaskStore.getState().addTask('Another task')
-      expect(task.sortOrder).toBe(6)
+      expect(task.sortOrder).toBe(0)
+
+      // Existing task should have been shifted down
+      const tasks = useTaskStore.getState().projectState!.tasks
+      const existingUpdated = tasks.find((t) => t.id === existing.id)!
+      expect(existingUpdated.sortOrder).toBe(6) // was 5, shifted to 6
     })
 
     it('calls warmupTmuxSession after creating a non-archived task', async () => {

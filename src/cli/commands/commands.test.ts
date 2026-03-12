@@ -66,14 +66,18 @@ describe('CLI commands (via file-ops)', () => {
     const priority = (opts.priority ?? 'none') as Task['priority']
     const labels = opts.labels ? opts.labels.split(',').map((l) => l.trim()).filter(Boolean) : []
 
-    const tasksInColumn = state.tasks.filter((t) => t.status === status)
-    const maxSort = tasksInColumn.length > 0 ? Math.max(...tasksInColumn.map((t) => t.sortOrder)) : -1
+    // Shift existing tasks in the target column down to make room at the top
+    for (const t of state.tasks) {
+      if (t.status === status) {
+        t.sortOrder += 1
+      }
+    }
 
     const task = createTask(title, {
       status,
       priority,
       labels,
-      sortOrder: maxSort + 1
+      sortOrder: 0
     })
 
     await ensureTaskDir(tmpDir, task.id)
