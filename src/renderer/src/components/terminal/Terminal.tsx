@@ -100,10 +100,13 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     fitAddonRef.current = fitAddon
 
     // Fit after DOM settles and focus the terminal
+    // Use a short delay to win the focus race against BlockNote editor auto-focus
     requestAnimationFrame(() => {
       fitAddon.fit()
-      term.focus()
     })
+    const focusTimer = setTimeout(() => {
+      term.focus()
+    }, 100)
 
     // Connect to PTY data
     const cleanup = window.api.onPtyData((sid: string, data: string) => {
@@ -201,6 +204,7 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     onReady?.()
 
     return (): void => {
+      clearTimeout(focusTimer)
       clearTimeout(resizeTimer)
       resizeObserver.disconnect()
       containerRef.current?.removeEventListener('paste', handlePaste, { capture: true })
@@ -210,12 +214,14 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
-  // Re-focus terminal when it becomes visible (e.g. task detail reopened)
+  // Re-focus terminal when it becomes visible (e.g. task detail opened via Enter)
+  // Use a short delay to win the focus race against BlockNote editor auto-focus
   useEffect(() => {
     if (visible && termRef.current) {
-      requestAnimationFrame(() => {
+      const timer = setTimeout(() => {
         termRef.current?.focus()
-      })
+      }, 100)
+      return () => clearTimeout(timer)
     }
   }, [visible])
 

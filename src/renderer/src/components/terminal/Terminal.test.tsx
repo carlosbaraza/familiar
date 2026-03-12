@@ -117,10 +117,18 @@ describe('Terminal', () => {
     expect(mockLoadAddon).toHaveBeenCalledTimes(3)
   })
 
-  it('calls fit and focus after mount via requestAnimationFrame', () => {
+  it('calls fit after mount via requestAnimationFrame', () => {
     render(<Terminal sessionId="test-session" />)
     expect(mockFit).toHaveBeenCalled()
+  })
+
+  it('calls focus after mount via delayed timer', async () => {
+    vi.useFakeTimers()
+    render(<Terminal sessionId="test-session" />)
+    expect(mockFocus).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(100)
     expect(mockFocus).toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('registers onPtyData listener for the session', () => {
@@ -206,6 +214,18 @@ describe('Terminal', () => {
     expect(mockDispose).toHaveBeenCalledOnce()
     expect(mockDisconnect).toHaveBeenCalledOnce()
     expect(mockPtyDataCleanup).toHaveBeenCalledOnce()
+  })
+
+  it('re-focuses terminal when visible prop changes to true', () => {
+    vi.useFakeTimers()
+    const { rerender } = render(<Terminal sessionId="test-session" visible={false} />)
+    mockFocus.mockClear()
+
+    rerender(<Terminal sessionId="test-session" visible={true} />)
+    expect(mockFocus).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(100)
+    expect(mockFocus).toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('handles WebGL addon failure gracefully', () => {
