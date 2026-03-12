@@ -1,5 +1,4 @@
-import { Menu, app, dialog, BrowserWindow, shell, clipboard } from 'electron'
-import { BASE_AGENTS_MD } from '@shared/prompts'
+import { Menu, app, dialog, BrowserWindow, shell } from 'electron'
 import { spawn } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 
@@ -109,12 +108,6 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
           }
         },
         { type: 'separator' },
-        {
-          label: 'Copy AGENTS.md',
-          click: (): void => {
-            clipboard.writeText(BASE_AGENTS_MD)
-          }
-        },
         {
           label: 'Install CLI',
           click: (): void => {

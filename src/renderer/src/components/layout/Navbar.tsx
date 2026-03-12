@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
-import { BASE_AGENTS_MD } from '@shared/prompts'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
@@ -42,7 +41,6 @@ export function Navbar(): React.JSX.Element {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const [showHelpMenu, setShowHelpMenu] = useState(false)
-  const [copiedItem, setCopiedItem] = useState<string | null>(null)
   const helpMenuRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on outside click
@@ -68,16 +66,6 @@ export function Navbar(): React.JSX.Element {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showHelpMenu])
-
-  const handleCopyPrompt = useCallback(async (label: string, content: string) => {
-    try {
-      await navigator.clipboard.writeText(content)
-      setCopiedItem(label)
-      setTimeout(() => setCopiedItem(null), 1500)
-    } catch {
-      console.error('Failed to copy to clipboard')
-    }
-  }, [])
 
   const count = unreadCount()
 
@@ -185,18 +173,6 @@ export function Navbar(): React.JSX.Element {
                   <span className={styles.helpDropdownTitle}>Run Onboarding</span>
                   <span className={styles.helpDropdownDesc}>Re-run setup wizard</span>
                 </span>
-              </button>
-              <div className={styles.helpDropdownDivider} />
-              <button
-                className={styles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('agents', BASE_AGENTS_MD)}
-              >
-                <span className={styles.helpDropdownIcon}>&#128196;</span>
-                <span className={styles.helpDropdownText}>
-                  <span className={styles.helpDropdownTitle}>Copy AGENTS.md</span>
-                  <span className={styles.helpDropdownDesc}>Agent onboarding instructions</span>
-                </span>
-                {copiedItem === 'agents' && <span className={styles.copiedBadge}>Copied!</span>}
               </button>
             </div>
           )}

@@ -15,13 +15,6 @@ vi.mock('@renderer/lib/format-time', () => ({
   formatRelativeTime: () => '2m ago'
 }))
 
-// Mock the prompts module
-vi.mock('@shared/prompts', () => ({
-  TMUX_SETUP_PROMPT: 'tmux setup prompt content',
-  DOCTOR_PROMPT: 'doctor prompt content',
-  BASE_AGENTS_MD: 'agents md content'
-}))
-
 // Mock window.api
 const mockGetProjectRoot = vi.fn()
 const mockOpenPath = vi.fn()
@@ -40,10 +33,6 @@ const mockClearNotifications = vi.fn()
   markAllNotificationsRead: mockMarkAllNotificationsRead,
   clearNotifications: mockClearNotifications
 }
-
-// Mock clipboard
-const mockWriteText = vi.fn()
-Object.assign(navigator, { clipboard: { writeText: mockWriteText } })
 
 async function renderNavbarAndWait(): Promise<ReturnType<typeof render>> {
   const result = render(<Navbar />)
@@ -64,8 +53,6 @@ describe('Navbar', () => {
     mockMarkNotificationsByTaskRead.mockResolvedValue(undefined)
     mockMarkAllNotificationsRead.mockResolvedValue(undefined)
     mockClearNotifications.mockResolvedValue(undefined)
-    mockWriteText.mockResolvedValue(undefined)
-
     useUIStore.setState({
       taskDetailOpen: false,
       activeTaskId: null,
@@ -165,50 +152,6 @@ describe('Navbar', () => {
     fireEvent.click(helpBtn)
 
     expect(screen.getByText('Run Onboarding')).toBeTruthy()
-    expect(screen.getByText('Copy AGENTS.md')).toBeTruthy()
-  })
-
-  it('copies agents.md to clipboard', async () => {
-    await renderNavbarAndWait()
-
-    fireEvent.click(screen.getByTitle('Agent setup prompts'))
-    fireEvent.click(screen.getByText('Copy AGENTS.md'))
-
-    await waitFor(() => {
-      expect(mockWriteText).toHaveBeenCalledWith('agents md content')
-    })
-  })
-
-  it('shows "Copied!" badge after copying and hides it after timeout', async () => {
-    vi.useFakeTimers()
-    // Render with real timers first since renderNavbarAndWait uses waitFor
-    mockGetProjectRoot.mockResolvedValue('/Users/test/my-project')
-
-    render(<Navbar />)
-
-    // Manually flush the getProjectRoot promise
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    fireEvent.click(screen.getByTitle('Agent setup prompts'))
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Copy AGENTS.md'))
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    expect(screen.getByText('Copied!')).toBeTruthy()
-
-    // Badge disappears after 1500ms
-    act(() => {
-      vi.advanceTimersByTime(1500)
-    })
-
-    expect(screen.queryByText('Copied!')).toBeNull()
-    vi.useRealTimers()
   })
 
   it('closes help menu on outside click', async () => {

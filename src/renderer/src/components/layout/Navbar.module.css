@@ -194,6 +194,7 @@
 /* Dropdown anchor */
 .dropdownAnchor {
   position: relative;
+  z-index: calc(var(--z-modal) + 20);
 }
 
 /* Help dropdown */
