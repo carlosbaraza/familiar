@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { CodingAgent, ProjectSettings } from '@shared/types'
 import { CODING_AGENT_LABELS } from '@shared/types/settings'
+import { DOCTOR_PROMPT } from '@shared/prompts'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 
@@ -420,38 +421,6 @@ function StepLine({ completed }: { completed?: boolean }): React.JSX.Element {
     />
   )
 }
-
-const DOCTOR_PROMPT = `# Familiar Environment Diagnostic
-
-Please run a full diagnostic of this machine's Familiar setup. Check each item below, report the results, then offer to fix any issues found.
-
-## Checks to perform
-
-### 1. tmux
-- Is tmux installed? (which tmux && tmux -V)
-- Can we create and destroy a tmux session?
-- Is mouse support configured in ~/.tmux.conf?
-- Is clipboard integration (OSC 52 / pbcopy) configured?
-
-### 2. familiar CLI
-- Is the CLI installed and in PATH? (which familiar)
-- Can it run? (familiar --version)
-
-### 3. Project setup
-- Is .familiar/ initialized in the current directory?
-- Is state.json present?
-
-### 4. Environment variables
-- Is FAMILIAR_TASK_ID set?
-- Is FAMILIAR_PROJECT_ROOT set?
-- Is FAMILIAR_SETTINGS_PATH set?
-
-### 5. AI agent hooks
-- Check if lifecycle hooks are configured for the selected agent
-- For Claude Code: check .claude/settings.json for hooks
-- Verify hook scripts exist and are executable
-
-After running all checks, summarize Pass/Warn/Fail items and offer to fix any issues.`
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
