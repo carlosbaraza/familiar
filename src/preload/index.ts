@@ -37,6 +37,10 @@ const api = {
   copyTempToAttachment: (taskId: string, tempPath: string, fileName: string): Promise<string> =>
     ipcRenderer.invoke('task:copy-temp-to-attachment', taskId, tempPath, fileName),
 
+  // Task file listing
+  listTaskFiles: (taskId: string): Promise<{ name: string; size: number; isDir: boolean; path: string }[]> =>
+    ipcRenderer.invoke('task:list-files', taskId),
+
   // Pasted files
   savePastedFile: (taskId: string, filename: string, content: string): Promise<void> =>
     ipcRenderer.invoke('task:save-pasted-file', taskId, filename, content),

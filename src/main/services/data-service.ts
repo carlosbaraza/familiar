@@ -190,6 +190,34 @@ export class DataService {
     return destPath
   }
 
+  async listTaskFiles(taskId: string): Promise<{ name: string; size: number; isDir: boolean; path: string }[]> {
+    const taskDir = this.getDataPath(TASKS_DIR, taskId)
+    const { stat } = await import('fs/promises')
+    try {
+      const entries = await this.fs.readDir(taskDir)
+      const results: { name: string; size: number; isDir: boolean; path: string }[] = []
+      for (const entry of entries) {
+        // Skip internal metadata files
+        if (entry === TASK_FILE || entry === ACTIVITY_FILE) continue
+        const fullPath = path.join(taskDir, entry)
+        try {
+          const s = await stat(fullPath)
+          results.push({
+            name: entry,
+            size: s.size,
+            isDir: s.isDirectory(),
+            path: fullPath
+          })
+        } catch {
+          // File may have been deleted between readdir and stat
+        }
+      }
+      return results
+    } catch {
+      return []
+    }
+  }
+
   // ─── Pasted Files ────────────────────────────────────────────────
 
   async savePastedFile(

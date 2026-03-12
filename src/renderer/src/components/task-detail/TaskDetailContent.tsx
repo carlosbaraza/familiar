@@ -5,6 +5,7 @@ import { ActivityTimeline } from './ActivityTimeline'
 import { TerminalPanel } from '@renderer/components/terminal/TerminalPanel'
 import { BlockEditor } from '@renderer/components/editor'
 import { PastedFileCard, PreviewDialog } from '@renderer/components/common'
+import { TaskFiles } from './TaskFiles'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import styles from './TaskDetailContent.module.css'
@@ -83,6 +84,7 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
                 <div className={styles.editorArea}>Loading...</div>
               )}
             </div>
+            <TaskFiles taskId={taskId} />
             {pastedFiles.length > 0 && (
               <div className={styles.pastedFilesSection}>
                 <div className={styles.pastedFilesHeader}>Pasted Files</div>

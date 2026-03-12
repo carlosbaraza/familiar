@@ -24,6 +24,12 @@ vi.mock('./ActivityTimeline', () => ({
   )
 }))
 
+vi.mock('./TaskFiles', () => ({
+  TaskFiles: ({ taskId }: any) => (
+    <div data-testid="task-files">Files for {taskId}</div>
+  )
+}))
+
 vi.mock('./SplitPanel', () => ({
   SplitPanel: ({ left, right }: any) => (
     <div data-testid="split-panel">

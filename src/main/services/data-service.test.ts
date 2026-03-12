@@ -174,4 +174,44 @@ describe('DataService', () => {
       expect(activities[1].message).toBe('A note')
     })
   })
+
+  describe('listTaskFiles', () => {
+    it('lists files in the task directory excluding metadata files', async () => {
+      await service.initProject('Test')
+      const task = makeTask()
+      await service.createTask(task)
+
+      // Write a document and an attachment
+      await service.writeTaskDocument(task.id, '# Hello')
+      await service.saveAttachment(task.id, 'image.png', new ArrayBuffer(16))
+
+      const files = await service.listTaskFiles(task.id)
+      const names = files.map((f) => f.name)
+
+      // Should include document.md, attachments dir, but NOT task.json or activity.json
+      expect(names).toContain('document.md')
+      expect(names).toContain('attachments')
+      expect(names).not.toContain('task.json')
+      expect(names).not.toContain('activity.json')
+    })
+
+    it('marks directories correctly', async () => {
+      await service.initProject('Test')
+      const task = makeTask()
+      await service.createTask(task)
+
+      await service.saveAttachment(task.id, 'img.png', new ArrayBuffer(8))
+
+      const files = await service.listTaskFiles(task.id)
+      const attachDir = files.find((f) => f.name === 'attachments')
+      expect(attachDir).toBeDefined()
+      expect(attachDir!.isDir).toBe(true)
+    })
+
+    it('returns empty array for nonexistent task', async () => {
+      await service.initProject('Test')
+      const files = await service.listTaskFiles('nonexistent')
+      expect(files).toEqual([])
+    })
+  })
 })

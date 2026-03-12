@@ -76,6 +76,11 @@ export function registerFileHandlers(
       )
   )
 
+  // Task files listing
+  ipcMain.handle('task:list-files', async (_, taskId: string) =>
+    dataService.listTaskFiles(taskId)
+  )
+
   // Pasted files
   ipcMain.handle('task:save-pasted-file', async (_, taskId: string, filename: string, content: string) =>
     withSelfTriggered(getFileWatcher, () => dataService.savePastedFile(taskId, filename, content))
