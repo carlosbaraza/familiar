@@ -1,4 +1,5 @@
-import { Menu, app, dialog, BrowserWindow, shell } from 'electron'
+import { Menu, app, dialog, BrowserWindow, shell, clipboard } from 'electron'
+import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
 import { spawn } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 
@@ -101,6 +102,32 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
     {
       role: 'help',
       submenu: [
+        {
+          label: 'Copy Tmux Setup Prompt',
+          click: (): void => {
+            clipboard.writeText(TMUX_SETUP_PROMPT)
+          }
+        },
+        {
+          label: 'Copy Doctor Prompt',
+          click: (): void => {
+            clipboard.writeText(DOCTOR_PROMPT)
+          }
+        },
+        {
+          label: 'Copy AGENTS.md',
+          click: (): void => {
+            clipboard.writeText(BASE_AGENTS_MD)
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Install CLI',
+          click: (): void => {
+            mainWindow.webContents.send('menu:install-cli')
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Kanban Agent GitHub',
           click: (): void => {

@@ -1,0 +1,214 @@
+/**
+ * Shared prompt templates for AI agent onboarding.
+ * Used by both the CLI commands and the Electron UI.
+ */
+
+export const TMUX_SETUP_PROMPT = `# Tmux Setup for Kanban Agent
+
+Please configure tmux on this machine so it works correctly with Kanban Agent. Follow these steps:
+
+## 1. Check if tmux is installed
+
+\`\`\`bash
+which tmux && tmux -V
+\`\`\`
+
+If tmux is not installed, install it:
+
+\`\`\`bash
+brew install tmux
+\`\`\`
+
+## 2. Ensure tmux config exists
+
+Check if ~/.tmux.conf exists. If not, create it. Add or verify the following minimal settings required for Kanban Agent:
+
+\`\`\`tmux
+# Enable mouse support (required for terminal interaction in Kanban Agent)
+set -g mouse on
+
+# Scrollback buffer — generous size for agent output
+set -g history-limit 10000
+
+# Start window numbering at 1
+set -g base-index 1
+setw -g pane-base-index 1
+
+# Don't rename windows automatically
+set -g allow-rename off
+
+# Extended keys support (for Shift+Enter, Ctrl+Enter in terminals)
+set -s extended-keys on
+set -as terminal-features 'xterm*:extkeys'
+\`\`\`
+
+## 3. Verify tmux works
+
+\`\`\`bash
+# Create a test session and kill it
+tmux new-session -d -s kanban-test && tmux kill-session -t kanban-test && echo "tmux is working correctly"
+\`\`\`
+
+## 4. If tmux is already running, reload the config
+
+\`\`\`bash
+tmux source-file ~/.tmux.conf 2>/dev/null || true
+\`\`\`
+
+Report what you did and whether everything is working.`
+
+export const DOCTOR_PROMPT = `# Kanban Agent Environment Diagnostic
+
+Please run a full diagnostic of this machine's Kanban Agent setup. Check each item below, report the results, then offer to fix any issues found.
+
+## Checks to perform
+
+### 1. tmux
+\`\`\`bash
+# Is tmux installed?
+which tmux && tmux -V || echo "FAIL: tmux not found"
+
+# Is the tmux config present?
+test -f ~/.tmux.conf && echo "OK: ~/.tmux.conf exists" || echo "WARN: no ~/.tmux.conf found"
+
+# Does the config have mouse support?
+grep -q "set -g mouse on" ~/.tmux.conf 2>/dev/null && echo "OK: mouse support enabled" || echo "WARN: mouse support not configured"
+
+# Can we create and destroy a tmux session?
+tmux new-session -d -s kanban-doctor-test 2>/dev/null && tmux kill-session -t kanban-doctor-test 2>/dev/null && echo "OK: tmux sessions work" || echo "FAIL: cannot create tmux sessions"
+
+# Are there any existing kanban sessions?
+tmux list-sessions 2>/dev/null | grep "^kanban-" || echo "INFO: no active kanban tmux sessions"
+\`\`\`
+
+### 2. kanban-agent CLI
+\`\`\`bash
+# Is the CLI installed and in PATH?
+which kanban-agent && echo "OK: CLI found" || echo "FAIL: kanban-agent not in PATH"
+
+# Can it run?
+kanban-agent --version 2>/dev/null && echo "OK: CLI runs" || echo "FAIL: CLI cannot execute"
+\`\`\`
+
+### 3. Project setup
+\`\`\`bash
+# Is .kanban-agent/ initialized in the current project?
+test -d .kanban-agent && echo "OK: .kanban-agent/ exists" || echo "WARN: .kanban-agent/ not found — run 'kanban-agent init'"
+
+# Is state.json present?
+test -f .kanban-agent/state.json && echo "OK: state.json exists" || echo "WARN: state.json missing"
+\`\`\`
+
+### 4. Environment variables (if running inside a Kanban Agent terminal)
+\`\`\`bash
+# Check if task context is set
+[ -n "$KANBAN_TASK_ID" ] && echo "OK: KANBAN_TASK_ID=$KANBAN_TASK_ID" || echo "INFO: KANBAN_TASK_ID not set (not in a task terminal)"
+[ -n "$KANBAN_PROJECT_ROOT" ] && echo "OK: KANBAN_PROJECT_ROOT=$KANBAN_PROJECT_ROOT" || echo "INFO: KANBAN_PROJECT_ROOT not set"
+\`\`\`
+
+## Report format
+
+After running all checks, summarize:
+- **Pass**: items that are correctly configured
+- **Warnings**: items that may need attention
+- **Failures**: items that must be fixed
+
+Then ask: "Would you like me to fix the issues found?" and if yes, fix them one by one, explaining each change.`
+
+export const BASE_AGENTS_MD = `# Kanban Agent — AGENTS.md
+
+This document describes how AI agents should interact with the Kanban Agent system.
+
+## Overview
+
+Kanban Agent is a macOS desktop app providing a kanban board with embedded terminal emulators for agentic AI coding workflows. Each task has a persistent tmux session. The \`kanban-agent\` CLI lets agents manage tasks without the GUI.
+
+## Environment
+
+When running inside a Kanban Agent terminal, these environment variables are set:
+
+- \`KANBAN_TASK_ID\` — The ID of the current task
+- \`KANBAN_PROJECT_ROOT\` — The root directory of the project
+
+## Agent Workflow
+
+### 1. Read your task
+
+\`\`\`bash
+cat "$KANBAN_PROJECT_ROOT/.kanban-agent/tasks/$KANBAN_TASK_ID/document.md"
+cat "$KANBAN_PROJECT_ROOT/.kanban-agent/tasks/$KANBAN_TASK_ID/task.json"
+\`\`\`
+
+### 2. Signal you're working
+
+\`\`\`bash
+kanban-agent status $KANBAN_TASK_ID in-progress
+kanban-agent update $KANBAN_TASK_ID --agent-status running
+kanban-agent log $KANBAN_TASK_ID "Starting work"
+\`\`\`
+
+### 3. Log progress
+
+\`\`\`bash
+kanban-agent log $KANBAN_TASK_ID "Implemented feature X — moving to tests"
+\`\`\`
+
+### 4. Commit your work
+
+\`\`\`bash
+git add <changed-files>
+git commit -m "feat: short description"
+\`\`\`
+
+Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`, \`test:\`, \`chore:\`. Do NOT push unless explicitly asked.
+
+### 5. Signal completion
+
+\`\`\`bash
+# On success
+kanban-agent status $KANBAN_TASK_ID in-review
+kanban-agent update $KANBAN_TASK_ID --agent-status done
+kanban-agent log $KANBAN_TASK_ID "Complete — all tests passing"
+kanban-agent notify "Task Done" "$KANBAN_TASK_ID complete"
+
+# On failure
+kanban-agent update $KANBAN_TASK_ID --agent-status error
+kanban-agent log $KANBAN_TASK_ID "ERROR: description of what went wrong"
+kanban-agent notify "Task Failed" "$KANBAN_TASK_ID failed"
+\`\`\`
+
+## CLI Reference
+
+| Command | Purpose |
+|---------|---------|
+| \`kanban-agent status <id> <status>\` | Set status: \`backlog\`, \`todo\`, \`in-progress\`, \`in-review\`, \`done\`, \`archived\` |
+| \`kanban-agent update <id> --agent-status <s>\` | Set agent status: \`idle\`, \`running\`, \`done\`, \`error\` |
+| \`kanban-agent update <id> --priority <p>\` | Set priority: \`urgent\`, \`high\`, \`medium\`, \`low\`, \`none\` |
+| \`kanban-agent log <id> "<message>"\` | Append to activity log |
+| \`kanban-agent notify "<title>" "<body>"\` | Send in-app notification |
+| \`kanban-agent add "<title>" [--priority p] [--status s]\` | Create a new task |
+| \`kanban-agent list [--status s] [--json]\` | List tasks |
+| \`kanban-agent setup [--copy]\` | Print tmux setup prompt for your AI agent |
+| \`kanban-agent doctor [--copy]\` | Print environment diagnostic prompt |
+| \`kanban-agent agents [--copy]\` | Print this AGENTS.md document |
+
+## Tmux Sessions
+
+Kanban Agent uses tmux sessions named \`kanban-<taskId>-<paneIndex>\`. These sessions persist across app restarts. Do not manually kill or rename them.
+
+## Data Directory
+
+All state is stored in \`.kanban-agent/\` at the project root:
+
+\`\`\`
+.kanban-agent/
+├── state.json              # Board state (task list, column order)
+├── settings.json           # User settings
+├── notifications.json      # In-app notifications
+└── tasks/<taskId>/
+    ├── task.json           # Task metadata
+    ├── document.md         # Task description/spec
+    ├── activity.json       # Activity log
+    └── attachments/        # Files and images
+\`\`\`
+`

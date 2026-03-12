@@ -10,6 +10,9 @@ import { notifyCommand } from './commands/notify'
 import { openCommand } from './commands/open'
 import { syncCommand } from './commands/sync'
 import { importCommand } from './commands/import'
+import { setupCommand } from './commands/setup'
+import { doctorCommand } from './commands/doctor'
+import { agentsCommand } from './commands/agents'
 
 const program = new Command()
 
@@ -29,5 +32,8 @@ program.addCommand(notifyCommand())
 program.addCommand(openCommand())
 program.addCommand(syncCommand())
 program.addCommand(importCommand())
+program.addCommand(setupCommand())
+program.addCommand(doctorCommand())
+program.addCommand(agentsCommand())
 
 program.parse()
