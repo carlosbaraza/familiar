@@ -6,10 +6,12 @@ import { TerminalPanel } from './TerminalPanel'
 import type { Task, ProjectState } from '@shared/types'
 
 // Mock the Terminal component since it uses xterm
+let capturedOnInput: (() => void) | undefined
 vi.mock('./Terminal', () => ({
-  Terminal: ({ sessionId }: { sessionId: string }) => (
-    <div data-testid="mock-terminal">Terminal session: {sessionId}</div>
-  )
+  Terminal: ({ sessionId, onInput }: { sessionId: string; onInput?: () => void }) => {
+    capturedOnInput = onInput
+    return <div data-testid="mock-terminal">Terminal session: {sessionId}</div>
+  }
 }))
 
 // Mock the IconPicker's LucideIconByName
@@ -71,7 +73,7 @@ function makeProjectState(tasks: Task[] = []): ProjectState {
 
 /** Flush microtask queue to let async effects complete */
 function flushPromises(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0))
+  return vi.advanceTimersByTimeAsync(0)
 }
 
 /** Render TerminalPanel and wait for the active session to be established */
@@ -90,7 +92,9 @@ async function renderActive(taskId = 'tsk_test01'): Promise<ReturnType<typeof re
 
 describe('TerminalPanel', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
+    capturedOnInput = undefined
     // Restore default mocks
     mockApi.getProjectRoot.mockResolvedValue('/test/project')
     mockApi.ptyCreate.mockResolvedValue('session-123')
@@ -109,6 +113,10 @@ describe('TerminalPanel', () => {
     useUIStore.setState({
       settingsOpen: false
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('shows archived message for archived tasks', async () => {
@@ -319,5 +327,83 @@ describe('TerminalPanel', () => {
 
     // Session should be destroyed when task becomes archived
     expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
+
+  it('does NOT reset agentStatus to idle on stop when agent is done', async () => {
+    const task = makeTask({ agentStatus: 'done' })
+    useTaskStore.setState({
+      projectState: makeProjectState([task])
+    })
+    mockApi.tmuxList.mockResolvedValue([])
+
+    await renderActive()
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Stop Agent'))
+      await flushPromises()
+    })
+
+    // Should NOT have called updateTask since agentStatus is 'done', not 'running'
+    expect(mockApi.updateTask).not.toHaveBeenCalled()
+  })
+
+  it('resets agentStatus to idle on stop when agent is running', async () => {
+    const task = makeTask({ agentStatus: 'running' })
+    useTaskStore.setState({
+      projectState: makeProjectState([task])
+    })
+    mockApi.tmuxList.mockResolvedValue([])
+
+    await renderActive()
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Stop Agent'))
+      await flushPromises()
+    })
+
+    // Should have called updateTask to set idle
+    expect(mockApi.updateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ agentStatus: 'idle' })
+    )
+  })
+
+  it('promotes agentStatus to running on user input when idle', async () => {
+    const task = makeTask({ agentStatus: 'idle' })
+    useTaskStore.setState({
+      projectState: makeProjectState([task])
+    })
+
+    await renderActive()
+
+    expect(capturedOnInput).toBeDefined()
+
+    await act(async () => {
+      capturedOnInput!()
+      // Advance past the 500ms debounce
+      await vi.advanceTimersByTimeAsync(500)
+    })
+
+    expect(mockApi.updateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ agentStatus: 'running' })
+    )
+  })
+
+  it('does NOT promote agentStatus when already running', async () => {
+    const task = makeTask({ agentStatus: 'running' })
+    useTaskStore.setState({
+      projectState: makeProjectState([task])
+    })
+
+    await renderActive()
+
+    expect(capturedOnInput).toBeDefined()
+
+    await act(async () => {
+      capturedOnInput!()
+      await vi.advanceTimersByTimeAsync(500)
+    })
+
+    // Should not call updateTask since already running
+    expect(mockApi.updateTask).not.toHaveBeenCalled()
   })
 })

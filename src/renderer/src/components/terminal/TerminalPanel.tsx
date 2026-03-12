@@ -114,8 +114,9 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
         setSessionId(null)
       }
 
-      // Update agent status to idle
-      if (task) {
+      // Update agent status to idle — but only if currently running.
+      // If the agent already set itself to 'done', respect that.
+      if (task && task.agentStatus === 'running') {
         await updateTask({ ...task, agentStatus: 'idle' })
       }
 
@@ -141,6 +142,27 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
       setIsRestarting(false)
     }
   }, [createSession, isRestarting])
+
+  // When the user types in the terminal, promote agent status to 'running'.
+  // Debounce so we don't fire an update on every keystroke.
+  const userInputTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleUserInput = useCallback(() => {
+    if (userInputTimerRef.current) return // already scheduled
+    userInputTimerRef.current = setTimeout(() => {
+      userInputTimerRef.current = null
+      const currentTask = useTaskStore.getState().getTaskById(taskId)
+      if (currentTask && currentTask.agentStatus !== 'running') {
+        updateTask({ ...currentTask, agentStatus: 'running' })
+      }
+    }, 500)
+  }, [taskId, updateTask])
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (userInputTimerRef.current) clearTimeout(userInputTimerRef.current)
+    }
+  }, [])
 
   // Show archived state — no terminal for archived tasks
   if (task?.status === 'archived') {
@@ -264,7 +286,7 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
         </Tooltip>
       </div>
       <div style={panelStyles.terminalArea}>
-        <Terminal sessionId={sessionId} visible={visible} />
+        <Terminal sessionId={sessionId} visible={visible} onInput={handleUserInput} />
       </div>
     </div>
   )

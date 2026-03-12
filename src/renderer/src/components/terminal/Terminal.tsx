@@ -9,9 +9,10 @@ interface TerminalProps {
   sessionId: string
   visible?: boolean
   onReady?: () => void
+  onInput?: () => void
 }
 
-export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.JSX.Element {
+export function Terminal({ sessionId, visible, onReady, onInput }: TerminalProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -118,6 +119,7 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     // Send terminal input to PTY
     term.onData((data: string) => {
       window.api.ptyWrite(sessionId, data)
+      onInput?.()
     })
 
     // Handle resize — notify PTY of new dimensions
