@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from './Terminal'
+import { SnippetSettingsModal } from './SnippetSettingsModal'
 import type { Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -15,6 +16,7 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const [isStopping, setIsStopping] = useState(false)
   const [isStopped, setIsStopped] = useState(false)
   const [isRestarting, setIsRestarting] = useState(false)
+  const [showSnippetSettings, setShowSnippetSettings] = useState(false)
   const sessionIdRef = useRef<string | null>(null)
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
@@ -202,6 +204,13 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
             {snippet.title}
           </button>
         ))}
+        <button
+          style={panelStyles.gearButton}
+          onClick={() => setShowSnippetSettings(true)}
+          title="Configure snippets"
+        >
+          &#9881;
+        </button>
         <div style={{ flex: 1 }} />
         <button
           style={{
@@ -219,6 +228,16 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
       <div style={panelStyles.terminalArea}>
         <Terminal sessionId={sessionId} />
       </div>
+      {showSnippetSettings && (
+        <SnippetSettingsModal
+          snippets={snippets}
+          onSave={(updated) => {
+            setSnippets(updated.length > 0 ? updated : DEFAULT_SNIPPETS)
+            setShowSnippetSettings(false)
+          }}
+          onClose={() => setShowSnippetSettings(false)}
+        />
+      )}
     </div>
   )
 }
@@ -259,6 +278,17 @@ const panelStyles: Record<string, React.CSSProperties> = {
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     transition: 'background-color 0.15s, color 0.15s'
+  },
+  gearButton: {
+    padding: '3px 6px',
+    fontSize: '13px',
+    borderRadius: '4px',
+    border: '1px solid transparent',
+    backgroundColor: 'transparent',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    opacity: 0.6,
+    transition: 'opacity 0.15s'
   },
   stopButton: {
     border: '1px solid rgba(231, 76, 60, 0.3)',
