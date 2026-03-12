@@ -41,7 +41,7 @@ export function useMarqueeSelection({
       if (e.button !== 0) return
       const target = e.target as HTMLElement
       // Don't start marquee if clicking on a task card or interactive element
-      if (target.closest('[data-task-id]') || target.closest('button') || target.closest('input')) {
+      if (target.closest('[data-task-id]') || target.closest('button') || target.closest('input') || target.closest('textarea')) {
         return
       }
 
