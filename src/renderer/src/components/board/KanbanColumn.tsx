@@ -142,6 +142,9 @@ export function KanbanColumn({
   useEffect(() => {
     if (!alwaysShowInput) return
     const handleFocus = (): void => {
+      // Clear card keyboard focus before focusing input so handleInputFocus
+      // doesn't immediately blur (it guards against accidental browser focus shifts)
+      useUIStore.getState().setFocusedColumn(-1)
       inputRef.current?.focus()
     }
     window.addEventListener('focus-new-task-input', handleFocus)
@@ -154,6 +157,9 @@ export function KanbanColumn({
     const handleFocusColumn = (e: Event): void => {
       const detail = (e as CustomEvent<{ status: string }>).detail
       if (detail.status === status) {
+        // Clear card keyboard focus before focusing input so handleInputFocus
+        // doesn't immediately blur (it guards against accidental browser focus shifts)
+        useUIStore.getState().setFocusedColumn(-1)
         inputRef.current?.focus()
       }
     }

@@ -290,4 +290,47 @@ describe('KanbanColumn — input focus guard', () => {
     expect(useUIStore.getState().focusedColumnIndex).toBe(1)
     expect(useUIStore.getState().focusedTaskIndex).toBe(2)
   })
+
+  it('clears card focus and focuses input on focus-new-task-input event (Cmd+N)', () => {
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 2 })
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+
+    // Simulate Cmd+N dispatching focus-new-task-input
+    window.dispatchEvent(new Event('focus-new-task-input'))
+
+    // Card focus should be cleared so input can receive focus
+    expect(useUIStore.getState().focusedColumnIndex).toBe(-1)
+    expect(document.activeElement).toBe(textarea)
+  })
+
+  it('clears card focus and focuses input on focus-column-input event (ArrowUp from first card)', () => {
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 0 })
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+
+    // Simulate ArrowUp from first card dispatching focus-column-input
+    window.dispatchEvent(
+      new CustomEvent('focus-column-input', { detail: { status: 'todo' } })
+    )
+
+    // Card focus should be cleared so input can receive focus
+    expect(useUIStore.getState().focusedColumnIndex).toBe(-1)
+    expect(document.activeElement).toBe(textarea)
+  })
+
+  it('ignores focus-column-input event for a different column status', () => {
+    useUIStore.setState({ focusedColumnIndex: 1, focusedTaskIndex: 0 })
+    render(<KanbanColumn {...defaultProps} />)
+
+    // Dispatch event for a different column
+    window.dispatchEvent(
+      new CustomEvent('focus-column-input', { detail: { status: 'in-progress' } })
+    )
+
+    // State should not change since this column is 'todo'
+    expect(useUIStore.getState().focusedColumnIndex).toBe(1)
+  })
 })
