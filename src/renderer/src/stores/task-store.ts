@@ -151,6 +151,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
 
+    // Warm up tmux session for non-archived tasks (fire-and-forget)
+    if (task.status !== 'archived') {
+      window.api.warmupTmuxSession(task.id).catch(() => {
+        // Warmup failure is non-critical — terminal will create session on open
+      })
+    }
+
     return task
   },
 

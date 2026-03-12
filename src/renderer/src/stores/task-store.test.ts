@@ -10,7 +10,10 @@ const mockApi = {
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
-  writeProjectState: vi.fn()
+  writeProjectState: vi.fn(),
+  warmupTmuxSession: vi.fn(),
+  tmuxList: vi.fn().mockResolvedValue([]),
+  tmuxKill: vi.fn()
 }
 
 Object.defineProperty(globalThis, 'window', {
@@ -46,6 +49,9 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 describe('useTaskStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Provide default resolutions for mocks used across tests
+    mockApi.tmuxList.mockResolvedValue([])
+    mockApi.warmupTmuxSession.mockResolvedValue(undefined)
     // Reset store state
     useTaskStore.setState({
       projectState: null,
@@ -116,6 +122,28 @@ describe('useTaskStore', () => {
 
       const task = await useTaskStore.getState().addTask('Another task')
       expect(task.sortOrder).toBe(6)
+    })
+
+    it('calls warmupTmuxSession after creating a non-archived task', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.warmupTmuxSession.mockResolvedValue(undefined)
+
+      const task = await useTaskStore.getState().addTask('Test warmup')
+      expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith(task.id)
+    })
+
+    it('does not call warmupTmuxSession when creating an archived task', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.warmupTmuxSession.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().addTask('Archived task', { status: 'archived' })
+      expect(mockApi.warmupTmuxSession).not.toHaveBeenCalled()
     })
   })
 
