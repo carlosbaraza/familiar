@@ -10,12 +10,20 @@ import type { DropIndicator } from './KanbanBoard'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
 
+/** A pasted image stored in temp, pending task creation */
+export interface PendingImage {
+  tempPath: string
+  fileName: string
+  mimeType: string
+  dataUrl: string // for preview
+}
+
 interface KanbanColumnProps {
   status: TaskStatus
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   onMultiSelect: (taskId: string, append: boolean) => void
-  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[]) => void
+  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[]) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
@@ -66,6 +74,7 @@ export function KanbanColumn({
     // All snippets enabled by default
     return new Set(allSnippets.map((_, i) => i))
   })
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const contextMenu = useContextMenu()
 
@@ -159,21 +168,59 @@ export function KanbanColumn({
     resizeCreateTextarea()
   }, [newTaskTitle, resizeCreateTextarea])
 
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = e.clipboardData.items
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          e.preventDefault()
+          const blob = item.getAsFile()
+          if (!blob) continue
+          const arrayBuffer = await blob.arrayBuffer()
+          const mimeType = item.type
+          const tempPath = await window.api.clipboardSaveImage(arrayBuffer, mimeType)
+          const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
+          const fileName = `paste-${Date.now()}.${ext}`
+
+          // Create data URL for preview
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          )
+          const dataUrl = `data:${mimeType};base64,${base64}`
+
+          setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, dataUrl }])
+          break // Handle one image at a time
+        }
+      }
+    },
+    []
+  )
+
+  const removePendingImage = useCallback((index: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== index))
+  }, [])
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey && newTaskTitle.trim()) {
+      if (e.key === 'Enter' && !e.shiftKey && (newTaskTitle.trim() || pendingImages.length > 0)) {
         e.preventDefault()
         const lines = newTaskTitle.trim().split('\n')
-        const title = lines[0].trim()
+        const title = lines[0].trim() || 'Untitled'
         const document = lines.slice(1).join('\n').trim() || undefined
-        if (title) {
-          const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
-          onCreateTask(title, document, enabled.length > 0 ? enabled : undefined)
-          updateDraft('')
-        }
+        const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
+        onCreateTask(
+          title,
+          document,
+          enabled.length > 0 ? enabled : undefined,
+          pendingImages.length > 0 ? pendingImages : undefined
+        )
+        updateDraft('')
+        setPendingImages([])
       }
       if (e.key === 'Escape') {
         updateDraft('')
+        setPendingImages([])
         if (!alwaysShowInput) {
           setIsCreating(false)
         }
@@ -193,7 +240,7 @@ export function KanbanColumn({
         }
       }
     },
-    [newTaskTitle, onCreateTask, alwaysShowInput, onInputExit, updateDraft]
+    [newTaskTitle, pendingImages, onCreateTask, alwaysShowInput, onInputExit, updateDraft, allSnippets, enabledSnippetIndices]
   )
 
   const handleBlur = useCallback(() => {
@@ -305,13 +352,31 @@ export function KanbanColumn({
           <textarea
             ref={inputRef}
             className={styles.createInput}
-            placeholder="Task title... (Shift+Enter for notes, Enter to create)"
+            placeholder="Task title... (Shift+Enter for notes, Enter to create, paste images)"
             value={newTaskTitle}
             onChange={(e) => updateDraft(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             onBlur={handleBlur}
             rows={1}
           />
+          {pendingImages.length > 0 && (
+            <div className={styles.pendingImages}>
+              {pendingImages.map((img, i) => (
+                <div key={i} className={styles.pendingImageThumb}>
+                  <img src={img.dataUrl} alt={img.fileName} />
+                  <button
+                    className={styles.pendingImageRemove}
+                    onClick={() => removePendingImage(i)}
+                    type="button"
+                    aria-label="Remove image"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {allSnippets.length > 0 && (
             <div className={styles.snippetToggles}>
               <span className={styles.snippetTogglesLabel}>Auto-run on create:</span>

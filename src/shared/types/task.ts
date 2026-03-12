@@ -14,4 +14,5 @@ export interface Task {
   createdAt: string // ISO 8601
   updatedAt: string
   sortOrder: number // within column
+  attachments?: string[] // filenames in task attachments folder
 }

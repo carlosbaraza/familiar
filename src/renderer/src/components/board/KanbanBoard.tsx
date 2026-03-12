@@ -27,6 +27,7 @@ import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
 import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
+import type { PendingImage } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import { CliSetupBanner } from './CliSetupBanner'
 import styles from './KanbanBoard.module.css'
@@ -201,10 +202,26 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   const handleCreateTask = useCallback(
-    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[]) => {
+    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[]) => {
       const task = await addTask(title, { status })
       if (document) {
         await window.api.writeTaskDocument(task.id, document)
+      }
+      // Copy pending images from temp to task attachments
+      if (pendingImages && pendingImages.length > 0) {
+        const attachmentPaths: string[] = []
+        for (const img of pendingImages) {
+          try {
+            const absPath = await window.api.copyTempToAttachment(task.id, img.tempPath, img.fileName)
+            attachmentPaths.push(absPath)
+          } catch {
+            console.warn('Failed to copy image to task attachments:', img.fileName)
+          }
+        }
+        if (attachmentPaths.length > 0) {
+          const { updateTask } = useTaskStore.getState()
+          await updateTask({ ...task, attachments: attachmentPaths })
+        }
       }
       // Auto-run enabled snippets 5 seconds after creation
       if (enabledSnippets && enabledSnippets.length > 0) {
@@ -444,7 +461,7 @@ export function KanbanBoard(): React.JSX.Element {
               allSnippets={snippets}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
-              onCreateTask={(title, document, enabledSnippets) => handleCreateTask(status, title, document, enabledSnippets)}
+              onCreateTask={(title, document, enabledSnippets, pendingImages) => handleCreateTask(status, title, document, enabledSnippets, pendingImages)}
               selectedTaskId={activeTaskId}
               multiSelectedIds={selectedTaskIds}
               draggedTaskId={activeTask?.id ?? null}

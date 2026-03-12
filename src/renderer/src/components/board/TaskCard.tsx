@@ -25,8 +25,11 @@ const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
   error: '#e74c3c'
 }
 
-/** Green "done" dot only shows when task is in the done column; otherwise gray */
+/** Only show running/done colors when the task status matches; otherwise gray */
 function getAgentDotColor(agentStatus: AgentStatus, taskStatus: TaskStatus): string {
+  if (agentStatus === 'running' && taskStatus !== 'in-progress') {
+    return AGENT_STATUS_COLORS.idle
+  }
   if (agentStatus === 'done' && taskStatus !== 'done') {
     return AGENT_STATUS_COLORS.idle
   }
@@ -389,12 +392,30 @@ export function TaskCard({
             <span className={styles.title} onClick={handleTitleClick}>{task.title}</span>
           )}
           <span
-            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            className={`${styles.agentDot}${task.agentStatus === 'running' && task.status === 'in-progress' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
+
+        {/* Image attachments */}
+        {task.attachments && task.attachments.length > 0 && (
+          <div className={styles.attachmentThumbs}>
+            {task.attachments.slice(0, 4).map((absPath, i) => (
+              <img
+                key={i}
+                className={styles.attachmentThumb}
+                src={`familiar-attachment://file${absPath}`}
+                alt="attachment"
+                draggable={false}
+              />
+            ))}
+            {task.attachments.length > 4 && (
+              <span className={styles.attachmentMore}>+{task.attachments.length - 4}</span>
+            )}
+          </div>
+        )}
 
         {/* Description preview — click opens task detail */}
         {documentContent !== null && documentContent.length > 0 && (
@@ -488,7 +509,7 @@ export function TaskCardOverlay({
           <PriorityIcon priority={task.priority} size={14} />
           <span className={styles.title}>{task.title}</span>
           <span
-            className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
+            className={`${styles.agentDot}${task.agentStatus === 'running' && task.status === 'in-progress' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
           />
         </div>

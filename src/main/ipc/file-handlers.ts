@@ -68,6 +68,14 @@ export function registerFileHandlers(
     withSelfTriggered(getFileWatcher, () => dataService.saveAttachment(taskId, fileName, data))
   )
 
+  ipcMain.handle(
+    'task:copy-temp-to-attachment',
+    async (_, taskId: string, tempPath: string, fileName: string): Promise<string> =>
+      withSelfTriggered(getFileWatcher, () =>
+        dataService.copyTempToAttachment(taskId, tempPath, fileName)
+      )
+  )
+
   ipcMain.handle('settings:read', async () => dataService.readSettings())
   ipcMain.handle('settings:write', async (_, settings) =>
     withSelfTriggered(getFileWatcher, () => dataService.writeSettings(settings))

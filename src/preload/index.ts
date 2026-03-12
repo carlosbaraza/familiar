@@ -34,6 +34,8 @@ const api = {
   // Attachments
   saveAttachment: (taskId: string, fileName: string, data: ArrayBuffer): Promise<string> =>
     ipcRenderer.invoke('task:save-attachment', taskId, fileName, data),
+  copyTempToAttachment: (taskId: string, tempPath: string, fileName: string): Promise<string> =>
+    ipcRenderer.invoke('task:copy-temp-to-attachment', taskId, tempPath, fileName),
 
   // Clipboard
   clipboardSaveImage: (arrayBuffer: ArrayBuffer, mimeType: string): Promise<string> =>

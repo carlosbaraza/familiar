@@ -35,6 +35,7 @@ declare global {
 
       // Attachments
       saveAttachment(taskId: string, fileName: string, data: ArrayBuffer): Promise<string>
+      copyTempToAttachment(taskId: string, tempPath: string, fileName: string): Promise<string>
 
       // Clipboard
       clipboardSaveImage(arrayBuffer: ArrayBuffer, mimeType: string): Promise<string>

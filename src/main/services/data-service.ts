@@ -177,6 +177,19 @@ export class DataService {
     return filePath
   }
 
+  async copyTempToAttachment(
+    taskId: string,
+    tempPath: string,
+    fileName: string
+  ): Promise<string> {
+    const attachDir = this.getDataPath(TASKS_DIR, taskId, ATTACHMENTS_DIR)
+    await this.fs.mkdir(attachDir, true)
+    const destPath = path.join(attachDir, fileName)
+    const { copyFile } = await import('fs/promises')
+    await copyFile(tempPath, destPath)
+    return destPath
+  }
+
   // ─── Init ─────────────────────────────────────────────────────────
 
   async initProject(projectName: string): Promise<ProjectState> {

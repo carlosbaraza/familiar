@@ -81,6 +81,28 @@
   box-shadow: 0 0 0 1px #f2994a, var(--shadow-md);
 }
 
+/* Focus colour wins over notification orange */
+.cardFocused.cardNotified {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardFocused.cardNotified:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+}
+
+/* Selected colour also wins over notification orange */
+.cardSelected.cardNotified {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.cardSelected.cardNotified:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
 .notificationDot {
   flex-shrink: 0;
   width: 7px;
@@ -200,6 +222,38 @@
   resize: none;
   overflow: hidden;
   word-break: break-word;
+}
+
+/* ---- Attachment thumbnails ---- */
+
+.attachmentThumbs {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.attachmentThumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.attachmentMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--bg-elevated);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
 }
 
 /* ---- Description preview + expanded editor ---- */

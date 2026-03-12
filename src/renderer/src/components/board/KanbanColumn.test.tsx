@@ -14,7 +14,8 @@ vi.mock('@dnd-kit/sortable', () => ({
 
 // Mock window.api
 ;(window as any).api = {
-  readTaskDocument: vi.fn().mockResolvedValue('')
+  readTaskDocument: vi.fn().mockResolvedValue(''),
+  clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/clipboard-123.png')
 }
 
 const defaultProps = {
@@ -99,7 +100,8 @@ describe('KanbanColumn — snippet toggles', () => {
     expect(onCreateTask).toHaveBeenCalledWith(
       'New task',
       undefined,
-      [testSnippets[0]] // Only the first snippet (Start) should be enabled
+      [testSnippets[0]], // Only the first snippet (Start) should be enabled
+      undefined
     )
   })
 
@@ -123,7 +125,7 @@ describe('KanbanColumn — snippet toggles', () => {
     fireEvent.change(textarea, { target: { value: 'New task' } })
     fireEvent.keyDown(textarea, { key: 'Enter' })
 
-    expect(onCreateTask).toHaveBeenCalledWith('New task', undefined, undefined)
+    expect(onCreateTask).toHaveBeenCalledWith('New task', undefined, undefined, undefined)
   })
 })
 
@@ -192,5 +194,67 @@ describe('KanbanColumn — draft persistence', () => {
 
     fireEvent.change(textarea, { target: { value: '' } })
     expect(localStorage.getItem('familiar-draft-todo')).toBeNull()
+  })
+})
+
+describe('KanbanColumn — image paste', () => {
+  it('shows pending image thumbnail after pasting an image', async () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+
+    // Create a mock image paste event
+    const file = new File(['fake-image-data'], 'test.png', { type: 'image/png' })
+    const arrayBuffer = await file.arrayBuffer()
+
+    // Mock the clipboard items
+    const items = [
+      {
+        kind: 'file',
+        type: 'image/png',
+        getAsFile: () => file
+      }
+    ]
+
+    const pasteEvent = new Event('paste', { bubbles: true }) as any
+    pasteEvent.clipboardData = {
+      items,
+      getData: () => ''
+    }
+
+    fireEvent(textarea, pasteEvent)
+
+    // Wait for async paste handler
+    await vi.waitFor(() => {
+      expect((window as any).api.clipboardSaveImage).toHaveBeenCalled()
+    })
+  })
+
+  it('shows remove button on pending image thumbnail', async () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    const file = new File(['fake-image-data'], 'test.png', { type: 'image/png' })
+
+    const items = [
+      {
+        kind: 'file',
+        type: 'image/png',
+        getAsFile: () => file
+      }
+    ]
+
+    const pasteEvent = new Event('paste', { bubbles: true }) as any
+    pasteEvent.clipboardData = {
+      items,
+      getData: () => ''
+    }
+
+    fireEvent(textarea, pasteEvent)
+
+    await vi.waitFor(() => {
+      const removeBtn = screen.queryByLabelText('Remove image')
+      expect(removeBtn).toBeInTheDocument()
+    })
   })
 })
