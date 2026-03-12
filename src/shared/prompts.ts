@@ -119,7 +119,42 @@ which familiar && echo "OK: CLI found" || echo "FAIL: familiar not in PATH"
 familiar --version 2>/dev/null && echo "OK: CLI runs" || echo "FAIL: CLI cannot execute"
 \`\`\`
 
+If the CLI is **not found**, it needs to be installed. The CLI binary is bundled inside the Familiar.app package. There are two ways to set it up:
+
+**Option A — Use the Install CLI button** in the Familiar app (board header banner or onboarding). This automatically:
+1. Creates a symlink at \`~/.familiar/bin/familiar\` pointing to the binary inside the app
+2. Adds \`export PATH="$HOME/.familiar/bin:$PATH"\` to your shell rc file
+
+**Option B — Manual setup** (if the button didn't work or you prefer manual control):
+
+\`\`\`bash
+# 1. Create the bin directory
+mkdir -p ~/.familiar/bin
+
+# 2. Find the CLI binary inside the app bundle and create a symlink
+# For the installed app:
+ln -sf "/Applications/Familiar.app/Contents/Resources/bin/index.mjs" ~/.familiar/bin/familiar
+# For development builds:
+# ln -sf "<project-root>/dist/cli/index.mjs" ~/.familiar/bin/familiar
+
+# 3. Add to PATH — add this line to your ~/.zshrc (or ~/.bashrc for bash):
+echo '\\n# Added by Familiar — CLI path\\nexport PATH="$HOME/.familiar/bin:$PATH"' >> ~/.zshrc
+
+# 4. Reload your shell
+source ~/.zshrc   # or: source ~/.bashrc
+\`\`\`
+
+After installing, verify with \`which familiar && familiar --version\`.
+
 ### 3. Project setup
+
+If the project is not initialized yet, run:
+\`\`\`bash
+familiar init
+\`\`\`
+
+This creates the \`.familiar/\` directory with default state, settings, and AGENTS.md.
+
 \`\`\`bash
 # Is .familiar/ initialized in the current project?
 test -d .familiar && echo "OK: .familiar/ exists" || echo "WARN: .familiar/ not found — run 'familiar init'"
