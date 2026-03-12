@@ -29,6 +29,7 @@ export function Navbar(): React.JSX.Element {
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
   const settingsOpen = useUIStore((s) => s.settingsOpen)
   const openSettings = useUIStore((s) => s.openSettings)
+  const closeSettings = useUIStore((s) => s.closeSettings)
 
   const notifications = useNotificationStore((s) => s.notifications)
   const markRead = useNotificationStore((s) => s.markRead)
@@ -134,7 +135,7 @@ export function Navbar(): React.JSX.Element {
         {/* Settings gear */}
         <button
           className={`${styles.navButton} ${settingsOpen ? styles.navButtonActive : ''}`}
-          onClick={openSettings}
+          onClick={settingsOpen ? closeSettings : openSettings}
           title="Settings (⌘,)"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

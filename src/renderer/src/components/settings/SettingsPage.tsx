@@ -120,7 +120,7 @@ export function SettingsPage(): React.JSX.Element {
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
   container: {
     position: 'fixed',
     inset: 0,
@@ -129,7 +129,8 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 300,
     display: 'flex',
     justifyContent: 'center',
-    overflowY: 'auto'
+    overflowY: 'auto',
+    WebkitAppRegion: 'no-drag'
   },
   content: {
     width: '100%',
