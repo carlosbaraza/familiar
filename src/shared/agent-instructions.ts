@@ -117,6 +117,27 @@ Use \`kanban-agent update <id> --agent-status <status>\` to show your runtime st
 - **Do** use \`kanban-agent log\` only for progress notes describing what you did or what happened.
 - **Always** set both task status and agent-status together (e.g., \`in-progress\` + \`running\`, \`in-review\` + \`done\`).
 
+## Task Classification
+
+When you start working on a task, **classify it** by adding the appropriate label based on the task title and description. Use one of these standard labels:
+
+| Label | When to use |
+|-------|-------------|
+| \`bug\` | Fixing broken behavior, errors, crashes, or regressions |
+| \`feature\` | Adding new functionality that didn't exist before |
+| \`improvement\` | Enhancing existing functionality, UX, performance, or DX |
+| \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
+
+\`\`\`bash
+# Example: classify your task as a bug fix
+kanban-agent update $KANBAN_TASK_ID --labels "bug"
+
+# You can combine with other labels
+kanban-agent update $KANBAN_TASK_ID --labels "bug,backend"
+\`\`\`
+
+Do this **right after** setting your status to \`in-progress\`, before you start the actual work.
+
 ## Best Practices
 
 1. **Set your status to \`in-progress\`** and agent-status to \`running\` as the **first thing** when you start working
@@ -133,8 +154,9 @@ kanban-agent status $KANBAN_TASK_ID in-progress
 kanban-agent update $KANBAN_TASK_ID --agent-status running
 kanban-agent log $KANBAN_TASK_ID "Starting work"
 
-# 2. Read the task document for context
+# 2. Read the task document and classify it
 cat .kanban-agent/tasks/$KANBAN_TASK_ID/document.md
+kanban-agent update $KANBAN_TASK_ID --labels "feature"  # or bug, improvement, chore
 
 # 3. Do your work, logging progress (NOT status changes)
 kanban-agent log $KANBAN_TASK_ID "Implemented the auth module"

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
-import { DATA_DIR, STATE_FILE, TASKS_DIR } from '../../shared/constants'
+import { DATA_DIR, STATE_FILE, TASKS_DIR, DEFAULT_LABELS } from '../../shared/constants'
 import type { ProjectState, Task } from '../../shared/types'
 
 // We test CLI commands by invoking their action handlers indirectly.
@@ -50,7 +50,7 @@ describe('CLI commands (via file-ops)', () => {
       projectName: path.basename(tmpDir),
       tasks: [],
       columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
-      labels: []
+      labels: [...DEFAULT_LABELS]
     }
 
     await fs.writeFile(statePath, JSON.stringify(state, null, 2) + '\n', 'utf-8')

@@ -3,7 +3,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import chalk from 'chalk'
 import { DATA_DIR, STATE_FILE, TASKS_DIR, SETTINGS_FILE } from '../../shared/constants'
-import { DEFAULT_COLUMNS } from '../../shared/constants'
+import { DEFAULT_COLUMNS, DEFAULT_LABELS } from '../../shared/constants'
 import type { ProjectState } from '../../shared/types'
 import { DEFAULT_SETTINGS } from '../../shared/types/settings'
 import { AGENTS_MD } from '../../shared/agent-instructions'
@@ -36,7 +36,7 @@ export function initCommand(): Command {
         projectName: path.basename(cwd),
         tasks: [],
         columnOrder: [...DEFAULT_COLUMNS],
-        labels: []
+        labels: [...DEFAULT_LABELS]
       }
 
       await fs.writeFile(statePath, JSON.stringify(defaultState, null, 2) + '\n', 'utf-8')

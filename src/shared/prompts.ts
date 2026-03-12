@@ -175,13 +175,28 @@ kanban-agent update $KANBAN_TASK_ID --agent-status running
 kanban-agent log $KANBAN_TASK_ID "Starting work"
 \`\`\`
 
-### 3. Log progress
+### 3. Classify your task
+
+After reading the task, add the appropriate label based on the title and description:
+
+| Label | When to use |
+|-------|-------------|
+| \`bug\` | Fixing broken behavior, errors, crashes, or regressions |
+| \`feature\` | Adding new functionality that didn't exist before |
+| \`improvement\` | Enhancing existing functionality, UX, performance, or DX |
+| \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
+
+\`\`\`bash
+kanban-agent update $KANBAN_TASK_ID --labels "feature"  # or bug, improvement, chore
+\`\`\`
+
+### 4. Log progress
 
 \`\`\`bash
 kanban-agent log $KANBAN_TASK_ID "Implemented feature X — moving to tests"
 \`\`\`
 
-### 4. Commit your work
+### 5. Commit your work
 
 \`\`\`bash
 git add <changed-files>
@@ -190,7 +205,7 @@ git commit -m "feat: short description"
 
 Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`, \`test:\`, \`chore:\`. Do NOT push unless explicitly asked.
 
-### 5. Signal completion
+### 6. Signal completion
 
 \`\`\`bash
 # On success

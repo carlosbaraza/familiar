@@ -39,6 +39,9 @@ export const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {
   error: 'Error'
 }
 
+// Default labels seeded on project init
+export const DEFAULT_LABELS = ['bug', 'feature', 'improvement', 'chore']
+
 // File system paths
 export const DATA_DIR = '.kanban-agent'
 export const STATE_FILE = 'state.json'
