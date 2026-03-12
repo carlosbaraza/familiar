@@ -51,7 +51,8 @@ export function useKeyboardNavigation({
       const currentTasks = currentColumn ? (tasksByStatus[currentColumn] ?? []) : []
 
       switch (e.key) {
-        case 'j': {
+        case 'j':
+        case 'ArrowDown': {
           // Move down within column
           e.preventDefault()
           if (currentTasks.length > 0) {
@@ -61,7 +62,8 @@ export function useKeyboardNavigation({
           break
         }
 
-        case 'k': {
+        case 'k':
+        case 'ArrowUp': {
           // Move up within column
           e.preventDefault()
           if (currentTasks.length > 0) {
@@ -71,7 +73,8 @@ export function useKeyboardNavigation({
           break
         }
 
-        case 'h': {
+        case 'h':
+        case 'ArrowLeft': {
           // Move to previous column
           e.preventDefault()
           if (focusedColumnIndex > 0) {
@@ -80,7 +83,8 @@ export function useKeyboardNavigation({
           break
         }
 
-        case 'l': {
+        case 'l':
+        case 'ArrowRight': {
           // Move to next column
           e.preventDefault()
           if (focusedColumnIndex < columnOrder.length - 1) {

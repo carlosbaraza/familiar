@@ -199,6 +199,46 @@ describe('useKeyboardNavigation', () => {
     })
   })
 
+  // Arrow key navigation (mirrors vim keys)
+  it('ArrowDown moves focusedTaskIndex down', () => {
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowDown'))
+    expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+  })
+
+  it('ArrowUp moves focusedTaskIndex up', () => {
+    useUIStore.setState({ focusedTaskIndex: 1 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowUp'))
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+  })
+
+  it('ArrowRight moves to next column', () => {
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowRight'))
+    expect(useUIStore.getState().focusedColumnIndex).toBe(1)
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+  })
+
+  it('ArrowLeft moves to previous column', () => {
+    useUIStore.setState({ focusedColumnIndex: 2 })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('ArrowLeft'))
+    expect(useUIStore.getState().focusedColumnIndex).toBe(1)
+  })
+
   it('does not intercept keys when target is an input', () => {
     renderHook(() =>
       useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
