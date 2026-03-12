@@ -30,15 +30,30 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     error?: string
   } | null>(null)
 
-  // Check CLI availability when entering the install-cli step
+  // Claude Code binary state
+  const [claudeStatus, setClaudeStatus] = useState<{
+    available: boolean
+    path: string | null
+    version: string | null
+  } | null>(null)
+
+  // Check CLI and Claude availability when entering the install-cli step
   useEffect(() => {
-    if (step === 'install-cli' && cliAvailable === null) {
-      window.api
-        .cliCheckAvailable()
-        .then((available) => setCliAvailable(available))
-        .catch(() => setCliAvailable(false))
+    if (step === 'install-cli') {
+      if (cliAvailable === null) {
+        window.api
+          .cliCheckAvailable()
+          .then((available) => setCliAvailable(available))
+          .catch(() => setCliAvailable(false))
+      }
+      if (claudeStatus === null && selectedAgent === 'claude-code') {
+        window.api
+          .claudeCheckAvailable()
+          .then((result) => setClaudeStatus(result))
+          .catch(() => setClaudeStatus({ available: false, path: null, version: null }))
+      }
     }
-  }, [step, cliAvailable])
+  }, [step, cliAvailable, claudeStatus, selectedAgent])
 
   const handleOpenFolder = useCallback(async () => {
     const success = await openWorkspace()
@@ -315,14 +330,61 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
             </div>
           )}
 
+          {/* Claude Code binary check */}
+          {selectedAgent === 'claude-code' && (
+            <>
+              <div style={styles.sectionDivider} />
+              <p style={styles.sectionLabel}>Claude Code</p>
+
+              {claudeStatus === null && (
+                <div style={styles.cliStatus}>
+                  <span style={styles.cliStatusText}>Checking for Claude Code binary...</span>
+                </div>
+              )}
+
+              {claudeStatus?.available && (
+                <div style={styles.cliStatusSuccess}>
+                  <CheckIcon />
+                  <div>
+                    <span style={styles.cliStatusText}>
+                      Claude Code found
+                      {claudeStatus.version ? ` (${claudeStatus.version})` : ''}
+                    </span>
+                    {claudeStatus.path && (
+                      <span style={styles.cliHint}>
+                        <code style={styles.inlineCode}>{claudeStatus.path}</code>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {claudeStatus && !claudeStatus.available && (
+                <>
+                  <div style={styles.cliStatusError}>
+                    <span style={styles.cliStatusText}>
+                      Claude Code not found
+                    </span>
+                  </div>
+                  <div style={styles.cliManualSection}>
+                    <p style={styles.manualText}>
+                      Install Claude Code to use it with Familiar:
+                    </p>
+                    <pre style={styles.manualCode}>{CLAUDE_INSTALL_INSTRUCTIONS}</pre>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           <div style={styles.cliManualSection}>
             <details style={styles.details}>
-              <summary style={styles.detailsSummary}>Manual installation instructions</summary>
+              <summary style={styles.detailsSummary}>Manual CLI installation instructions</summary>
               <div style={styles.detailsContent}>
                 <p style={styles.manualText}>
-                  The CLI binary is bundled inside Familiar.app. The Install button creates a symlink
-                  at <code style={styles.inlineCode}>~/.familiar/bin/familiar</code> and adds it to
-                  your shell PATH.
+                  The Familiar CLI binary is bundled inside Familiar.app. The Install button creates
+                  a symlink at <code style={styles.inlineCode}>~/.familiar/bin/familiar</code> and
+                  adds it to your shell PATH.
                 </p>
                 <p style={styles.manualText}>To set it up manually:</p>
                 <pre style={styles.manualCode}>{MANUAL_CLI_INSTALL}</pre>
@@ -520,6 +582,15 @@ function StepLine({ completed }: { completed?: boolean }): React.JSX.Element {
 
 // ── Constants ──
 
+const CLAUDE_INSTALL_INSTRUCTIONS = `# Option 1: Official installer (recommended)
+curl -fsSL https://claude.ai/install.sh | sh
+
+# Option 2: npm global install
+npm install -g @anthropic-ai/claude-code
+
+# After installing, verify:
+which claude && claude --version`
+
 const MANUAL_CLI_INSTALL = `# 1. Create the bin directory
 mkdir -p ~/.familiar/bin
 
@@ -677,6 +748,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     color: 'var(--text-tertiary)',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  sectionDivider: {
+    width: '100%',
+    height: '1px',
+    backgroundColor: 'var(--border)',
+    margin: '4px 0'
+  },
+  sectionLabel: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    margin: 0,
+    alignSelf: 'flex-start' as const
   },
   inlineCode: {
     fontFamily: "'SF Mono', 'Fira Code', monospace",

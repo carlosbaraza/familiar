@@ -136,6 +136,8 @@ const api = {
   cliCheckAvailable: (): Promise<boolean> => ipcRenderer.invoke('cli:check-available'),
   cliInstallToPath: (): Promise<{ success: boolean; shell: string; error?: string }> =>
     ipcRenderer.invoke('cli:install-to-path'),
+  claudeCheckAvailable: (): Promise<{ available: boolean; path: string | null; version: string | null }> =>
+    ipcRenderer.invoke('claude:check-available'),
 
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),

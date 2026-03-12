@@ -171,7 +171,57 @@ test -f .familiar/state.json && echo "OK: state.json exists" || echo "WARN: stat
 [ -n "$FAMILIAR_SETTINGS_PATH" ] && echo "OK: FAMILIAR_SETTINGS_PATH=$FAMILIAR_SETTINGS_PATH" || echo "INFO: FAMILIAR_SETTINGS_PATH not set"
 \`\`\`
 
-### 5. AI agent hooks
+### 5. Claude Code binary
+
+Claude Code can be installed in several locations. Check all known paths and verify it can execute:
+
+\`\`\`bash
+# Check if 'claude' is in PATH
+which claude 2>/dev/null && echo "OK: claude found at $(which claude)" || echo "WARN: claude not in PATH"
+
+# Check common installation locations
+for p in \\
+  "$HOME/.local/bin/claude" \\
+  "$HOME/.claude/local/claude" \\
+  "/usr/local/bin/claude" \\
+  "$HOME/.npm-global/bin/claude" \\
+  "$HOME/.nvm/versions/node/*/bin/claude" \\
+  "$HOME/.local/share/fnm/node-versions/*/installation/bin/claude" \\
+  "$HOME/.volta/bin/claude"; do
+  # Expand globs
+  for expanded in $p; do
+    test -f "$expanded" && echo "FOUND: $expanded" || true
+  done
+done
+
+# Try to run it
+claude --version 2>/dev/null && echo "OK: claude runs — $(claude --version 2>/dev/null)" || echo "FAIL: claude cannot execute"
+\`\`\`
+
+If \`claude\` is not found:
+
+1. **Install via the official installer** (recommended):
+   \`\`\`bash
+   # This installs to ~/.local/bin/claude
+   curl -fsSL https://claude.ai/install.sh | sh
+   \`\`\`
+
+2. **Install via npm** (alternative):
+   \`\`\`bash
+   npm install -g @anthropic-ai/claude-code
+   \`\`\`
+
+3. **If installed but not in PATH**, add the directory to your shell:
+   \`\`\`bash
+   # For the official installer (zsh):
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+   # For bash:
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+   \`\`\`
+
+After installing, verify with \`which claude && claude --version\`.
+
+### 6. AI agent hooks
 
 Ask the user which AI agent they are using (e.g. Claude Code, Gemini CLI, Codex, Aider, etc.), then check if the appropriate hooks are configured. Hooks handle two lifecycle events:
 

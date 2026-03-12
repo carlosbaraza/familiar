@@ -19,7 +19,8 @@ const mockApi = {
   tmuxSendKeys: vi.fn().mockResolvedValue(undefined),
   tmuxList: vi.fn().mockResolvedValue([]),
   cliCheckAvailable: vi.fn().mockResolvedValue(true),
-  cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' })
+  cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' }),
+  claudeCheckAvailable: vi.fn().mockResolvedValue({ available: true, path: '/usr/local/bin/claude', version: '1.0.0' })
 }
 
 ;(window as any).api = mockApi
@@ -108,7 +109,7 @@ describe('Onboarding', () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
-      expect(screen.getByText('Manual installation instructions')).toBeInTheDocument()
+      expect(screen.getByText('Manual CLI installation instructions')).toBeInTheDocument()
     })
   })
 
@@ -203,6 +204,46 @@ describe('Onboarding', () => {
     await waitFor(() => {
       expect(screen.getByText('Install CLI')).toBeInTheDocument()
     })
+  })
+
+  it('shows Claude Code found when available', async () => {
+    mockApi.claudeCheckAvailable.mockResolvedValue({
+      available: true,
+      path: '/Users/test/.local/bin/claude',
+      version: '2.1.0'
+    })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText(/Claude Code found/)).toBeInTheDocument()
+      expect(screen.getByText(/2\.1\.0/)).toBeInTheDocument()
+    })
+  })
+
+  it('shows Claude Code not found with install instructions', async () => {
+    mockApi.claudeCheckAvailable.mockResolvedValue({
+      available: false,
+      path: null,
+      version: null
+    })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Claude Code not found')).toBeInTheDocument()
+      expect(screen.getByText(/Install Claude Code/)).toBeInTheDocument()
+    })
+  })
+
+  it('does not show Claude check when Other agent is selected', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Other'))
+    await waitFor(() => {
+      expect(screen.getByText('Install CLI')).toBeInTheDocument()
+    })
+    // The Claude Code section label should not appear when Other is selected
+    expect(screen.queryByText('Claude Code found')).not.toBeInTheDocument()
+    expect(screen.queryByText('Claude Code not found')).not.toBeInTheDocument()
+    expect(mockApi.claudeCheckAvailable).not.toHaveBeenCalled()
   })
 
   it('shows step indicator with 4 dots', () => {
