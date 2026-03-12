@@ -113,10 +113,51 @@ export class ElectronPtyManager implements IPtyManager {
 
   private _dataService: DataService | null = null
 
+  /** Tracks last time we checked/set agentStatus per task to throttle disk I/O */
+  private _lastActivityCheck = new Map<string, number>()
+  private static readonly ACTIVITY_CHECK_INTERVAL_MS = 10_000
+
   constructor(private _tmux: ElectronTmuxManager) {}
 
   setDataService(dataService: DataService): void {
     this._dataService = dataService
+  }
+
+  /**
+   * Auto-detect terminal activity and set agentStatus to 'running' if currently 'idle'.
+   * Throttled per task to avoid excessive disk I/O.
+   */
+  private _handleActivityDetection(taskId: string): void {
+    if (!this._dataService) return
+
+    const now = Date.now()
+    const lastCheck = this._lastActivityCheck.get(taskId) ?? 0
+    if (now - lastCheck < ElectronPtyManager.ACTIVITY_CHECK_INTERVAL_MS) return
+
+    this._lastActivityCheck.set(taskId, now)
+
+    const ds = this._dataService
+    ds.readTask(taskId)
+      .then((task) => {
+        if (task.agentStatus === 'idle') {
+          task.agentStatus = 'running'
+          task.updatedAt = new Date().toISOString()
+          return ds.updateTask(task).then(() => {
+            // Also update the in-memory task in project state so the UI picks it up
+            return ds.readProjectState().then((state) => {
+              const stateTask = state.tasks.find((t) => t.id === taskId)
+              if (stateTask) {
+                stateTask.agentStatus = 'running'
+                stateTask.updatedAt = task.updatedAt
+                return ds.writeProjectState(state)
+              }
+            })
+          })
+        }
+      })
+      .catch(() => {
+        // Task may not exist or file may be locked — ignore silently
+      })
   }
 
   /**
@@ -207,6 +248,7 @@ export class ElectronPtyManager implements IPtyManager {
       for (const listener of this._dataListeners) {
         listener(sessionId, data)
       }
+      this._handleActivityDetection(taskId)
     })
 
     // Run default command on newly created sessions via tmux send-keys
@@ -264,6 +306,7 @@ export class ElectronPtyManager implements IPtyManager {
       for (const listener of this._dataListeners) {
         listener(sessionId, data)
       }
+      this._handleActivityDetection(taskId)
     })
 
     ptyProcess.onExit(({ exitCode }) => {
