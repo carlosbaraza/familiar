@@ -79,40 +79,103 @@
   background-color: var(--bg-elevated);
 }
 
-/* ---- Create input ---- */
+/* ---- Create widget ---- */
 
-.createArea {
-  padding: 0 var(--space-3) var(--space-2);
+.createWidget {
+  padding: var(--space-2) var(--space-3) var(--space-2);
+  margin: 0 var(--space-2) var(--space-2);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .createInput {
   width: 100%;
   min-height: 30px;
   padding: var(--space-1) var(--space-2);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background-color: transparent;
+  border: none;
   color: var(--text-primary);
   font-size: var(--font-size-sm);
   font-family: inherit;
   line-height: 1.4;
   resize: none;
   overflow: hidden;
-  transition:
-    border-color var(--transition-base),
-    background-color var(--transition-base);
 }
 
 .createInput:focus {
+  outline: none;
+}
+
+.createWidget:focus-within {
   border-color: var(--accent);
   background-color: var(--bg-elevated);
   box-shadow: var(--shadow-focus);
-  outline: none;
 }
 
 .createInput::placeholder {
   color: var(--text-tertiary);
+}
+
+/* ---- Snippet toggles ---- */
+
+.snippetToggles {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border);
+}
+
+.snippetTogglesLabel {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-right: var(--space-1);
+  white-space: nowrap;
+}
+
+.snippetToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1.4;
+}
+
+.snippetToggle:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-tertiary);
+}
+
+.snippetToggleOn {
+  color: var(--accent);
+  border-color: var(--accent);
+  background-color: rgba(99, 102, 241, 0.08);
+}
+
+.snippetToggleOn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background-color: rgba(99, 102, 241, 0.14);
+}
+
+.snippetToggleCheck {
+  width: 10px;
+  font-size: 10px;
+  text-align: center;
 }
 
 /* ---- Task list ---- */
