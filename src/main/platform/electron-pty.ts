@@ -215,6 +215,7 @@ export class ElectronPtyManager implements IPtyManager {
     // Inject familiar context so agents know which task they're in
     env.FAMILIAR_TASK_ID = taskId
     env.FAMILIAR_PROJECT_ROOT = cwd
+    env.FAMILIAR_SETTINGS_PATH = `${cwd}/.familiar/settings.json`
 
     const tmuxPath = this._getTmuxPath()
 
@@ -229,7 +230,8 @@ export class ElectronPtyManager implements IPtyManager {
       // Ensure tmux session exists — create if needed, ignore "duplicate session" errors
       const familiarEnv = {
         FAMILIAR_TASK_ID: taskId,
-        FAMILIAR_PROJECT_ROOT: cwd
+        FAMILIAR_PROJECT_ROOT: cwd,
+        FAMILIAR_SETTINGS_PATH: `${cwd}/.familiar/settings.json`
       }
       try {
         const exists = await this._tmux.hasSession(tmuxSessionName)

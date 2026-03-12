@@ -20,6 +20,8 @@ export interface ProjectSettings {
   defaultCommand?: string
   /** Configurable terminal snippets shown as buttons above the terminal */
   snippets?: Snippet[]
+  /** When true, agents should simplify verbose task titles to a few words and move the original prompt to the task document */
+  simplifyTaskTitles?: boolean
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [

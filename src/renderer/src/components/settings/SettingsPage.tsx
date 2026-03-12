@@ -87,6 +87,45 @@ export function SettingsPage(): React.JSX.Element {
             </div>
           </div>
 
+          {/* Agent section */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Agent</h2>
+
+            <div style={styles.settingRow}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div style={styles.settingInfo}>
+                  <label style={styles.settingLabel}>Simplify Task Titles</label>
+                  <span style={styles.settingDescription}>
+                    Agents will shorten verbose task titles and move the original prompt to the task
+                    notes
+                  </span>
+                </div>
+                <button
+                  style={{
+                    ...styles.toggleButton,
+                    ...(settings.simplifyTaskTitles ? styles.toggleButtonActive : {})
+                  }}
+                  onClick={() => handleChange('simplifyTaskTitles', !settings.simplifyTaskTitles)}
+                  role="switch"
+                  aria-checked={settings.simplifyTaskTitles ?? false}
+                >
+                  <span
+                    style={{
+                      ...styles.toggleKnob,
+                      ...(settings.simplifyTaskTitles ? styles.toggleKnobActive : {})
+                    }}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Snippets section */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Snippets</h2>
@@ -235,6 +274,37 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     backgroundColor: 'var(--bg-surface)',
     color: 'var(--text-secondary)',
     cursor: 'pointer'
+  },
+  toggleButton: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    cursor: 'pointer',
+    position: 'relative' as const,
+    padding: 0,
+    flexShrink: 0,
+    transition: 'background-color 0.15s ease'
+  },
+  toggleButtonActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(99, 102, 241, 0.5)'
+  },
+  toggleKnob: {
+    display: 'block',
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    backgroundColor: 'var(--text-tertiary)',
+    position: 'absolute' as const,
+    top: 2,
+    left: 2,
+    transition: 'transform 0.15s ease, background-color 0.15s ease'
+  },
+  toggleKnobActive: {
+    transform: 'translateX(18px)',
+    backgroundColor: '#818cf8'
   },
   saveButton: {
     padding: '6px 14px',

@@ -12,16 +12,32 @@ documents, and activity for an agentic coding workflow.
 
 The environment variable \`FAMILIAR_TASK_ID\` contains the ID of the task you are
 working on. The variable \`FAMILIAR_PROJECT_ROOT\` points to the workspace root.
+The variable \`FAMILIAR_SETTINGS_PATH\` points to the project settings file.
 
 \`\`\`bash
 echo $FAMILIAR_TASK_ID        # e.g. tsk_a1b2c3d4
 echo $FAMILIAR_PROJECT_ROOT   # e.g. /Users/me/myproject
+echo $FAMILIAR_SETTINGS_PATH  # e.g. /Users/me/myproject/.familiar/settings.json
 \`\`\`
 
 ## CLI — \`familiar\`
 
 Use the \`familiar\` CLI to interact with the system. All commands operate
 on the \`.familiar/\` directory in the project root.
+
+### Read project settings
+
+**Before starting any work**, read the project settings file to check for enabled behaviors:
+
+\`\`\`bash
+cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
+\`\`\`
+
+Check for these settings and obey them:
+
+| Setting | Effect |
+|---------|--------|
+| \`simplifyTaskTitles\` | If \`true\`, simplify the task title to a short descriptive name (3-6 words) and move the original verbose title/prompt into the task document (\`document.md\`) as context. Use \`familiar update $FAMILIAR_TASK_ID --title "Short title"\` to update the title. |
 
 ### Read your task
 
@@ -154,27 +170,31 @@ familiar status $FAMILIAR_TASK_ID in-progress
 familiar update $FAMILIAR_TASK_ID --agent-status running
 familiar log $FAMILIAR_TASK_ID "Starting work"
 
-# 2. Read the task document and classify it
+# 2. Read settings and obey them
+cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
+# If simplifyTaskTitles is true: shorten the title and move the original to document.md
+
+# 3. Read the task document and classify it
 cat .familiar/tasks/$FAMILIAR_TASK_ID/document.md
 familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 
-# 3. Do your work, logging progress (NOT status changes)
+# 4. Do your work, logging progress (NOT status changes)
 familiar log $FAMILIAR_TASK_ID "Implemented the auth module"
 # ... more work ...
 familiar log $FAMILIAR_TASK_ID "Running tests — 12/12 passing"
 
-# 4. On success — ready for human review
+# 5. On success — ready for human review
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — ready for review"
 familiar notify "Task Complete" "$FAMILIAR_TASK_ID done"
 
-# 4b. On success — no review needed (e.g. chores, trivial fixes)
+# 5b. On success — no review needed (e.g. chores, trivial fixes)
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — no review needed"
 familiar notify "Task Complete" "$FAMILIAR_TASK_ID done"
 
-# 5. On failure: update status, then notify
+# 6. On failure: update status, then notify
 familiar update $FAMILIAR_TASK_ID --agent-status error
 familiar log $FAMILIAR_TASK_ID "ERROR: Tests failed — see terminal output"
 familiar notify "Task Failed" "Error on $FAMILIAR_TASK_ID"
