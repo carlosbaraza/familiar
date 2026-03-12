@@ -94,6 +94,52 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
       window.api.ptyResize(sessionId, cols, rows)
     })
 
+    // Intercept paste in capture phase (before xterm.js processes it).
+    // When clipboard contains files or image data, paste the file path instead
+    // of raw content. This enables Claude Code and CLI tools to receive usable paths.
+    const handlePaste = async (e: ClipboardEvent): Promise<void> => {
+      const clipData = e.clipboardData
+      if (!clipData) return
+
+      // Case 1: Files with paths (e.g. copied from Finder)
+      const files = clipData.files
+      if (files && files.length > 0) {
+        const paths: string[] = []
+        for (let i = 0; i < files.length; i++) {
+          const filePath = (files[i] as File & { path?: string }).path
+          if (filePath) paths.push(filePath)
+        }
+        if (paths.length > 0) {
+          e.preventDefault()
+          e.stopImmediatePropagation()
+          window.api.ptyWrite(sessionId, paths.join(' '))
+          return
+        }
+      }
+
+      // Case 2: Image data in clipboard (e.g. screenshot from clipboard manager)
+      // No file path available — save to temp file, then paste that path.
+      const items = clipData.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const blob = item.getAsFile()
+            if (blob) {
+              e.preventDefault()
+              e.stopImmediatePropagation()
+              const arrayBuffer = await blob.arrayBuffer()
+              const savedPath = await window.api.clipboardSaveImage(arrayBuffer, item.type)
+              window.api.ptyWrite(sessionId, savedPath)
+              return
+            }
+          }
+        }
+      }
+      // Text-only paste: let xterm.js handle it normally
+    }
+    containerRef.current.addEventListener('paste', handlePaste, { capture: true })
+
     // ResizeObserver for container resize (debounced)
     let resizeTimer: ReturnType<typeof setTimeout>
     const resizeObserver = new ResizeObserver(() => {
@@ -109,6 +155,7 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
     return (): void => {
       clearTimeout(resizeTimer)
       resizeObserver.disconnect()
+      containerRef.current?.removeEventListener('paste', handlePaste, { capture: true })
       cleanup()
       term.dispose()
     }

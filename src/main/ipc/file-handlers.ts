@@ -1,7 +1,20 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
+import { writeFile } from 'fs/promises'
+import { join } from 'path'
 import { DataService } from '../services/data-service'
 
 export function registerFileHandlers(dataService: DataService): void {
+  // Save raw image bytes from clipboard to a temp file, return the path
+  ipcMain.handle(
+    'clipboard:save-image',
+    async (_, arrayBuffer: ArrayBuffer, mimeType: string): Promise<string> => {
+      const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
+      const fileName = `clipboard-${Date.now()}.${ext}`
+      const filePath = join(app.getPath('temp'), fileName)
+      await writeFile(filePath, Buffer.from(arrayBuffer))
+      return filePath
+    }
+  )
   ipcMain.handle('project:get-root', async () => dataService.getProjectRoot())
   ipcMain.handle('project:read-state', async () => dataService.readProjectState())
   ipcMain.handle('project:write-state', async (_, state) => dataService.writeProjectState(state))

@@ -36,6 +36,9 @@ declare global {
       // Attachments
       saveAttachment(taskId: string, fileName: string, data: ArrayBuffer): Promise<string>
 
+      // Clipboard
+      clipboardSaveImage(arrayBuffer: ArrayBuffer, mimeType: string): Promise<string>
+
       // PTY operations
       ptyCreate(taskId: string, paneId: string, cwd: string): Promise<string>
       ptyWrite(sessionId: string, data: string): Promise<void>

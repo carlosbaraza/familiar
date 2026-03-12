@@ -35,6 +35,10 @@ const api = {
   saveAttachment: (taskId: string, fileName: string, data: ArrayBuffer): Promise<string> =>
     ipcRenderer.invoke('task:save-attachment', taskId, fileName, data),
 
+  // Clipboard
+  clipboardSaveImage: (arrayBuffer: ArrayBuffer, mimeType: string): Promise<string> =>
+    ipcRenderer.invoke('clipboard:save-image', arrayBuffer, mimeType),
+
   // PTY operations
   ptyCreate: (taskId: string, paneId: string, cwd: string): Promise<string> =>
     ipcRenderer.invoke('pty:create', taskId, paneId, cwd),
