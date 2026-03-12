@@ -57,7 +57,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   // Actions
   loadProjectState: async (): Promise<void> => {
-    set({ isLoading: true, error: null })
+    const { projectState: existing } = get()
+    // Only show loading spinner on initial load — not when refreshing
+    // existing data (e.g. file-watcher reload). Flashing isLoading unmounts
+    // the board columns and destroys any in-progress input state.
+    if (!existing) {
+      set({ isLoading: true, error: null })
+    }
     try {
       const initialized = await window.api.isInitialized()
       if (!initialized) {
