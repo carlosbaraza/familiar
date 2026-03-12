@@ -175,6 +175,76 @@
   color: var(--text-primary);
   line-height: var(--line-height-tight);
   word-break: break-word;
+  border-radius: var(--radius-sm);
+  padding: 1px 2px;
+  margin: -1px -2px;
+}
+
+.title:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.titleInput {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+  background-color: var(--bg-base);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  outline: none;
+  font-family: inherit;
+  width: 100%;
+}
+
+/* ---- Description preview + expanded editor ---- */
+
+.descriptionPreview {
+  padding: 4px 0;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.descriptionPreview:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.descriptionLine {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.descriptionExpanded {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.collapseBtn {
+  display: block;
+  width: 100%;
+  padding: 3px 0;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+}
+
+.collapseBtn:hover {
+  color: var(--text-secondary);
 }
 
 /* ---- Priority inline picker ---- */

@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react'
+import { useCallback, useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task, TaskStatus, Priority, AgentStatus, Snippet, LabelConfig } from '@shared/types'
@@ -11,6 +11,10 @@ import { useBoardStore } from '@renderer/stores/board-store'
 import { ContextMenu, PriorityIcon } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
+
+const LazyBlockEditor = lazy(() =>
+  import('@renderer/components/editor/BlockEditor').then((m) => ({ default: m.BlockEditor }))
+)
 
 function getLabelColor(name: string, projectLabels: LabelConfig[]): string {
   const config = projectLabels.find((l) => l.name === name)
@@ -74,6 +78,71 @@ export function TaskCard({
   const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const selectedTaskIds = useBoardStore((s) => s.selectedTaskIds)
+
+  // Inline title editing
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitleValue, setEditTitleValue] = useState(task.title)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+
+  // Description preview + expand
+  const [documentContent, setDocumentContent] = useState<string | null>(null)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+
+  // Load document content on mount
+  useEffect(() => {
+    let cancelled = false
+    window.api.readTaskDocument(task.id).then((content) => {
+      if (!cancelled) setDocumentContent(content || '')
+    }).catch(() => {
+      if (!cancelled) setDocumentContent('')
+    })
+    return () => { cancelled = true }
+  }, [task.id])
+
+  // Focus title input when editing starts
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [isEditingTitle])
+
+  const handleTitleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditTitleValue(task.title)
+    setIsEditingTitle(true)
+  }, [task.title])
+
+  const handleTitleSave = useCallback(() => {
+    const trimmed = editTitleValue.trim()
+    if (trimmed && trimmed !== task.title) {
+      updateTask({ ...task, title: trimmed })
+    }
+    setIsEditingTitle(false)
+  }, [editTitleValue, task, updateTask])
+
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    e.stopPropagation()
+    if (e.key === 'Enter') {
+      handleTitleSave()
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false)
+    }
+  }, [handleTitleSave])
+
+  const handleDescriptionClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDescriptionExpanded(true)
+  }, [])
+
+  const handleDescriptionCollapse = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDescriptionExpanded(false)
+  }, [])
+
+  const handleEditorChange = useCallback((markdown: string) => {
+    setDocumentContent(markdown)
+  }, [])
 
   useEffect(() => {
     if (!priorityOpen) return
@@ -293,7 +362,19 @@ export function TaskCard({
               </div>
             )}
           </button>
-          <span className={styles.title}>{task.title}</span>
+          {isEditingTitle ? (
+            <input
+              ref={titleInputRef}
+              className={styles.titleInput}
+              value={editTitleValue}
+              onChange={(e) => setEditTitleValue(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className={styles.title} onClick={handleTitleClick}>{task.title}</span>
+          )}
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
@@ -301,6 +382,34 @@ export function TaskCard({
           />
           {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
+
+        {/* Description preview / expanded editor */}
+        {documentContent !== null && documentContent.length > 0 && (
+          isDescriptionExpanded ? (
+            <div className={styles.descriptionExpanded} onClick={(e) => e.stopPropagation()}>
+              <Suspense fallback={<div className={styles.descriptionPreview}>Loading editor...</div>}>
+                <LazyBlockEditor
+                  taskId={task.id}
+                  initialContent={documentContent}
+                  onChange={handleEditorChange}
+                />
+              </Suspense>
+              <button
+                className={styles.collapseBtn}
+                onClick={handleDescriptionCollapse}
+                title="Collapse description"
+              >
+                Collapse
+              </button>
+            </div>
+          ) : (
+            <div className={styles.descriptionPreview} onClick={handleDescriptionClick} title="Click to expand and edit">
+              {documentContent.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
+                <div key={i} className={styles.descriptionLine}>{line}</div>
+              ))}
+            </div>
+          )
+        )}
 
         {(dashboardSnippets.length > 0 || task.labels.length > 0) && (
           <div className={styles.footer}>
