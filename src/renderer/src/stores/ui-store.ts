@@ -16,6 +16,7 @@ interface UIState {
   // Active views
   activeTaskId: string | null
   taskDetailOpen: boolean
+  mountedTaskIds: Set<string> // Tasks kept mounted (hidden) for instant reopen
 
   // Command palette
   commandPaletteOpen: boolean
@@ -35,6 +36,7 @@ interface UIState {
   setSidebarWidth: (width: number) => void
   openTaskDetail: (taskId: string) => void
   closeTaskDetail: () => void
+  unmountTask: (taskId: string) => void
   toggleCommandPalette: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
@@ -63,6 +65,7 @@ export const useUIStore = create<UIState>((set) => ({
   // Active views
   activeTaskId: null,
   taskDetailOpen: false,
+  mountedTaskIds: new Set<string>(),
 
   // Command palette
   commandPaletteOpen: false,
@@ -84,10 +87,21 @@ export const useUIStore = create<UIState>((set) => ({
     set({ sidebarWidth: Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width)) }),
 
   openTaskDetail: (taskId: string) =>
-    set({ activeTaskId: taskId, taskDetailOpen: true }),
+    set((state) => {
+      const mounted = new Set(state.mountedTaskIds)
+      mounted.add(taskId)
+      return { activeTaskId: taskId, taskDetailOpen: true, mountedTaskIds: mounted }
+    }),
 
   closeTaskDetail: () =>
     set({ activeTaskId: null, taskDetailOpen: false }),
+
+  unmountTask: (taskId: string) =>
+    set((state) => {
+      const mounted = new Set(state.mountedTaskIds)
+      mounted.delete(taskId)
+      return { mountedTaskIds: mounted }
+    }),
 
   toggleCommandPalette: () =>
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),

@@ -53,10 +53,8 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
 
     return () => {
       cancelled = true
-      if (sessionIdRef.current) {
-        window.api.ptyDestroy(sessionIdRef.current).catch(console.error)
-        sessionIdRef.current = null
-      }
+      // Do NOT destroy PTY on unmount — task details stay mounted but hidden
+      // for instant reopen. PTY is only destroyed via explicit "Stop Agent" action.
     }
   }, [taskId, createSession, task?.status])
 

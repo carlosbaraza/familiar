@@ -1,5 +1,4 @@
 import { useEffect, useCallback } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import type { Task } from '@shared/types'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
@@ -9,21 +8,25 @@ import styles from './TaskDetail.module.css'
 
 interface TaskDetailProps {
   taskId: string
+  visible: boolean
   onClose: () => void
 }
 
-export function TaskDetail({ taskId, onClose }: TaskDetailProps): React.JSX.Element {
+export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React.JSX.Element {
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
 
-  // Clear notifications when task is opened
+  // Clear notifications only when task becomes visible (not just mounted)
   useEffect(() => {
-    markReadByTaskId(taskId)
-  }, [taskId, markReadByTaskId])
+    if (visible) {
+      markReadByTaskId(taskId)
+    }
+  }, [taskId, visible, markReadByTaskId])
 
-  // Close on Escape key
+  // Close on Escape key — only when visible
   useEffect(() => {
+    if (!visible) return
     function handleKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') {
         onClose()
@@ -31,7 +34,7 @@ export function TaskDetail({ taskId, onClose }: TaskDetailProps): React.JSX.Elem
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [onClose, visible])
 
   const handleUpdate = useCallback(
     (updates: Partial<Task>) => {
@@ -42,28 +45,26 @@ export function TaskDetail({ taskId, onClose }: TaskDetailProps): React.JSX.Elem
   )
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className={styles.overlay}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-      >
-        {task ? (
-          <div className={styles.inner}>
-            <TaskDetailHeader task={task} onUpdate={handleUpdate} onClose={onClose} />
-            <TaskDetailContent taskId={taskId} />
-          </div>
-        ) : (
-          <div className={styles.notFound}>
-            Task not found
-            <button onClick={onClose} style={{ marginLeft: 12 }}>
-              Close
-            </button>
-          </div>
-        )}
-      </motion.div>
-    </AnimatePresence>
+    <div
+      className={styles.overlay}
+      style={{
+        visibility: visible ? 'visible' : 'hidden',
+        pointerEvents: visible ? 'auto' : 'none'
+      }}
+    >
+      {task ? (
+        <div className={styles.inner}>
+          <TaskDetailHeader task={task} onUpdate={handleUpdate} onClose={onClose} />
+          <TaskDetailContent taskId={taskId} />
+        </div>
+      ) : (
+        <div className={styles.notFound}>
+          Task not found
+          <button onClick={onClose} style={{ marginLeft: 12 }}>
+            Close
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

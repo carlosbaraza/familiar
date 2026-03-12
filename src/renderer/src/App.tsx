@@ -14,6 +14,7 @@ function App(): React.JSX.Element {
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const activeTaskId = useUIStore((s) => s.activeTaskId)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
+  const mountedTaskIds = useUIStore((s) => s.mountedTaskIds)
 
   // Centralized global keyboard shortcuts
   useGlobalShortcuts()
@@ -40,9 +41,14 @@ function App(): React.JSX.Element {
       <AppShell>
         <KanbanBoard />
         <CommandPalette />
-        {taskDetailOpen && activeTaskId && (
-          <TaskDetail taskId={activeTaskId} onClose={closeTaskDetail} />
-        )}
+        {Array.from(mountedTaskIds).map((taskId) => (
+          <TaskDetail
+            key={taskId}
+            taskId={taskId}
+            visible={taskDetailOpen && activeTaskId === taskId}
+            onClose={closeTaskDetail}
+          />
+        ))}
       </AppShell>
     </>
   )
