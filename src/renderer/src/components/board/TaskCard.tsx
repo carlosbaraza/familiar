@@ -1,15 +1,21 @@
 import { useCallback } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task, TaskStatus, Priority, AgentStatus, Snippet } from '@shared/types'
+import type { Task, TaskStatus, Priority, AgentStatus, Snippet, LabelConfig } from '@shared/types'
+import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { LucideIconByName } from '@renderer/components/terminal/IconPicker'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
-import { ContextMenu } from '@renderer/components/common'
+import { ContextMenu, PriorityIcon } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
+
+function getLabelColor(name: string, projectLabels: LabelConfig[]): string {
+  const config = projectLabels.find((l) => l.name === name)
+  return config?.color ?? DEFAULT_LABEL_COLOR
+}
 
 const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
   idle: '#5c5c6e',
@@ -60,6 +66,7 @@ export function TaskCard({
   })
 
   const { updateTask, deleteTask } = useTaskStore()
+  const projectLabels = useTaskStore((s) => s.projectState?.labels ?? [])
   const contextMenu = useContextMenu()
   const notifications = useNotificationStore((s) => s.notifications)
   const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
@@ -231,12 +238,13 @@ export function TaskCard({
         tabIndex={0}
       >
         <div className={styles.topRow}>
+          <PriorityIcon priority={task.priority} size={14} />
+          <span className={styles.title}>{task.title}</span>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
             title={`Agent: ${task.agentStatus}`}
           />
-          <span className={styles.title}>{task.title}</span>
           {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
 
@@ -259,11 +267,22 @@ export function TaskCard({
             {dashboardSnippets.length > 0 && task.labels.length > 0 && (
               <div className={styles.footerSpacer} />
             )}
-            {task.labels.map((label) => (
-              <span key={label} className={styles.label}>
-                {label}
-              </span>
-            ))}
+            {task.labels.map((label) => {
+              const color = getLabelColor(label, projectLabels)
+              return (
+                <span
+                  key={label}
+                  className={styles.label}
+                  style={{
+                    backgroundColor: `${color}20`,
+                    borderColor: `${color}40`,
+                    color
+                  }}
+                >
+                  {label}
+                </span>
+              )
+            })}
           </div>
         )}
       </div>
@@ -298,11 +317,12 @@ export function TaskCardOverlay({
       )}
       <div className={`${styles.card} ${styles.cardDragging}`} style={{ position: 'relative' }}>
         <div className={styles.topRow}>
+          <PriorityIcon priority={task.priority} size={14} />
+          <span className={styles.title}>{task.title}</span>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
           />
-          <span className={styles.title}>{task.title}</span>
         </div>
         <div className={styles.bottomRow}>
           {task.labels.map((label) => (

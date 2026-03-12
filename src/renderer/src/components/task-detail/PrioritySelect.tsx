@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Priority } from '@shared/types'
-import { PRIORITY_COLORS } from '@shared/constants'
+import { PriorityIcon } from '@renderer/components/common'
 import styles from './PrioritySelect.module.css'
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
@@ -37,7 +37,7 @@ export function PrioritySelect({ value, onChange }: PrioritySelectProps): React.
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       <button className={styles.trigger} onClick={() => setOpen(!open)}>
-        <span className={styles.dot} style={{ backgroundColor: PRIORITY_COLORS[value] }} />
+        <PriorityIcon priority={value} size={14} />
         {PRIORITY_LABELS[value]}
       </button>
       {open && (
@@ -51,7 +51,7 @@ export function PrioritySelect({ value, onChange }: PrioritySelectProps): React.
                 setOpen(false)
               }}
             >
-              <span className={styles.dot} style={{ backgroundColor: PRIORITY_COLORS[p] }} />
+              <PriorityIcon priority={p} size={14} />
               {PRIORITY_LABELS[p]}
             </button>
           ))}
