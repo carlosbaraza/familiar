@@ -93,7 +93,7 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
     try {
       // Find and kill all tmux sessions for this task
       const sessions = await window.api.tmuxList()
-      const taskSessions = sessions.filter((s) => s.startsWith(`kanban-${taskId}`))
+      const taskSessions = sessions.filter((s) => s.startsWith(`familiar-${taskId}`))
       for (const session of taskSessions) {
         await window.api.tmuxKill(session)
       }

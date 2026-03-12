@@ -68,10 +68,21 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
       console.warn('WebGL renderer not available, falling back to canvas')
     }
 
-    // Let Shift+Escape bubble up to the app (not consumed by xterm)
-    // so users can close the task detail view from the terminal
+    // Custom key event handler for keys that need special treatment
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      // Let Shift+Escape bubble up to the app (not consumed by xterm)
+      // so users can close the task detail view from the terminal
       if (e.key === 'Escape' && e.shiftKey) return false
+
+      // Shift+Enter: xterm.js 6.0 doesn't support the kitty keyboard protocol,
+      // so it sends plain \r for both Enter and Shift+Enter. Intercept Shift+Enter
+      // and manually send the CSI u escape sequence that Claude Code expects.
+      // Only handle keydown to avoid sending the sequence twice.
+      if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
+        window.api.ptyWrite(sessionId, '\x1b[13;2u')
+        return false
+      }
+
       return true
     })
 

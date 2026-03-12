@@ -35,7 +35,7 @@ interface TaskStore {
 async function killTmuxSessionsForTask(taskId: string): Promise<void> {
   try {
     const sessions = await window.api.tmuxList()
-    const taskSessions = sessions.filter((s) => s.startsWith(`kanban-${taskId}`))
+    const taskSessions = sessions.filter((s) => s.startsWith(`familiar-${taskId}`))
     for (const session of taskSessions) {
       await window.api.tmuxKill(session).catch(() => {})
     }

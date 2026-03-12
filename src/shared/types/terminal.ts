@@ -2,7 +2,7 @@ export interface TerminalSession {
   id: string
   taskId: string
   paneIndex: number
-  sessionName: string // e.g. "kanban-tsk_a1b2c3-0"
+  sessionName: string // e.g. "familiar-tsk_a1b2c3-0"
   isActive: boolean
 }
 

@@ -25,7 +25,7 @@ export function BlockEditor({ taskId, initialContent, onChange }: BlockEditorPro
       const filePath = await window.api.saveAttachment(taskIdRef.current, fileName, arrayBuffer)
       // Return a custom protocol URL so the editor can display the image inline
       // file:// URLs are blocked by Electron's security policy in the renderer
-      return `kanban-attachment://file${filePath}`
+      return `familiar-attachment://file${filePath}`
     },
     []
   )

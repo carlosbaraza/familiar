@@ -50,7 +50,8 @@ setw -g pane-base-index 1
 set -g allow-rename off
 
 # Extended keys support (for Shift+Enter, Ctrl+Enter in terminals)
-set -s extended-keys on
+# "always" sends extended keys unconditionally — "on" requires the inner app to request them
+set -s extended-keys always
 set -as terminal-features 'xterm*:extkeys'
 \`\`\`
 

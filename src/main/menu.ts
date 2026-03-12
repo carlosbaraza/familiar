@@ -131,7 +131,7 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
         {
           label: 'Familiar GitHub',
           click: (): void => {
-            shell.openExternal('https://github.com/carlosbaraza/familiar')
+            shell.openExternal('https://github.com/familiar-sh/familiar')
           }
         }
       ]

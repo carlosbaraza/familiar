@@ -79,7 +79,7 @@ export function statusCommand(): Command {
             stdio: ['pipe', 'pipe', 'pipe']
           })
           const sessions = output.trim().split('\n').filter(Boolean)
-          const taskSessions = sessions.filter((s) => s.startsWith(`kanban-${id}`))
+          const taskSessions = sessions.filter((s) => s.startsWith(`familiar-${id}`))
           for (const session of taskSessions) {
             try {
               execSync(`tmux kill-session -t "${session}"`, { stdio: 'pipe' })

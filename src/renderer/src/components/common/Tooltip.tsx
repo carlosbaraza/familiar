@@ -151,7 +151,7 @@ const styles: Record<string, React.CSSProperties> = {
 
 // Inject keyframe animation once
 if (typeof document !== 'undefined') {
-  const id = 'kanban-tooltip-keyframes'
+  const id = 'familiar-tooltip-keyframes'
   if (!document.getElementById(id)) {
     const style = document.createElement('style')
     style.id = id

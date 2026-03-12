@@ -362,7 +362,7 @@ describe('useTaskStore', () => {
       const task = makeTask({ id: 'tsk_arch', status: 'done' })
       const state = makeProjectState([task])
       useTaskStore.setState({ projectState: state })
-      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_arch-0', 'kanban-tsk_arch-1'])
+      mockApi.tmuxList.mockResolvedValue(['familiar-tsk_arch-0', 'familiar-tsk_arch-1'])
       mockApi.tmuxKill.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
@@ -370,8 +370,8 @@ describe('useTaskStore', () => {
       await useTaskStore.getState().updateTask({ ...task, status: 'archived' })
 
       expect(mockApi.tmuxList).toHaveBeenCalled()
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_arch-0')
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_arch-1')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_arch-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_arch-1')
     })
 
     it('resets agentStatus to idle when archiving', async () => {
@@ -405,7 +405,7 @@ describe('useTaskStore', () => {
       const task = makeTask({ id: 'tsk_del' })
       const state = makeProjectState([task])
       useTaskStore.setState({ projectState: state })
-      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_del-0'])
+      mockApi.tmuxList.mockResolvedValue(['familiar-tsk_del-0'])
       mockApi.tmuxKill.mockResolvedValue(undefined)
       mockApi.deleteTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
@@ -413,7 +413,7 @@ describe('useTaskStore', () => {
       await useTaskStore.getState().deleteTask('tsk_del')
 
       expect(mockApi.tmuxList).toHaveBeenCalled()
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_del-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_del-0')
       expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_del')
     })
 
@@ -436,14 +436,14 @@ describe('useTaskStore', () => {
       const task = makeTask({ id: 'tsk_mv', status: 'done', sortOrder: 0 })
       const state = makeProjectState([task])
       useTaskStore.setState({ projectState: state })
-      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_mv-0'])
+      mockApi.tmuxList.mockResolvedValue(['familiar-tsk_mv-0'])
       mockApi.tmuxKill.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
       await useTaskStore.getState().moveTask('tsk_mv', 'archived', 0)
 
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_mv-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_mv-0')
       const stored = useTaskStore.getState().projectState!.tasks[0]
       expect(stored.status).toBe('archived')
       expect(stored.agentStatus).toBe('idle')
@@ -514,15 +514,15 @@ describe('useTaskStore', () => {
       const t2 = makeTask({ id: 'tsk_b', status: 'done', sortOrder: 1 })
       const state = makeProjectState([t1, t2])
       useTaskStore.setState({ projectState: state })
-      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_a-0', 'kanban-tsk_b-0'])
+      mockApi.tmuxList.mockResolvedValue(['familiar-tsk_a-0', 'familiar-tsk_b-0'])
       mockApi.tmuxKill.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
       await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b'], 'archived', 0)
 
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_a-0')
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_b-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_a-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_b-0')
     })
 
     it('throws when project not initialized', async () => {
@@ -584,14 +584,14 @@ describe('useTaskStore', () => {
       const t1 = makeTask({ id: 'tsk_a', status: 'done', sortOrder: 0 })
       const state = makeProjectState([t1])
       useTaskStore.setState({ projectState: state })
-      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_a-0'])
+      mockApi.tmuxList.mockResolvedValue(['familiar-tsk_a-0'])
       mockApi.tmuxKill.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
       await useTaskStore.getState().archiveAllDone()
 
-      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_a-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_a-0')
     })
   })
 

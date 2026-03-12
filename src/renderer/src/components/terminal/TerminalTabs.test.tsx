@@ -6,7 +6,7 @@ import type { TerminalPane } from '@shared/types/terminal'
 function makePane(overrides: Partial<TerminalPane> = {}): TerminalPane {
   return {
     id: 'pane-1',
-    sessionName: 'kanban-tsk_test-0',
+    sessionName: 'familiar-tsk_test-0',
     title: 'Terminal 1',
     ...overrides
   }

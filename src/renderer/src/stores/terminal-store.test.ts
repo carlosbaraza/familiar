@@ -21,7 +21,7 @@ describe('useTerminalStore', () => {
         id: 'sess-1',
         taskId: 'tsk_abc123',
         paneIndex: 0,
-        sessionName: 'kanban-tsk_abc123-0',
+        sessionName: 'familiar-tsk_abc123-0',
         isActive: true
       }
       useTerminalStore.getState().addSession(session)
@@ -33,7 +33,7 @@ describe('useTerminalStore', () => {
         id: 'sess-1',
         taskId: 'tsk_abc123',
         paneIndex: 0,
-        sessionName: 'kanban-tsk_abc123-0',
+        sessionName: 'familiar-tsk_abc123-0',
         isActive: true
       }
       useTerminalStore.getState().addSession(session)
@@ -51,7 +51,7 @@ describe('useTerminalStore', () => {
     it('addPane adds a pane for a task', () => {
       const pane: TerminalPane = {
         id: 'pane-1',
-        sessionName: 'kanban-tsk_abc123-0',
+        sessionName: 'familiar-tsk_abc123-0',
         title: 'Terminal 1'
       }
       useTerminalStore.getState().addPane('tsk_abc123', pane)
@@ -64,7 +64,7 @@ describe('useTerminalStore', () => {
     it('addPane sets the pane as active', () => {
       const pane: TerminalPane = {
         id: 'pane-1',
-        sessionName: 'kanban-tsk_abc123-0',
+        sessionName: 'familiar-tsk_abc123-0',
         title: 'Terminal 1'
       }
       useTerminalStore.getState().addPane('tsk_abc123', pane)

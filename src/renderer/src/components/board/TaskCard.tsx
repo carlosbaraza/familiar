@@ -215,7 +215,7 @@ export function TaskCard({
     (e: React.MouseEvent, snippet: Snippet, index: number) => {
       e.stopPropagation()
       if (snippetCooldowns[index]) return
-      const sessionName = `kanban-${task.id}`
+      const sessionName = `familiar-${task.id}`
       window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter).catch((err) => {
         console.warn('Failed to send snippet command:', err)
       })
