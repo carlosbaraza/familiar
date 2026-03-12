@@ -4,7 +4,7 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
-import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
+import { BASE_AGENTS_MD } from '@shared/prompts'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
@@ -175,26 +175,18 @@ export function Navbar(): React.JSX.Element {
             <div className={styles.helpDropdown}>
               <button
                 className={styles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('setup', TMUX_SETUP_PROMPT)}
+                onClick={() => {
+                  useUIStore.getState().openOnboarding()
+                  setShowHelpMenu(false)
+                }}
               >
-                <span className={styles.helpDropdownIcon}>&#9881;</span>
+                <span className={styles.helpDropdownIcon}>&#128640;</span>
                 <span className={styles.helpDropdownText}>
-                  <span className={styles.helpDropdownTitle}>Copy Tmux Setup Prompt</span>
-                  <span className={styles.helpDropdownDesc}>Configure tmux for Familiar</span>
+                  <span className={styles.helpDropdownTitle}>Run Onboarding</span>
+                  <span className={styles.helpDropdownDesc}>Re-run setup wizard</span>
                 </span>
-                {copiedItem === 'setup' && <span className={styles.copiedBadge}>Copied!</span>}
               </button>
-              <button
-                className={styles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('doctor', DOCTOR_PROMPT)}
-              >
-                <span className={styles.helpDropdownIcon}>&#128269;</span>
-                <span className={styles.helpDropdownText}>
-                  <span className={styles.helpDropdownTitle}>Copy Doctor Prompt</span>
-                  <span className={styles.helpDropdownDesc}>Diagnose environment issues</span>
-                </span>
-                {copiedItem === 'doctor' && <span className={styles.copiedBadge}>Copied!</span>}
-              </button>
+              <div className={styles.helpDropdownDivider} />
               <button
                 className={styles.helpDropdownItem}
                 onClick={() => handleCopyPrompt('agents', BASE_AGENTS_MD)}

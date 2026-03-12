@@ -259,6 +259,12 @@
   color: var(--text-tertiary);
 }
 
+.helpDropdownDivider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 0;
+}
+
 .copiedBadge {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);

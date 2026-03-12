@@ -56,6 +56,8 @@ const api = {
   // PTY operations
   ptyCreate: (taskId: string, paneId: string, cwd: string): Promise<string> =>
     ipcRenderer.invoke('pty:create', taskId, paneId, cwd),
+  ptyCreatePlain: (taskId: string, paneId: string, cwd: string): Promise<string> =>
+    ipcRenderer.invoke('pty:create-plain', taskId, paneId, cwd),
   ptyWrite: (sessionId: string, data: string): Promise<void> =>
     ipcRenderer.invoke('pty:write', sessionId, data),
   ptyResize: (sessionId: string, cols: number, rows: number): Promise<void> =>
@@ -112,6 +114,12 @@ const api = {
     ipcRenderer.on('menu:open-workspace', () => callback())
     return () => {
       ipcRenderer.removeAllListeners('menu:open-workspace')
+    }
+  },
+  onMenuRunOnboarding: (callback: () => void): (() => void) => {
+    ipcRenderer.on('menu:run-onboarding', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('menu:run-onboarding')
     }
   },
 

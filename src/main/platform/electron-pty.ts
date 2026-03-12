@@ -317,6 +317,19 @@ export class ElectronPtyManager implements IPtyManager {
   }
 
   /**
+   * Create a plain shell session (no tmux), regardless of tmux availability.
+   * Used for onboarding doctor terminal and other contexts where tmux is not wanted.
+   */
+  async createPlain(taskId: string, paneId: string, cwd: string): Promise<string> {
+    const validCwd = getValidCwd(cwd)
+    const env = getShellEnv()
+    env.FAMILIAR_TASK_ID = taskId
+    env.FAMILIAR_PROJECT_ROOT = cwd
+    env.FAMILIAR_SETTINGS_PATH = `${cwd}/.familiar/settings.json`
+    return this._spawnPlainShell(taskId, paneId, validCwd, env)
+  }
+
+  /**
    * Spawn a plain shell (no tmux) as a fallback.
    * Throws with a descriptive error if spawning fails (e.g. EMFILE).
    */

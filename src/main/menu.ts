@@ -1,5 +1,5 @@
 import { Menu, app, dialog, BrowserWindow, shell, clipboard } from 'electron'
-import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
+import { BASE_AGENTS_MD } from '@shared/prompts'
 import { spawn } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 
@@ -103,24 +103,18 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
       role: 'help',
       submenu: [
         {
-          label: 'Copy Tmux Setup Prompt',
+          label: 'Run Onboarding…',
           click: (): void => {
-            clipboard.writeText(TMUX_SETUP_PROMPT)
+            mainWindow.webContents.send('menu:run-onboarding')
           }
         },
-        {
-          label: 'Copy Doctor Prompt',
-          click: (): void => {
-            clipboard.writeText(DOCTOR_PROMPT)
-          }
-        },
+        { type: 'separator' },
         {
           label: 'Copy AGENTS.md',
           click: (): void => {
             clipboard.writeText(BASE_AGENTS_MD)
           }
         },
-        { type: 'separator' },
         {
           label: 'Install CLI',
           click: (): void => {

@@ -49,6 +49,17 @@ function App(): React.JSX.Element {
     }
   }, [openWorkspace])
 
+  // Listen for "Run Onboarding" from the application menu
+  const openOnboarding = useUIStore((s) => s.openOnboarding)
+  useEffect(() => {
+    const unsubscribe = window.api.onMenuRunOnboarding(() => {
+      openOnboarding()
+    })
+    return () => {
+      unsubscribe()
+    }
+  }, [openOnboarding])
+
   return (
     <>
       <Navbar />

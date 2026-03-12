@@ -15,6 +15,16 @@ export function registerPtyHandlers(
     }
   })
 
+  ipcMain.handle('pty:create-plain', async (_event, taskId: string, paneId: string, cwd: string) => {
+    try {
+      return await ptyManager.createPlain(taskId, paneId, cwd)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('pty:create-plain failed:', message)
+      throw new Error(`Failed to create plain terminal session: ${message}`)
+    }
+  })
+
   ipcMain.handle('pty:write', async (_event, sessionId: string, data: string) => {
     try {
       await ptyManager.write(sessionId, data)

@@ -1,7 +1,41 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { Onboarding } from './Onboarding'
+
+// Polyfill ResizeObserver for test environment
+if (typeof ResizeObserver === 'undefined') {
+  ;(globalThis as any).ResizeObserver = class {
+    observe = vi.fn()
+    unobserve = vi.fn()
+    disconnect = vi.fn()
+    constructor(_cb: ResizeObserverCallback) {
+      // no-op
+    }
+  }
+}
+
+// Mock xterm.js modules
+vi.mock('@xterm/xterm', () => {
+  class MockTerminal {
+    loadAddon = vi.fn()
+    open = vi.fn()
+    write = vi.fn()
+    onData = vi.fn(() => ({ dispose: vi.fn() }))
+    dispose = vi.fn()
+    cols = 80
+    rows = 24
+  }
+  return { Terminal: MockTerminal }
+})
+
+vi.mock('@xterm/addon-fit', () => {
+  class MockFitAddon {
+    fit = vi.fn()
+  }
+  return { FitAddon: MockFitAddon }
+})
 
 // Mock window.api
 const mockApi = {
@@ -20,7 +54,14 @@ const mockApi = {
   tmuxList: vi.fn().mockResolvedValue([]),
   cliCheckAvailable: vi.fn().mockResolvedValue(true),
   cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' }),
-  claudeCheckAvailable: vi.fn().mockResolvedValue({ available: true, path: '/usr/local/bin/claude', version: '1.0.0' })
+  claudeCheckAvailable: vi.fn().mockResolvedValue({ available: true, path: '/usr/local/bin/claude', version: '1.0.0' }),
+  getProjectRoot: vi.fn().mockResolvedValue('/test/project'),
+  ptyCreate: vi.fn().mockResolvedValue('session-123'),
+  ptyCreatePlain: vi.fn().mockResolvedValue('session-123'),
+  ptyWrite: vi.fn().mockResolvedValue(undefined),
+  ptyResize: vi.fn().mockResolvedValue(undefined),
+  ptyDestroy: vi.fn().mockResolvedValue(undefined),
+  onPtyData: vi.fn().mockReturnValue(() => {})
 }
 
 ;(window as any).api = mockApi
@@ -250,5 +291,76 @@ describe('Onboarding', () => {
     render(<Onboarding hasProject={false} onComplete={vi.fn()} />)
     const container = document.querySelector('[style*="gap"]')
     expect(container).toBeTruthy()
+  })
+
+  it('saves skipDoctor=true and creates inline terminal when Run Doctor is clicked', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    await waitFor(() => {
+      // Should save skipDoctor=true
+      expect(mockApi.writeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDoctor: true })
+      )
+    })
+    await waitFor(() => {
+      // Should show Done button (terminal is running)
+      expect(screen.getByText('Done')).toBeInTheDocument()
+    })
+  })
+
+  it('creates PTY session without tmux when running doctor', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    await waitFor(() => {
+      expect(mockApi.ptyCreatePlain).toHaveBeenCalledWith('onboarding-doctor', 'doctor', '/test/project')
+    })
+  })
+
+  it('calls onComplete when Done is clicked in doctor terminal view', async () => {
+    const onComplete = vi.fn()
+    render(<Onboarding hasProject={true} onComplete={onComplete} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    await waitFor(() => screen.getByText('Done'))
+    fireEvent.click(screen.getByText('Done'))
+    expect(onComplete).toHaveBeenCalled()
+  })
+
+  it('cleans up PTY session on unmount', async () => {
+    const { unmount } = render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    await waitFor(() => {
+      expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
+    })
+    unmount()
+    expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
+})
+
+describe('UI Store onboarding', () => {
+  it('openOnboarding sets onboardingOpen to true', () => {
+    useUIStore.getState().openOnboarding()
+    expect(useUIStore.getState().onboardingOpen).toBe(true)
+  })
+
+  it('closeOnboarding sets onboardingOpen to false', () => {
+    useUIStore.getState().openOnboarding()
+    useUIStore.getState().closeOnboarding()
+    expect(useUIStore.getState().onboardingOpen).toBe(false)
   })
 })

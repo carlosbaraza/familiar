@@ -50,6 +50,7 @@ declare global {
 
       // PTY operations
       ptyCreate(taskId: string, paneId: string, cwd: string): Promise<string>
+      ptyCreatePlain(taskId: string, paneId: string, cwd: string): Promise<string>
       ptyWrite(sessionId: string, data: string): Promise<void>
       ptyResize(sessionId: string, cols: number, rows: number): Promise<void>
       ptyDestroy(sessionId: string): Promise<void>
@@ -78,6 +79,7 @@ declare global {
       setProjectRoot(path: string): Promise<boolean>
       onExternalTaskOpen(callback: (taskId: string) => void): () => void
       onMenuOpenWorkspace(callback: () => void): () => void
+      onMenuRunOnboarding(callback: () => void): () => void
 
       // File watching
       watchProjectDir(callback: () => void): () => void
@@ -90,6 +92,7 @@ declare global {
       // CLI
       cliCheckAvailable(): Promise<boolean>
       cliInstallToPath(): Promise<{ success: boolean; shell: string; error?: string }>
+      claudeCheckAvailable(): Promise<{ available: boolean; path: string | null; version: string | null }>
 
       // Shell
       openPath(path: string): Promise<string>

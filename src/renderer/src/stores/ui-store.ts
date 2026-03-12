@@ -30,6 +30,9 @@ interface UIState {
   // Keyboard shortcuts modal
   shortcutsModalOpen: boolean
 
+  // Onboarding wizard (can be re-triggered from help menu)
+  onboardingOpen: boolean
+
   // Board filters
   filters: TaskFilters
 
@@ -53,6 +56,8 @@ interface UIState {
   closeCreateTaskModal: () => void
   openShortcutsModal: () => void
   closeShortcutsModal: () => void
+  openOnboarding: () => void
+  closeOnboarding: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
   setFocusedColumn: (index: number) => void
@@ -95,6 +100,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: false,
+
+  // Onboarding
+  onboardingOpen: false,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -154,6 +162,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeShortcutsModal: () =>
     set({ shortcutsModalOpen: false }),
+
+  openOnboarding: () =>
+    set({ onboardingOpen: true, taskDetailOpen: false, settingsOpen: false, commandPaletteOpen: false }),
+
+  closeOnboarding: () =>
+    set({ onboardingOpen: false }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),

@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { CodingAgent, ProjectSettings } from '@shared/types'
 import { CODING_AGENT_LABELS } from '@shared/types/settings'
 import { DOCTOR_PROMPT } from '@shared/prompts'
 import { useTaskStore } from '@renderer/stores/task-store'
-import { useUIStore } from '@renderer/stores/ui-store'
 
 type OnboardingStep = 'open-folder' | 'select-agent' | 'install-cli' | 'doctor'
 
@@ -133,41 +132,139 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     }
   }, [])
 
+  // Inline terminal for doctor step
+  const [doctorRunning, setDoctorRunning] = useState(false)
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const xtermRef = useRef<import('@xterm/xterm').Terminal | null>(null)
+  const fitAddonRef = useRef<import('@xterm/addon-fit').FitAddon | null>(null)
+
+  // Cleanup PTY session and xterm on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionIdRef.current) {
+        window.api.ptyDestroy(sessionIdRef.current).catch(() => {})
+      }
+      xtermRef.current?.dispose()
+    }
+  }, [])
+
   const handleRunDoctor = useCallback(async () => {
+    // Save settings
     try {
       const settings = await window.api.readSettings()
-      const updated: ProjectSettings = { ...settings, skipDoctor }
+      const updated: ProjectSettings = { ...settings, skipDoctor: true }
       await window.api.writeSettings(updated)
     } catch {
       // ignore
     }
 
-    const { addTask } = useTaskStore.getState()
-    const task = await addTask('Doctor Check', { status: 'in-progress', labels: ['chore'] })
-    await window.api.writeTaskDocument(task.id, DOCTOR_PROMPT)
+    setDoctorRunning(true)
 
-    window.api.warmupTmuxSession(task.id).catch(() => {})
+    // Dynamically import xterm to avoid bundling it in the main chunk
+    const [{ Terminal }, { FitAddon }] = await Promise.all([
+      import('@xterm/xterm'),
+      import('@xterm/addon-fit')
+    ])
 
-    onComplete()
-    setTimeout(() => {
-      useUIStore.getState().openTaskDetail(task.id)
+    // Small delay to let the terminal container render
+    await new Promise((r) => setTimeout(r, 50))
 
-      const sessionName = `familiar-${task.id}`
-      setTimeout(async () => {
-        if (selectedAgent === 'claude-code') {
-          try {
-            await window.api.tmuxSendKeys(
-              sessionName,
-              'familiar doctor --copy | claude --print',
-              true
-            )
-          } catch {
-            // Terminal may not be ready yet
-          }
+    if (!terminalRef.current) return
+
+    const fitAddon = new FitAddon()
+    fitAddonRef.current = fitAddon
+
+    const term = new Terminal({
+      fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+      fontSize: 13,
+      lineHeight: 1.3,
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      theme: {
+        background: '#1a1a2e',
+        foreground: '#e0e0e0',
+        cursor: '#5b5fc7',
+        selectionBackground: 'rgba(91,95,199,0.3)',
+        black: '#1a1a2e',
+        red: '#e74c3c',
+        green: '#27ae60',
+        yellow: '#e89b3e',
+        blue: '#5b5fc7',
+        magenta: '#c678dd',
+        cyan: '#56b6c2',
+        white: '#e0e0e0'
+      }
+    })
+    xtermRef.current = term
+
+    term.loadAddon(fitAddon)
+    term.open(terminalRef.current)
+    fitAddon.fit()
+
+    // Create a PTY session (will fall back to plain shell if tmux unavailable)
+    let cwd: string
+    try {
+      cwd = await window.api.getProjectRoot()
+    } catch {
+      cwd = '/'
+    }
+
+    const sessionId = await window.api.ptyCreatePlain('onboarding-doctor', 'doctor', cwd)
+    sessionIdRef.current = sessionId
+
+    // Connect PTY output to xterm
+    const unsubscribe = window.api.onPtyData((sid, data) => {
+      if (sid === sessionId) {
+        term.write(data)
+      }
+    })
+
+    // Connect xterm input to PTY
+    term.onData((data) => {
+      if (sessionIdRef.current) {
+        window.api.ptyWrite(sessionIdRef.current, data)
+      }
+    })
+
+    // Handle resize
+    const resizeObserver = new ResizeObserver(() => {
+      try {
+        fitAddon.fit()
+        if (sessionIdRef.current) {
+          window.api.ptyResize(sessionIdRef.current, term.cols, term.rows).catch(() => {})
         }
-      }, 3000)
-    }, 100)
-  }, [selectedAgent, skipDoctor, onComplete])
+      } catch {
+        // ignore
+      }
+    })
+    resizeObserver.observe(terminalRef.current)
+
+    // Resize once now that PTY is created
+    fitAddon.fit()
+    await window.api.ptyResize(sessionId, term.cols, term.rows)
+
+    // Send the doctor command after a brief delay for shell to initialize
+    setTimeout(() => {
+      if (sessionIdRef.current) {
+        if (selectedAgent === 'claude-code') {
+          window.api.ptyWrite(sessionIdRef.current, 'familiar doctor | claude\n')
+        } else {
+          window.api.ptyWrite(sessionIdRef.current, 'familiar doctor\n')
+        }
+      }
+    }, 500)
+
+    // Store cleanup for when component unmounts
+    const currentTerminalEl = terminalRef.current
+    return () => {
+      resizeObserver.disconnect()
+      unsubscribe()
+      if (currentTerminalEl) {
+        term.dispose()
+      }
+    }
+  }, [selectedAgent])
 
   const handleSkipDoctor = useCallback(async () => {
     try {
@@ -403,6 +500,33 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   }
 
   // ── Step 4: Doctor Check ──
+  if (doctorRunning) {
+    return (
+      <div style={styles.container}>
+        <div style={{ ...styles.card, maxWidth: 720 }}>
+          <StepIndicator current={3} total={4} />
+
+          <h1 style={styles.title}>Environment Check</h1>
+          <p style={styles.subtitle}>
+            Running doctor diagnostics for{' '}
+            {selectedAgent ? CODING_AGENT_LABELS[selectedAgent] : 'your agent'}...
+          </p>
+
+          <div
+            ref={terminalRef}
+            style={styles.terminalContainer}
+          />
+
+          <div style={styles.doctorActions}>
+            <button style={styles.primaryButton} onClick={onComplete}>
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
@@ -916,6 +1040,14 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto' as const,
     whiteSpace: 'pre-wrap' as const,
     wordBreak: 'break-word' as const
+  },
+  terminalContainer: {
+    width: '100%',
+    height: '340px',
+    backgroundColor: '#1a1a2e',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    overflow: 'hidden'
   },
   doctorActions: {
     display: 'flex',

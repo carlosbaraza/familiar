@@ -164,19 +164,18 @@ describe('Navbar', () => {
     const helpBtn = screen.getByTitle('Agent setup prompts')
     fireEvent.click(helpBtn)
 
-    expect(screen.getByText('Copy Tmux Setup Prompt')).toBeTruthy()
-    expect(screen.getByText('Copy Doctor Prompt')).toBeTruthy()
+    expect(screen.getByText('Run Onboarding')).toBeTruthy()
     expect(screen.getByText('Copy AGENTS.md')).toBeTruthy()
   })
 
-  it('copies tmux setup prompt to clipboard', async () => {
+  it('copies agents.md to clipboard', async () => {
     await renderNavbarAndWait()
 
     fireEvent.click(screen.getByTitle('Agent setup prompts'))
-    fireEvent.click(screen.getByText('Copy Tmux Setup Prompt'))
+    fireEvent.click(screen.getByText('Copy AGENTS.md'))
 
     await waitFor(() => {
-      expect(mockWriteText).toHaveBeenCalledWith('tmux setup prompt content')
+      expect(mockWriteText).toHaveBeenCalledWith('agents md content')
     })
   })
 
@@ -196,7 +195,7 @@ describe('Navbar', () => {
     fireEvent.click(screen.getByTitle('Agent setup prompts'))
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Copy Tmux Setup Prompt'))
+      fireEvent.click(screen.getByText('Copy AGENTS.md'))
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -216,10 +215,19 @@ describe('Navbar', () => {
     await renderNavbarAndWait()
 
     fireEvent.click(screen.getByTitle('Agent setup prompts'))
-    expect(screen.getByText('Copy Tmux Setup Prompt')).toBeTruthy()
+    expect(screen.getByText('Run Onboarding')).toBeTruthy()
 
     fireEvent.mouseDown(document.body)
-    expect(screen.queryByText('Copy Tmux Setup Prompt')).toBeNull()
+    expect(screen.queryByText('Run Onboarding')).toBeNull()
+  })
+
+  it('opens onboarding when Run Onboarding is clicked', async () => {
+    await renderNavbarAndWait()
+
+    fireEvent.click(screen.getByTitle('Agent setup prompts'))
+    fireEvent.click(screen.getByText('Run Onboarding'))
+
+    expect(useUIStore.getState().onboardingOpen).toBe(true)
   })
 
   // --- Notification bell ---
