@@ -13,7 +13,7 @@ import {
 import type { ProjectState, Task, ActivityEntry, AppNotification } from '../../shared/types'
 
 /**
- * Find the project root by walking up from cwd looking for `.kanban-agent/`.
+ * Find the project root by walking up from cwd looking for `.familiar/`.
  * Falls back to cwd if not found.
  */
 export function getProjectRoot(): string {

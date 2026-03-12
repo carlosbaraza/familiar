@@ -123,14 +123,14 @@ function taskIdToUuid(taskId: string): string {
 }
 
 /**
- * Resolve a Claude default command that contains `--resume $KANBAN_TASK_ID` (or similar)
+ * Resolve a Claude default command that contains `--resume $FAMILIAR_TASK_ID` (or similar)
  * into either `--resume <uuid>` (if a prior session exists) or `--session-id <uuid>`
  * (if starting fresh). This avoids the interactive resume picker showing up when no
  * session matches the task ID.
  */
 function resolveClaudeSessionCommand(command: string, taskId: string, projectRoot: string): string {
-  // Only transform commands that reference KANBAN_TASK_ID in a --resume flag
-  const resumePattern = /--resume\s+["']?\$KANBAN_TASK_ID["']?/
+  // Only transform commands that reference FAMILIAR_TASK_ID in a --resume flag
+  const resumePattern = /--resume\s+["']?\$FAMILIAR_TASK_ID["']?/
   if (!resumePattern.test(command)) return command
 
   const sessionUuid = taskIdToUuid(taskId)
@@ -224,8 +224,8 @@ export class ElectronPtyManager implements IPtyManager {
     const env = getShellEnv()
 
     // Inject kanban context so agents know which task they're in
-    env.KANBAN_TASK_ID = taskId
-    env.KANBAN_PROJECT_ROOT = cwd
+    env.FAMILIAR_TASK_ID = taskId
+    env.FAMILIAR_PROJECT_ROOT = cwd
 
     const tmuxPath = this._getTmuxPath()
 
@@ -235,12 +235,12 @@ export class ElectronPtyManager implements IPtyManager {
 
     if (tmuxPath) {
       // tmux is available — one persistent session per task
-      tmuxSessionName = `kanban-${taskId}`
+      tmuxSessionName = `familiar-${taskId}`
 
       // Ensure tmux session exists — create if needed, ignore "duplicate session" errors
       const kanbanEnv = {
-        KANBAN_TASK_ID: taskId,
-        KANBAN_PROJECT_ROOT: cwd
+        FAMILIAR_TASK_ID: taskId,
+        FAMILIAR_PROJECT_ROOT: cwd
       }
       try {
         const exists = await this._tmux.hasSession(tmuxSessionName)
@@ -303,7 +303,7 @@ export class ElectronPtyManager implements IPtyManager {
     if (isNewSession && tmuxSessionName && this._dataService) {
       this._dataService.readSettings().then((settings) => {
         if (settings.defaultCommand) {
-          // Resolve --resume $KANBAN_TASK_ID into --resume <uuid> or --session-id <uuid>
+          // Resolve --resume $FAMILIAR_TASK_ID into --resume <uuid> or --session-id <uuid>
           const resolvedCommand = resolveClaudeSessionCommand(
             settings.defaultCommand,
             taskId,

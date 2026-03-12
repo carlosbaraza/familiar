@@ -99,7 +99,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       // Set the new project root in the main process
       await window.api.setProjectRoot(selectedPath)
 
-      // Check if the folder already has .kanban-agent/
+      // Check if the folder already has .familiar/
       const initialized = await window.api.isInitialized()
       if (initialized) {
         // Load existing project

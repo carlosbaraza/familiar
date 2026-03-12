@@ -23,11 +23,11 @@ export interface ProjectSettings {
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [
-  { title: 'Start', command: '/kanban-agent', pressEnter: true }
+  { title: 'Start', command: '/familiar', pressEnter: true }
 ]
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
   defaultCommand:
-    'claude --dangerously-skip-permissions --resume $KANBAN_TASK_ID',
+    'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
   snippets: DEFAULT_SNIPPETS
 }

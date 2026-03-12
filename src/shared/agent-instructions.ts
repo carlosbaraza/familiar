@@ -1,86 +1,86 @@
 /**
- * Template for AGENTS.md that gets created in .kanban-agent/
+ * Template for AGENTS.md that gets created in .familiar/
  * when a project is initialized. This file tells AI coding agents
- * how to interact with the kanban system.
+ * how to interact with the familiar system.
  */
-export const AGENTS_MD = `# Kanban Agent — Instructions for AI Agents
+export const AGENTS_MD = `# Familiar — Instructions for AI Agents
 
-You are running inside a **Kanban Agent** terminal. This system tracks tasks,
+You are running inside a **Familiar** terminal. This system tracks tasks,
 documents, and activity for an agentic coding workflow.
 
 ## Your Context
 
-The environment variable \`KANBAN_TASK_ID\` contains the ID of the task you are
-working on. The variable \`KANBAN_PROJECT_ROOT\` points to the workspace root.
+The environment variable \`FAMILIAR_TASK_ID\` contains the ID of the task you are
+working on. The variable \`FAMILIAR_PROJECT_ROOT\` points to the workspace root.
 
 \`\`\`bash
-echo $KANBAN_TASK_ID        # e.g. tsk_a1b2c3d4
-echo $KANBAN_PROJECT_ROOT   # e.g. /Users/me/myproject
+echo $FAMILIAR_TASK_ID        # e.g. tsk_a1b2c3d4
+echo $FAMILIAR_PROJECT_ROOT   # e.g. /Users/me/myproject
 \`\`\`
 
-## CLI — \`kanban-agent\`
+## CLI — \`familiar\`
 
-Use the \`kanban-agent\` CLI to interact with the system. All commands operate
-on the \`.kanban-agent/\` directory in the project root.
+Use the \`familiar\` CLI to interact with the system. All commands operate
+on the \`.familiar/\` directory in the project root.
 
 ### Read your task
 
 \`\`\`bash
-kanban-agent list --json                         # List all tasks
-kanban-agent list --status in-progress --json    # Filter by status
+familiar list --json                         # List all tasks
+familiar list --status in-progress --json    # Filter by status
 \`\`\`
 
 Your task document (markdown notes, specs, etc.) is at:
 \`\`\`
-.kanban-agent/tasks/$KANBAN_TASK_ID/document.md
+.familiar/tasks/$FAMILIAR_TASK_ID/document.md
 \`\`\`
 
 Your task metadata:
 \`\`\`
-.kanban-agent/tasks/$KANBAN_TASK_ID/task.json
+.familiar/tasks/$FAMILIAR_TASK_ID/task.json
 \`\`\`
 
 Activity log:
 \`\`\`
-.kanban-agent/tasks/$KANBAN_TASK_ID/activity.json
+.familiar/tasks/$FAMILIAR_TASK_ID/activity.json
 \`\`\`
 
 ### Update status
 
 \`\`\`bash
-kanban-agent status $KANBAN_TASK_ID in-progress  # Mark as in progress
-kanban-agent status $KANBAN_TASK_ID in-review    # Ready for review
-kanban-agent status $KANBAN_TASK_ID done         # Complete
+familiar status $FAMILIAR_TASK_ID in-progress  # Mark as in progress
+familiar status $FAMILIAR_TASK_ID in-review    # Ready for review
+familiar status $FAMILIAR_TASK_ID done         # Complete
 \`\`\`
 
 ### Log progress
 
 \`\`\`bash
-kanban-agent log $KANBAN_TASK_ID "Implemented the auth module"
-kanban-agent log $KANBAN_TASK_ID "Fixed failing tests, 12/12 passing"
+familiar log $FAMILIAR_TASK_ID "Implemented the auth module"
+familiar log $FAMILIAR_TASK_ID "Fixed failing tests, 12/12 passing"
 \`\`\`
 
 ### Send notifications
 
 \`\`\`bash
-kanban-agent notify "Build Complete" "All tests passing on feature-xyz"
+familiar notify "Build Complete" "All tests passing on feature-xyz"
 \`\`\`
 
 ### Update task fields
 
 \`\`\`bash
-kanban-agent update $KANBAN_TASK_ID --priority high
-kanban-agent update $KANBAN_TASK_ID --agent-status running
-kanban-agent update $KANBAN_TASK_ID --agent-status done
-kanban-agent update $KANBAN_TASK_ID --agent-status error
-kanban-agent update $KANBAN_TASK_ID --labels "backend,auth"
+familiar update $FAMILIAR_TASK_ID --priority high
+familiar update $FAMILIAR_TASK_ID --agent-status running
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar update $FAMILIAR_TASK_ID --agent-status error
+familiar update $FAMILIAR_TASK_ID --labels "backend,auth"
 \`\`\`
 
 ### Create new tasks
 
 \`\`\`bash
-kanban-agent add "Fix login redirect bug" --priority high --status todo
-kanban-agent add "Write unit tests for auth" --labels "testing"
+familiar add "Fix login redirect bug" --priority high --status todo
+familiar add "Write unit tests for auth" --labels "testing"
 \`\`\`
 
 ## Status Management
@@ -89,7 +89,7 @@ kanban-agent add "Write unit tests for auth" --labels "testing"
 
 ### Task Status (column on the board)
 
-Use \`kanban-agent status <id> <status>\` to move your task between columns:
+Use \`familiar status <id> <status>\` to move your task between columns:
 
 | Status | Meaning | When to set |
 |--------|---------|-------------|
@@ -102,7 +102,7 @@ Use \`kanban-agent status <id> <status>\` to move your task between columns:
 
 ### Agent Status (shows agent state on the card)
 
-Use \`kanban-agent update <id> --agent-status <status>\` to show your runtime state:
+Use \`familiar update <id> --agent-status <status>\` to show your runtime state:
 
 | Agent Status | Meaning | When to set |
 |-------------|---------|-------------|
@@ -113,8 +113,8 @@ Use \`kanban-agent update <id> --agent-status <status>\` to show your runtime st
 
 ### Rules
 
-- **Do NOT** use \`kanban-agent log\` to record status changes — use \`kanban-agent status\` and \`kanban-agent update --agent-status\` instead.
-- **Do** use \`kanban-agent log\` only for progress notes describing what you did or what happened.
+- **Do NOT** use \`familiar log\` to record status changes — use \`familiar status\` and \`familiar update --agent-status\` instead.
+- **Do** use \`familiar log\` only for progress notes describing what you did or what happened.
 - **Always** set both task status and agent-status together (e.g., \`in-progress\` + \`running\`, \`in-review\` + \`done\`).
 
 ## Task Classification
@@ -129,10 +129,10 @@ When you start working on a task, **classify it** by adding the appropriate labe
 
 \`\`\`bash
 # Example: classify your task as a bug fix
-kanban-agent update $KANBAN_TASK_ID --labels "bug"
+familiar update $FAMILIAR_TASK_ID --labels "bug"
 
 # You can combine with other labels
-kanban-agent update $KANBAN_TASK_ID --labels "bug,backend"
+familiar update $FAMILIAR_TASK_ID --labels "bug,backend"
 \`\`\`
 
 Do this **right after** setting your status to \`in-progress\`, before you start the actual work.
@@ -149,35 +149,35 @@ Do this **right after** setting your status to \`in-progress\`, before you start
 
 \`\`\`bash
 # 1. FIRST THING: Mark yourself as working (do this BEFORE anything else)
-kanban-agent status $KANBAN_TASK_ID in-progress
-kanban-agent update $KANBAN_TASK_ID --agent-status running
-kanban-agent log $KANBAN_TASK_ID "Starting work"
+familiar status $FAMILIAR_TASK_ID in-progress
+familiar update $FAMILIAR_TASK_ID --agent-status running
+familiar log $FAMILIAR_TASK_ID "Starting work"
 
 # 2. Read the task document and classify it
-cat .kanban-agent/tasks/$KANBAN_TASK_ID/document.md
-kanban-agent update $KANBAN_TASK_ID --labels "feature"  # or bug, improvement, chore
+cat .familiar/tasks/$FAMILIAR_TASK_ID/document.md
+familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 
 # 3. Do your work, logging progress (NOT status changes)
-kanban-agent log $KANBAN_TASK_ID "Implemented the auth module"
+familiar log $FAMILIAR_TASK_ID "Implemented the auth module"
 # ... more work ...
-kanban-agent log $KANBAN_TASK_ID "Running tests — 12/12 passing"
+familiar log $FAMILIAR_TASK_ID "Running tests — 12/12 passing"
 
 # 4. On success: update status, then notify
-kanban-agent status $KANBAN_TASK_ID in-review
-kanban-agent update $KANBAN_TASK_ID --agent-status done
-kanban-agent log $KANBAN_TASK_ID "Complete — ready for review"
-kanban-agent notify "Task Complete" "$KANBAN_TASK_ID done"
+familiar status $FAMILIAR_TASK_ID in-review
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar log $FAMILIAR_TASK_ID "Complete — ready for review"
+familiar notify "Task Complete" "$FAMILIAR_TASK_ID done"
 
 # 5. On failure: update status, then notify
-kanban-agent update $KANBAN_TASK_ID --agent-status error
-kanban-agent log $KANBAN_TASK_ID "ERROR: Tests failed — see terminal output"
-kanban-agent notify "Task Failed" "Error on $KANBAN_TASK_ID"
+familiar update $FAMILIAR_TASK_ID --agent-status error
+familiar log $FAMILIAR_TASK_ID "ERROR: Tests failed — see terminal output"
+familiar notify "Task Failed" "Error on $FAMILIAR_TASK_ID"
 \`\`\`
 
 ## File Structure
 
 \`\`\`
-.kanban-agent/
+.familiar/
 ├── AGENTS.md            # This file
 ├── state.json           # All tasks and project config
 └── tasks/

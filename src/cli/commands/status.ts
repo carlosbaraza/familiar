@@ -32,7 +32,7 @@ export function statusCommand(): Command {
       try {
         state = await readProjectState(root)
       } catch {
-        console.error(chalk.red('Project not initialized. Run `kanban-agent init` first.'))
+        console.error(chalk.red('Project not initialized. Run `familiar init` first.'))
         process.exit(1)
       }
 
@@ -101,7 +101,7 @@ export function statusCommand(): Command {
       console.log(chalk.green(`Task ${chalk.bold(id)} status updated: ${COLUMN_LABELS[oldStatus]} -> ${COLUMN_LABELS[newStatus]}`))
 
       if (newStatus === 'done') {
-        console.log(chalk.dim('Hint: Use `kanban-agent notify` to send a completion notification.'))
+        console.log(chalk.dim('Hint: Use `familiar notify` to send a completion notification.'))
       }
     })
 }

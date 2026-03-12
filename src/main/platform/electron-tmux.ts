@@ -119,6 +119,6 @@ export class ElectronTmuxManager implements ITmuxManager {
   }
 
   getSessionName(taskId: string, paneIndex: number): string {
-    return `kanban-${taskId}-${paneIndex}`
+    return `familiar-${taskId}-${paneIndex}`
   }
 }

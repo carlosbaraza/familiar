@@ -7,7 +7,7 @@ export function openCommand(): Command {
     .description('Open the Kanban Agent app')
     .argument('[id]', 'Task ID to open')
     .action(async (id?: string) => {
-      const appName = 'Kanban Agent'
+      const appName = 'Familiar'
 
       try {
         if (id) {

@@ -129,9 +129,9 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
         },
         { type: 'separator' },
         {
-          label: 'Kanban Agent GitHub',
+          label: 'Familiar GitHub',
           click: (): void => {
-            shell.openExternal('https://github.com/carlosbaraza/kanban-agent')
+            shell.openExternal('https://github.com/carlosbaraza/familiar')
           }
         }
       ]

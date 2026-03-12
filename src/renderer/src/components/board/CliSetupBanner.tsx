@@ -51,7 +51,7 @@ export function CliSetupBanner(): React.JSX.Element | null {
         <div className={styles.content}>
           <div className={styles.title}>CLI installed</div>
           <div className={styles.description}>
-            Restart your {shellName} terminal or run <code>source ~/.{shellName}rc</code> to start using <code>kanban-agent</code>.
+            Restart your {shellName} terminal or run <code>source ~/.{shellName}rc</code> to start using <code>familiar</code>.
           </div>
         </div>
         <div className={styles.actions}>
@@ -77,7 +77,7 @@ export function CliSetupBanner(): React.JSX.Element | null {
         <div className={styles.description}>
           {state === 'error'
             ? `Installation failed: ${errorMsg}`
-            : 'Install the kanban-agent CLI to manage tasks from your terminal.'}
+            : 'Install the familiar CLI to manage tasks from your terminal.'}
         </div>
       </div>
       <div className={styles.actions}>

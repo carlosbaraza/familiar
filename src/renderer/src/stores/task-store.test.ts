@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import type { ProjectState, Task } from '@shared/types'
 
 // Mock window.api
@@ -13,7 +14,14 @@ const mockApi = {
   writeProjectState: vi.fn(),
   warmupTmuxSession: vi.fn(),
   tmuxList: vi.fn().mockResolvedValue([]),
-  tmuxKill: vi.fn()
+  tmuxKill: vi.fn(),
+  openDirectory: vi.fn(),
+  setProjectRoot: vi.fn(),
+  listNotifications: vi.fn().mockResolvedValue([]),
+  markNotificationRead: vi.fn().mockResolvedValue(undefined),
+  markNotificationsByTaskRead: vi.fn().mockResolvedValue(undefined),
+  markAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
+  clearNotifications: vi.fn().mockResolvedValue(undefined)
 }
 
 Object.defineProperty(globalThis, 'window', {
@@ -276,6 +284,472 @@ describe('useTaskStore', () => {
 
     it('returns undefined when no project state', () => {
       expect(useTaskStore.getState().getTaskById('tsk_x')).toBeUndefined()
+    })
+  })
+
+  describe('addTask - additional coverage', () => {
+    it('generates an id starting with tsk_ and 6 alphanumeric chars', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      const task = await useTaskStore.getState().addTask('ID test')
+      expect(task.id).toMatch(/^tsk_[a-z0-9]{6}$/)
+    })
+
+    it('applies partial options to the created task', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      const task = await useTaskStore.getState().addTask('Custom task', {
+        priority: 'high',
+        labels: ['bug'],
+        status: 'in-progress'
+      })
+
+      expect(task.priority).toBe('high')
+      expect(task.labels).toEqual(['bug'])
+      expect(task.status).toBe('in-progress')
+    })
+
+    it('sets default values for new tasks', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      const task = await useTaskStore.getState().addTask('Defaults test')
+
+      expect(task.status).toBe('todo')
+      expect(task.priority).toBe('none')
+      expect(task.labels).toEqual([])
+      expect(task.agentStatus).toBe('idle')
+      expect(task.createdAt).toBeDefined()
+      expect(task.updatedAt).toBeDefined()
+    })
+
+    it('handles warmup failure gracefully', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.warmupTmuxSession.mockRejectedValue(new Error('tmux not found'))
+
+      // Should not throw even if warmup fails
+      const task = await useTaskStore.getState().addTask('Warmup fail test')
+      expect(task.title).toBe('Warmup fail test')
+    })
+  })
+
+  describe('updateTask - additional coverage', () => {
+    it('updates the updatedAt timestamp', async () => {
+      const task = makeTask({ updatedAt: '2020-01-01T00:00:00.000Z' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, title: 'Changed' })
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.updatedAt).not.toBe('2020-01-01T00:00:00.000Z')
+    })
+
+    it('kills tmux sessions when archiving a task', async () => {
+      const task = makeTask({ id: 'tsk_arch', status: 'done' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_arch-0', 'kanban-tsk_arch-1'])
+      mockApi.tmuxKill.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, status: 'archived' })
+
+      expect(mockApi.tmuxList).toHaveBeenCalled()
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_arch-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_arch-1')
+    })
+
+    it('resets agentStatus to idle when archiving', async () => {
+      const task = makeTask({ id: 'tsk_agent', status: 'done', agentStatus: 'running' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, status: 'archived' })
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('idle')
+    })
+
+    it('does not kill tmux sessions for non-archive updates', async () => {
+      const task = makeTask({ status: 'todo' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, title: 'Renamed' })
+
+      expect(mockApi.tmuxList).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('deleteTask - additional coverage', () => {
+    it('kills tmux sessions before deleting', async () => {
+      const task = makeTask({ id: 'tsk_del' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_del-0'])
+      mockApi.tmuxKill.mockResolvedValue(undefined)
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTask('tsk_del')
+
+      expect(mockApi.tmuxList).toHaveBeenCalled()
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_del-0')
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_del')
+    })
+
+    it('handles tmux list failure gracefully during delete', async () => {
+      const task = makeTask({ id: 'tsk_del2' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockRejectedValue(new Error('tmux not available'))
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTask('tsk_del2')
+
+      expect(useTaskStore.getState().projectState!.tasks).toHaveLength(0)
+    })
+  })
+
+  describe('moveTask - additional coverage', () => {
+    it('kills tmux sessions when moving to archived', async () => {
+      const task = makeTask({ id: 'tsk_mv', status: 'done', sortOrder: 0 })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_mv-0'])
+      mockApi.tmuxKill.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTask('tsk_mv', 'archived', 0)
+
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_mv-0')
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.status).toBe('archived')
+      expect(stored.agentStatus).toBe('idle')
+    })
+
+    it('re-indexes source column when moving to a different column', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 2 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move first task to in-progress
+      await useTaskStore.getState().moveTask('tsk_a', 'in-progress', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      // Source column re-indexed: tsk_b=0, tsk_c=1
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(1)
+    })
+
+    it('clamps index to column length when index exceeds it', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'in-progress', sortOrder: 0 })
+      const state = makeProjectState([t1, t2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move to in-progress at index 999 (should clamp to 1)
+      await useTaskStore.getState().moveTask('tsk_a', 'in-progress', 999)
+
+      const moved = useTaskStore.getState().projectState!.tasks.find((t) => t.id === 'tsk_a')!
+      expect(moved.status).toBe('in-progress')
+      expect(moved.sortOrder).toBe(1)
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(
+        useTaskStore.getState().moveTask('tsk_x', 'done', 0)
+      ).rejects.toThrow('Project not initialized')
+    })
+  })
+
+  describe('moveTasks (bulk)', () => {
+    it('moves multiple tasks to a new status', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'in-progress', sortOrder: 0 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b'], 'in-progress', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.status).toBe('in-progress')
+      expect(tasks.find((t) => t.id === 'tsk_b')!.status).toBe('in-progress')
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(1)
+    })
+
+    it('kills tmux sessions when bulk moving to archived', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'done', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'done', sortOrder: 1 })
+      const state = makeProjectState([t1, t2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_a-0', 'kanban-tsk_b-0'])
+      mockApi.tmuxKill.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b'], 'archived', 0)
+
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_a-0')
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_b-0')
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(
+        useTaskStore.getState().moveTasks(['tsk_x'], 'done', 0)
+      ).rejects.toThrow('Project not initialized')
+    })
+
+    it('ignores non-existent task ids', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const state = makeProjectState([t1])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_nonexistent'], 'done', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.status).toBe('done')
+    })
+  })
+
+  describe('archiveAllDone', () => {
+    it('archives all done tasks', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'done', sortOrder: 0, agentStatus: 'running' })
+      const t2 = makeTask({ id: 'tsk_b', status: 'done', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 0 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().archiveAllDone()
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.status).toBe('archived')
+      expect(tasks.find((t) => t.id === 'tsk_a')!.agentStatus).toBe('idle')
+      expect(tasks.find((t) => t.id === 'tsk_b')!.status).toBe('archived')
+      expect(tasks.find((t) => t.id === 'tsk_c')!.status).toBe('todo')
+    })
+
+    it('does nothing when no done tasks exist', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const state = makeProjectState([t1])
+      useTaskStore.setState({ projectState: state })
+
+      await useTaskStore.getState().archiveAllDone()
+
+      expect(mockApi.writeProjectState).not.toHaveBeenCalled()
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(
+        useTaskStore.getState().archiveAllDone()
+      ).rejects.toThrow('Project not initialized')
+    })
+
+    it('kills tmux sessions for all done tasks', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'done', sortOrder: 0 })
+      const state = makeProjectState([t1])
+      useTaskStore.setState({ projectState: state })
+      mockApi.tmuxList.mockResolvedValue(['kanban-tsk_a-0'])
+      mockApi.tmuxKill.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().archiveAllDone()
+
+      expect(mockApi.tmuxKill).toHaveBeenCalledWith('kanban-tsk_a-0')
+    })
+  })
+
+  describe('reorderTask', () => {
+    it('reorders a task within the same column', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 2 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move tsk_a from index 0 to index 2
+      await useTaskStore.getState().reorderTask('tsk_a', 2)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(2)
+    })
+
+    it('clamps to end of column when index exceeds length', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const state = makeProjectState([t1, t2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().reorderTask('tsk_a', 999)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(0)
+    })
+
+    it('throws when task not found', async () => {
+      const state = makeProjectState([])
+      useTaskStore.setState({ projectState: state })
+
+      await expect(
+        useTaskStore.getState().reorderTask('tsk_nonexistent', 0)
+      ).rejects.toThrow('Task tsk_nonexistent not found')
+    })
+
+    it('throws when project not initialized', async () => {
+      await expect(
+        useTaskStore.getState().reorderTask('tsk_x', 0)
+      ).rejects.toThrow('Project not initialized')
+    })
+  })
+
+  describe('updateProjectLabels', () => {
+    it('updates labels in project state', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      const labels = [
+        { name: 'bug', color: '#ff0000' },
+        { name: 'feature', color: '#00ff00' }
+      ]
+      await useTaskStore.getState().updateProjectLabels(labels)
+
+      expect(useTaskStore.getState().projectState!.labels).toEqual(labels)
+      expect(mockApi.writeProjectState).toHaveBeenCalled()
+    })
+
+    it('does nothing when project not initialized', async () => {
+      await useTaskStore.getState().updateProjectLabels([{ name: 'test', color: '#000' }])
+      expect(mockApi.writeProjectState).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('initProject', () => {
+    it('initializes a project and sets state', async () => {
+      const newState = makeProjectState()
+      mockApi.initProject.mockResolvedValue(newState)
+
+      await useTaskStore.getState().initProject('My Project')
+
+      expect(mockApi.initProject).toHaveBeenCalledWith('My Project')
+      expect(useTaskStore.getState().projectState).toEqual(newState)
+      expect(useTaskStore.getState().isLoading).toBe(false)
+    })
+
+    it('sets error when initProject fails', async () => {
+      mockApi.initProject.mockRejectedValue(new Error('Init failed'))
+
+      await useTaskStore.getState().initProject('Fail')
+
+      expect(useTaskStore.getState().error).toBe('Init failed')
+      expect(useTaskStore.getState().isLoading).toBe(false)
+    })
+  })
+
+  describe('openWorkspace', () => {
+    it('returns false when user cancels directory selection', async () => {
+      mockApi.openDirectory.mockResolvedValue(null)
+
+      const result = await useTaskStore.getState().openWorkspace()
+
+      expect(result).toBe(false)
+    })
+
+    it('loads existing project when .familiar/ exists', async () => {
+      const existingState = makeProjectState()
+      mockApi.openDirectory.mockResolvedValue('/path/to/project')
+      mockApi.setProjectRoot.mockResolvedValue(undefined)
+      mockApi.isInitialized.mockResolvedValue(true)
+      mockApi.readProjectState.mockResolvedValue(existingState)
+
+      const result = await useTaskStore.getState().openWorkspace()
+
+      expect(result).toBe(true)
+      expect(mockApi.setProjectRoot).toHaveBeenCalledWith('/path/to/project')
+      expect(useTaskStore.getState().projectState).toEqual(existingState)
+    })
+
+    it('initializes new project when .familiar/ does not exist', async () => {
+      const newState = makeProjectState()
+      mockApi.openDirectory.mockResolvedValue('/path/to/my-project')
+      mockApi.setProjectRoot.mockResolvedValue(undefined)
+      mockApi.isInitialized.mockResolvedValue(false)
+      mockApi.initProject.mockResolvedValue(newState)
+
+      const result = await useTaskStore.getState().openWorkspace()
+
+      expect(result).toBe(true)
+      expect(mockApi.initProject).toHaveBeenCalledWith('my-project')
+      expect(useTaskStore.getState().projectState).toEqual(newState)
+    })
+
+    it('sets error and returns false on failure', async () => {
+      mockApi.openDirectory.mockRejectedValue(new Error('Permission denied'))
+
+      const result = await useTaskStore.getState().openWorkspace()
+
+      expect(result).toBe(false)
+      expect(useTaskStore.getState().error).toBe('Permission denied')
+    })
+  })
+
+  describe('loadProjectState - additional coverage', () => {
+    it('does not show loading spinner on refresh when state already exists', async () => {
+      const existing = makeProjectState()
+      useTaskStore.setState({ projectState: existing })
+      mockApi.isInitialized.mockResolvedValue(true)
+      const newState = makeProjectState([makeTask()])
+      mockApi.readProjectState.mockResolvedValue(newState)
+
+      // We cannot easily observe transient isLoading=true in a sync test,
+      // but we can verify it stays false when existing state is present
+      await useTaskStore.getState().loadProjectState()
+
+      expect(useTaskStore.getState().projectState).toEqual(newState)
+      expect(useTaskStore.getState().isLoading).toBe(false)
     })
   })
 })

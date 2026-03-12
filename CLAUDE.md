@@ -1,8 +1,8 @@
-# Kanban Agent — Developer Guide
+# Familiar — Developer Guide
 
 ## What is this project?
 
-Kanban Agent is a macOS Electron desktop app that provides a Linear-style kanban board with embedded terminal emulators, purpose-built for agentic AI coding workflows. Each task card has a block editor and terminal panes running persistent tmux sessions. A companion CLI (`kanban-agent`) allows scripts/agents to manage tasks without the GUI.
+Familiar is a macOS Electron desktop app that provides a Linear-style kanban board with embedded terminal emulators, purpose-built for agentic AI coding workflows. Each task card has a block editor and terminal panes running persistent tmux sessions. A companion CLI (`familiar`) allows scripts/agents to manage tasks without the GUI.
 
 ## Quick Start
 
@@ -21,14 +21,14 @@ npm run typecheck    # TypeScript type checking
 - **Preload** (`src/preload/`) — contextBridge exposing `window.api` to renderer
 - **Renderer** (`src/renderer/`) — React 19 + Zustand UI
 - **Shared** (`src/shared/`) — Types, constants, utilities shared across all processes
-- **CLI** (`src/cli/`) — Standalone Commander.js CLI reading `.kanban-agent/` directly
+- **CLI** (`src/cli/`) — Standalone Commander.js CLI reading `.familiar/` directly
 
 ### Key Patterns
 
 - **Platform abstraction**: All Electron APIs are behind interfaces in `src/shared/platform/`. Implementations in `src/main/platform/`. This enables future browser portability.
 - **State**: Zustand stores in renderer only. Main process is stateless (provides services via IPC).
-- **Persistence**: File-based in `.kanban-agent/` folder. No database. Atomic writes (temp+rename) for safety.
-- **Terminals**: Real tmux sessions (`kanban-<taskId>-<paneIndex>`). node-pty spawns `tmux attach`. Sessions survive app restarts.
+- **Persistence**: File-based in `.familiar/` folder. No database. Atomic writes (temp+rename) for safety.
+- **Terminals**: Real tmux sessions (`familiar-<taskId>-<paneIndex>`). node-pty spawns `tmux attach`. Sessions survive app restarts.
 
 ## Project Structure
 
@@ -86,9 +86,9 @@ src/
 
 ## Data Model
 
-Tasks stored in `.kanban-agent/`:
+Tasks stored in `.familiar/`:
 ```
-.kanban-agent/
+.familiar/
 ├── state.json           # ProjectState (tasks array, column order, labels)
 └── tasks/<taskId>/
     ├── task.json        # Task metadata
@@ -116,6 +116,8 @@ Tasks stored in `.kanban-agent/`:
 
 Tests are **colocated** next to source files (e.g., `task-store.test.ts` next to `task-store.ts`). Integration tests are in `tests/integration/`.
 
+**All changes must include unit tests and integration tests.** Aim for good test coverage — every new feature, bug fix, or refactor should have corresponding tests. Run `npm run test:coverage` to verify coverage before submitting changes.
+
 ```bash
 npm test              # Run all tests
 npm run test:watch    # Watch mode
@@ -126,16 +128,16 @@ npm run test:e2e      # Playwright E2E (when available)
 ## CLI Usage
 
 ```bash
-kanban-agent init                          # Create .kanban-agent/
-kanban-agent add "Task title" --priority high --labels "a,b"
-kanban-agent list --status in-progress --json
-kanban-agent status <id> done
-kanban-agent update <id> --title "New title" --priority medium
-kanban-agent delete <id>
-kanban-agent log <id> "Completed step 1"
-kanban-agent notify "Title" "Body"
-kanban-agent open [id]
-kanban-agent import <markdown-file>
+familiar init                          # Create .familiar/
+familiar add "Task title" --priority high --labels "a,b"
+familiar list --status in-progress --json
+familiar status <id> done
+familiar update <id> --title "New title" --priority medium
+familiar delete <id>
+familiar log <id> "Completed step 1"
+familiar notify "Title" "Body"
+familiar open [id]
+familiar import <markdown-file>
 ```
 
 ## Key Decisions (see docs/EXECUTIVE_DECISIONS.md for full details)
@@ -144,7 +146,7 @@ kanban-agent import <markdown-file>
 - **Agent-agnostic** — any CLI command can run in terminals
 - **Manual launch** — user starts agents manually, no auto-start
 - **Flat hierarchy** — no sub-tasks, use labels instead
-- **File-based** — no database, `.kanban-agent/` is source of truth
+- **File-based** — no database, `.familiar/` is source of truth
 - **Browser-portable** — all Electron APIs abstracted for future web version
 
 ## Import Path Aliases

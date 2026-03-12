@@ -1,4 +1,4 @@
-# Executive Decisions — Kanban Agent
+# Executive Decisions — Familiar
 
 Raw record of all architectural and product decisions made during the requirements gathering session. These are critical constraints that must be respected in all future implementation work.
 
@@ -6,7 +6,7 @@ Raw record of all architectural and product decisions made during the requiremen
 
 ## Original User Prompt
 
-> I want to investigate and find the best open source electron apps that run a high performance terminal emulator inside. then I want to checkout the code to understand how they do that and create a new project inspired by it. The app would be an electron app that has the following principle. When I open a project folder, it creates a kanban view like a todo. each card represent an agentic unit of work. when a card is clicked, it zooms and opens a tmux session for that ticket which might have one or many agentic sessions like claude code running to complete the task. each task also has a markdown editor for the document's related to this task. the project tasks are stored in the .kanban-agent folder inside the project. there should be a main state file which tracks the status of the task. each task has a tasks/taskid folder where it stores all the plans, main document, etc. I want the ui and UX to be close to linear, simple task management with the twist of opening terminals directly inside the task. There should be also a CLI so that each task agent can autoupdate its own task status when it is finished. and also the agent should be able to send a notification via hooks when it finishes, so that you are informed of a task needing your attention.
+> I want to investigate and find the best open source electron apps that run a high performance terminal emulator inside. then I want to checkout the code to understand how they do that and create a new project inspired by it. The app would be an electron app that has the following principle. When I open a project folder, it creates a kanban view like a todo. each card represent an agentic unit of work. when a card is clicked, it zooms and opens a tmux session for that ticket which might have one or many agentic sessions like claude code running to complete the task. each task also has a markdown editor for the document's related to this task. the project tasks are stored in the .familiar folder inside the project. there should be a main state file which tracks the status of the task. each task has a tasks/taskid folder where it stores all the plans, main document, etc. I want the ui and UX to be close to linear, simple task management with the twist of opening terminals directly inside the task. There should be also a CLI so that each task agent can autoupdate its own task status when it is finished. and also the agent should be able to send a notification via hooks when it finishes, so that you are informed of a task needing your attention.
 >
 > The whole app should be tested and e2e tested literally opening the app and testing it working.
 >
@@ -45,11 +45,11 @@ Raw record of all architectural and product decisions made during the requiremen
 **Q: What kanban columns/statuses should tasks have?**
 > Linear-style (Recommended) — Backlog, Todo, In Progress, In Review, Done, Cancelled. Familiar to Linear users. Clean and sufficient.
 
-**Q: What should the .kanban-agent/ state file format be?**
+**Q: What should the .familiar/ state file format be?**
 > JSON files (Recommended) — Simple, human-readable, easy to diff in git. state.json + tasks/taskid/task.json. Works well with CLI tools.
 
-**Q: What CLI commands should kanban-agent support beyond status updates?**
-> Full CRUD + init + sync — Everything plus: init (create .kanban-agent/), sync (push/pull state), import (from Linear/GitHub issues).
+**Q: What CLI commands should familiar support beyond status updates?**
+> Full CRUD + init + sync — Everything plus: init (create .familiar/), sync (push/pull state), import (from Linear/GitHub issues).
 
 **Q: How rich should the markdown editor be?**
 > Initially answered "Monaco-based markdown", then corrected:
@@ -91,7 +91,7 @@ User then added explicit default layout preference:
 ### Round 6: Detection, Keyboard, Animation, Activity Log
 
 **Q: How should the app detect that an agent has finished its work in a terminal?**
-> CLI hook only (Recommended) — Agent calls `kanban-agent status <id> done` when finished. Simple, agent-agnostic. Agent must be configured to call this.
+> CLI hook only (Recommended) — Agent calls `familiar status <id> done` when finished. Simple, agent-agnostic. Agent must be configured to call this.
 
 **Q: Should the initial version include keyboard shortcuts for power users?**
 > Yes, Linear-style shortcuts (Recommended) — j/k to navigate, Enter to open, x to select, b for board view. Keyboard-first like Linear.
@@ -156,7 +156,7 @@ Meaning: the questions about dependencies, parallelization, and testing strategy
 | **Session management** | Real tmux underneath | Sessions survive app restarts. Requires tmux installed. When browser version comes, tmux runs on remote server. |
 | **Agent model** | Agent-agnostic | Any CLI command can be spawned (claude, aider, codex, custom scripts). No deep integration with any specific agent. |
 | **Agent launch** | Manual launch only | User opens task, then manually starts agent in terminal. No auto-start when moving to "In Progress". |
-| **Agent completion detection** | CLI hook only | Agent calls `kanban-agent status <id> done` when finished. Simple, agent-agnostic. |
+| **Agent completion detection** | CLI hook only | Agent calls `familiar status <id> done` when finished. Simple, agent-agnostic. |
 | **Session persistence** | Via tmux | Switching tasks reattaches to that task's tmux session. Full scrollback history preserved. |
 
 ### Kanban Board & Task Model

@@ -3,9 +3,9 @@
  * Used by both the CLI commands and the Electron UI.
  */
 
-export const TMUX_SETUP_PROMPT = `# Tmux Setup for Kanban Agent
+export const TMUX_SETUP_PROMPT = `# Tmux Setup for Familiar
 
-Please configure tmux on this machine so it works correctly with Kanban Agent. Follow these steps:
+Please configure tmux on this machine so it works correctly with Familiar. Follow these steps:
 
 ## 1. Check if tmux is installed
 
@@ -21,10 +21,10 @@ brew install tmux
 
 ## 2. Ensure tmux config exists
 
-Check if ~/.tmux.conf exists. If not, create it. Add or verify the following minimal settings required for Kanban Agent:
+Check if ~/.tmux.conf exists. If not, create it. Add or verify the following minimal settings required for Familiar:
 
 \`\`\`tmux
-# Enable mouse support (required for scrolling, selecting, and clicking in Kanban Agent)
+# Enable mouse support (required for scrolling, selecting, and clicking in Familiar)
 set -g mouse on
 
 # Scrollback buffer — generous size for agent output
@@ -64,7 +64,7 @@ set -as terminal-features 'xterm*:extkeys'
 
 \`\`\`bash
 # Create a test session and kill it
-tmux new-session -d -s kanban-test && tmux kill-session -t kanban-test && echo "tmux is working correctly"
+tmux new-session -d -s familiar-test && tmux kill-session -t familiar-test && echo "tmux is working correctly"
 \`\`\`
 
 ## 4. If tmux is already running, reload the config
@@ -75,9 +75,9 @@ tmux source-file ~/.tmux.conf 2>/dev/null || true
 
 Report what you did and whether everything is working.`
 
-export const DOCTOR_PROMPT = `# Kanban Agent Environment Diagnostic
+export const DOCTOR_PROMPT = `# Familiar Environment Diagnostic
 
-Please run a full diagnostic of this machine's Kanban Agent setup. Check each item below, report the results, then offer to fix any issues found.
+Please run a full diagnostic of this machine's Familiar setup. Check each item below, report the results, then offer to fix any issues found.
 
 ## Checks to perform
 
@@ -103,35 +103,35 @@ grep -q "pbcopy" ~/.tmux.conf 2>/dev/null && echo "OK: pbcopy clipboard integrat
 grep -q "history-limit" ~/.tmux.conf 2>/dev/null && echo "OK: scrollback buffer configured" || echo "WARN: scrollback buffer not configured"
 
 # Can we create and destroy a tmux session?
-tmux new-session -d -s kanban-doctor-test 2>/dev/null && tmux kill-session -t kanban-doctor-test 2>/dev/null && echo "OK: tmux sessions work" || echo "FAIL: cannot create tmux sessions"
+tmux new-session -d -s familiar-doctor-test 2>/dev/null && tmux kill-session -t familiar-doctor-test 2>/dev/null && echo "OK: tmux sessions work" || echo "FAIL: cannot create tmux sessions"
 
-# Are there any existing kanban sessions?
-tmux list-sessions 2>/dev/null | grep "^kanban-" || echo "INFO: no active kanban tmux sessions"
+# Are there any existing familiar sessions?
+tmux list-sessions 2>/dev/null | grep "^familiar-" || echo "INFO: no active familiar tmux sessions"
 \`\`\`
 
-### 2. kanban-agent CLI
+### 2. familiar CLI
 \`\`\`bash
 # Is the CLI installed and in PATH?
-which kanban-agent && echo "OK: CLI found" || echo "FAIL: kanban-agent not in PATH"
+which familiar && echo "OK: CLI found" || echo "FAIL: familiar not in PATH"
 
 # Can it run?
-kanban-agent --version 2>/dev/null && echo "OK: CLI runs" || echo "FAIL: CLI cannot execute"
+familiar --version 2>/dev/null && echo "OK: CLI runs" || echo "FAIL: CLI cannot execute"
 \`\`\`
 
 ### 3. Project setup
 \`\`\`bash
-# Is .kanban-agent/ initialized in the current project?
-test -d .kanban-agent && echo "OK: .kanban-agent/ exists" || echo "WARN: .kanban-agent/ not found — run 'kanban-agent init'"
+# Is .familiar/ initialized in the current project?
+test -d .familiar && echo "OK: .familiar/ exists" || echo "WARN: .familiar/ not found — run 'familiar init'"
 
 # Is state.json present?
-test -f .kanban-agent/state.json && echo "OK: state.json exists" || echo "WARN: state.json missing"
+test -f .familiar/state.json && echo "OK: state.json exists" || echo "WARN: state.json missing"
 \`\`\`
 
-### 4. Environment variables (if running inside a Kanban Agent terminal)
+### 4. Environment variables (if running inside a Familiar terminal)
 \`\`\`bash
 # Check if task context is set
-[ -n "$KANBAN_TASK_ID" ] && echo "OK: KANBAN_TASK_ID=$KANBAN_TASK_ID" || echo "INFO: KANBAN_TASK_ID not set (not in a task terminal)"
-[ -n "$KANBAN_PROJECT_ROOT" ] && echo "OK: KANBAN_PROJECT_ROOT=$KANBAN_PROJECT_ROOT" || echo "INFO: KANBAN_PROJECT_ROOT not set"
+[ -n "$FAMILIAR_TASK_ID" ] && echo "OK: FAMILIAR_TASK_ID=$FAMILIAR_TASK_ID" || echo "INFO: FAMILIAR_TASK_ID not set (not in a task terminal)"
+[ -n "$FAMILIAR_PROJECT_ROOT" ] && echo "OK: FAMILIAR_PROJECT_ROOT=$FAMILIAR_PROJECT_ROOT" || echo "INFO: FAMILIAR_PROJECT_ROOT not set"
 \`\`\`
 
 ## Report format
@@ -143,36 +143,36 @@ After running all checks, summarize:
 
 Then ask: "Would you like me to fix the issues found?" and if yes, fix them one by one, explaining each change.`
 
-export const BASE_AGENTS_MD = `# Kanban Agent — AGENTS.md
+export const BASE_AGENTS_MD = `# Familiar — AGENTS.md
 
-This document describes how AI agents should interact with the Kanban Agent system.
+This document describes how AI agents should interact with the Familiar system.
 
 ## Overview
 
-Kanban Agent is a macOS desktop app providing a kanban board with embedded terminal emulators for agentic AI coding workflows. Each task has a persistent tmux session. The \`kanban-agent\` CLI lets agents manage tasks without the GUI.
+Familiar is a macOS desktop app providing a kanban board with embedded terminal emulators for agentic AI coding workflows. Each task has a persistent tmux session. The \`familiar\` CLI lets agents manage tasks without the GUI.
 
 ## Environment
 
-When running inside a Kanban Agent terminal, these environment variables are set:
+When running inside a Familiar terminal, these environment variables are set:
 
-- \`KANBAN_TASK_ID\` — The ID of the current task
-- \`KANBAN_PROJECT_ROOT\` — The root directory of the project
+- \`FAMILIAR_TASK_ID\` — The ID of the current task
+- \`FAMILIAR_PROJECT_ROOT\` — The root directory of the project
 
 ## Agent Workflow
 
 ### 1. Read your task
 
 \`\`\`bash
-cat "$KANBAN_PROJECT_ROOT/.kanban-agent/tasks/$KANBAN_TASK_ID/document.md"
-cat "$KANBAN_PROJECT_ROOT/.kanban-agent/tasks/$KANBAN_TASK_ID/task.json"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
 \`\`\`
 
 ### 2. Signal you're working
 
 \`\`\`bash
-kanban-agent status $KANBAN_TASK_ID in-progress
-kanban-agent update $KANBAN_TASK_ID --agent-status running
-kanban-agent log $KANBAN_TASK_ID "Starting work"
+familiar status $FAMILIAR_TASK_ID in-progress
+familiar update $FAMILIAR_TASK_ID --agent-status running
+familiar log $FAMILIAR_TASK_ID "Starting work"
 \`\`\`
 
 ### 3. Classify your task
@@ -186,13 +186,13 @@ After reading the task, add the appropriate label based on the title and descrip
 | \`chore\` | Maintenance, refactoring, dependency updates, CI/CD, docs |
 
 \`\`\`bash
-kanban-agent update $KANBAN_TASK_ID --labels "feature"  # or bug, improvement, chore
+familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 \`\`\`
 
 ### 4. Log progress
 
 \`\`\`bash
-kanban-agent log $KANBAN_TASK_ID "Implemented feature X — moving to tests"
+familiar log $FAMILIAR_TASK_ID "Implemented feature X — moving to tests"
 \`\`\`
 
 ### 5. Commit your work
@@ -208,42 +208,42 @@ Use conventional commit prefixes: \`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`,
 
 \`\`\`bash
 # On success
-kanban-agent status $KANBAN_TASK_ID in-review
-kanban-agent update $KANBAN_TASK_ID --agent-status done
-kanban-agent log $KANBAN_TASK_ID "Complete — all tests passing"
-kanban-agent notify "Task Done" "$KANBAN_TASK_ID complete"
+familiar status $FAMILIAR_TASK_ID in-review
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
+familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 
 # On failure
-kanban-agent update $KANBAN_TASK_ID --agent-status error
-kanban-agent log $KANBAN_TASK_ID "ERROR: description of what went wrong"
-kanban-agent notify "Task Failed" "$KANBAN_TASK_ID failed"
+familiar update $FAMILIAR_TASK_ID --agent-status error
+familiar log $FAMILIAR_TASK_ID "ERROR: description of what went wrong"
+familiar notify "Task Failed" "$FAMILIAR_TASK_ID failed"
 \`\`\`
 
 ## CLI Reference
 
 | Command | Purpose |
 |---------|---------|
-| \`kanban-agent status <id> <status>\` | Set status: \`backlog\`, \`todo\`, \`in-progress\`, \`in-review\`, \`done\`, \`archived\` |
-| \`kanban-agent update <id> --agent-status <s>\` | Set agent status: \`idle\`, \`running\`, \`done\`, \`error\` |
-| \`kanban-agent update <id> --priority <p>\` | Set priority: \`urgent\`, \`high\`, \`medium\`, \`low\`, \`none\` |
-| \`kanban-agent log <id> "<message>"\` | Append to activity log |
-| \`kanban-agent notify "<title>" "<body>"\` | Send in-app notification |
-| \`kanban-agent add "<title>" [--priority p] [--status s]\` | Create a new task |
-| \`kanban-agent list [--status s] [--json]\` | List tasks |
-| \`kanban-agent setup [--copy]\` | Print tmux setup prompt for your AI agent |
-| \`kanban-agent doctor [--copy]\` | Print environment diagnostic prompt |
-| \`kanban-agent agents [--copy]\` | Print this AGENTS.md document |
+| \`familiar status <id> <status>\` | Set status: \`backlog\`, \`todo\`, \`in-progress\`, \`in-review\`, \`done\`, \`archived\` |
+| \`familiar update <id> --agent-status <s>\` | Set agent status: \`idle\`, \`running\`, \`done\`, \`error\` |
+| \`familiar update <id> --priority <p>\` | Set priority: \`urgent\`, \`high\`, \`medium\`, \`low\`, \`none\` |
+| \`familiar log <id> "<message>"\` | Append to activity log |
+| \`familiar notify "<title>" "<body>"\` | Send in-app notification |
+| \`familiar add "<title>" [--priority p] [--status s]\` | Create a new task |
+| \`familiar list [--status s] [--json]\` | List tasks |
+| \`familiar setup [--copy]\` | Print tmux setup prompt for your AI agent |
+| \`familiar doctor [--copy]\` | Print environment diagnostic prompt |
+| \`familiar agents [--copy]\` | Print this AGENTS.md document |
 
 ## Tmux Sessions
 
-Kanban Agent uses tmux sessions named \`kanban-<taskId>-<paneIndex>\`. These sessions persist across app restarts. Do not manually kill or rename them.
+Familiar uses tmux sessions named \`familiar-<taskId>-<paneIndex>\`. These sessions persist across app restarts. Do not manually kill or rename them.
 
 ## Data Directory
 
-All state is stored in \`.kanban-agent/\` at the project root:
+All state is stored in \`.familiar/\` at the project root:
 
 \`\`\`
-.kanban-agent/
+.familiar/
 ├── state.json              # Board state (task list, column order)
 ├── settings.json           # User settings
 ├── notifications.json      # In-app notifications

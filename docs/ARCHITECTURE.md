@@ -24,8 +24,8 @@
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                     CLI (kanban-agent)                    │
-│  Reads/writes .kanban-agent/ directly, sends IPC notify  │
+│                     CLI (familiar)                    │
+│  Reads/writes .familiar/ directly, sends IPC notify  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -48,7 +48,7 @@ src/main/platform/          → Electron implementations
 
 ## Terminal Architecture
 
-1. **tmux** manages sessions (`kanban-<taskId>-<paneIndex>`)
+1. **tmux** manages sessions (`familiar-<taskId>-<paneIndex>`)
 2. **node-pty** spawns `tmux attach-session -t <name>` for each pane
 3. **xterm.js** renders in the browser with WebGL acceleration
 4. PTY data flows: tmux → node-pty → IPC → xterm.js

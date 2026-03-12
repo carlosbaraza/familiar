@@ -7,17 +7,17 @@ import { homedir } from 'os'
 
 const execFileAsync = promisify(execFile)
 
-const CLI_BIN_DIR = join(homedir(), '.kanban-agent', 'bin')
-const CLI_SYMLINK = join(CLI_BIN_DIR, 'kanban-agent')
-const PATH_EXPORT_COMMENT = '# Added by Kanban Agent — CLI path'
-const PATH_EXPORT_LINE = `export PATH="$HOME/.kanban-agent/bin:$PATH"`
+const CLI_BIN_DIR = join(homedir(), '.familiar', 'bin')
+const CLI_SYMLINK = join(CLI_BIN_DIR, 'familiar')
+const PATH_EXPORT_COMMENT = '# Added by Familiar — CLI path'
+const PATH_EXPORT_LINE = `export PATH="$HOME/.familiar/bin:$PATH"`
 
 export function registerCliHandlers(): void {
   ipcMain.handle('cli:check-available', async (): Promise<boolean> => {
     try {
       // Use login shell to get the full PATH (including user rc files)
       const shell = process.env.SHELL || '/bin/zsh'
-      await execFileAsync(shell, ['-lc', 'which kanban-agent'], {
+      await execFileAsync(shell, ['-lc', 'which familiar'], {
         timeout: 5000
       })
       return true
@@ -43,7 +43,7 @@ export function registerCliHandlers(): void {
           }
         }
 
-        // 2. Create ~/.kanban-agent/bin/ and symlink
+        // 2. Create ~/.familiar/bin/ and symlink
         if (!existsSync(CLI_BIN_DIR)) {
           mkdirSync(CLI_BIN_DIR, { recursive: true })
         }
@@ -72,7 +72,7 @@ export function registerCliHandlers(): void {
           // File doesn't exist, that's fine
         }
 
-        if (!rcContents.includes('.kanban-agent/bin')) {
+        if (!rcContents.includes('.familiar/bin')) {
           const addition = `\n${PATH_EXPORT_COMMENT}\n${PATH_EXPORT_LINE}\n`
           appendFileSync(rcFile, addition)
         }

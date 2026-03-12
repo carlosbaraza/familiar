@@ -12,7 +12,7 @@ export function notifyCommand(): Command {
     .action(async (title: string, body: string | undefined, opts: { task?: string }) => {
       try {
         const root = getProjectRoot()
-        const taskId = opts.task || process.env.KANBAN_TASK_ID || undefined
+        const taskId = opts.task || process.env.FAMILIAR_TASK_ID || undefined
         await appendNotification(root, {
           id: generateNotificationId(),
           title,
@@ -23,7 +23,7 @@ export function notifyCommand(): Command {
         })
         console.log(chalk.green('Notification sent.'))
       } catch {
-        console.error(chalk.red('Failed to send notification. Is .kanban-agent/ initialized?'))
+        console.error(chalk.red('Failed to send notification. Is .familiar/ initialized?'))
         process.exit(1)
       }
     })

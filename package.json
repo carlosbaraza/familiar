@@ -1,10 +1,10 @@
 {
-  "name": "kanban-agent",
+  "name": "familiar",
   "version": "0.4.0",
   "description": "A macOS Electron desktop app with kanban board, terminals, and block editor for agentic AI coding workflows",
   "main": "./out/main/index.js",
   "bin": {
-    "kanban-agent": "./dist/cli/index.mjs"
+    "familiar": "./dist/cli/index.mjs"
   },
   "author": "",
   "license": "MIT",

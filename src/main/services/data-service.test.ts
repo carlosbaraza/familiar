@@ -43,7 +43,7 @@ describe('DataService', () => {
       expect(state.columnOrder).toHaveLength(5)
 
       // Verify directories exist
-      const dataDir = path.join(tmpDir, '.kanban-agent')
+      const dataDir = path.join(tmpDir, '.familiar')
       const tasksDir = path.join(dataDir, 'tasks')
       await expect(fs.access(dataDir)).resolves.toBeUndefined()
       await expect(fs.access(tasksDir)).resolves.toBeUndefined()
@@ -86,7 +86,7 @@ describe('DataService', () => {
       const task = makeTask()
       await service.createTask(task)
 
-      const taskDir = path.join(tmpDir, '.kanban-agent', 'tasks', task.id)
+      const taskDir = path.join(tmpDir, '.familiar', 'tasks', task.id)
       await expect(fs.access(taskDir)).resolves.toBeUndefined()
       await expect(fs.access(path.join(taskDir, 'task.json'))).resolves.toBeUndefined()
       await expect(fs.access(path.join(taskDir, 'document.md'))).resolves.toBeUndefined()
@@ -129,7 +129,7 @@ describe('DataService', () => {
 
       await service.deleteTask(task.id)
 
-      const taskDir = path.join(tmpDir, '.kanban-agent', 'tasks', task.id)
+      const taskDir = path.join(tmpDir, '.familiar', 'tasks', task.id)
       await expect(fs.access(taskDir)).rejects.toThrow()
     })
   })

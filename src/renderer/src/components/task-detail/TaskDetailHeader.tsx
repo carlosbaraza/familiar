@@ -105,7 +105,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
                 window.api
                   .getProjectRoot()
                   .then((root) =>
-                    window.api.openPath(`${root}/.kanban-agent/tasks/${task.id}`)
+                    window.api.openPath(`${root}/.familiar/tasks/${task.id}`)
                   )
               }}
             >

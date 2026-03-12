@@ -1,0 +1,122 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { useUIStore } from '@renderer/stores/ui-store'
+import { TaskDetailContent } from './TaskDetailContent'
+
+// Mock heavy child components
+vi.mock('@renderer/components/editor', () => ({
+  BlockEditor: ({ taskId, initialContent }: any) => (
+    <div data-testid="block-editor">
+      Editor for {taskId}: {initialContent}
+    </div>
+  )
+}))
+
+vi.mock('@renderer/components/terminal/TerminalPanel', () => ({
+  TerminalPanel: ({ taskId }: any) => (
+    <div data-testid="terminal-panel">Terminal for {taskId}</div>
+  )
+}))
+
+vi.mock('./ActivityTimeline', () => ({
+  ActivityTimeline: ({ taskId }: any) => (
+    <div data-testid="activity-timeline">Activity for {taskId}</div>
+  )
+}))
+
+vi.mock('./SplitPanel', () => ({
+  SplitPanel: ({ left, right }: any) => (
+    <div data-testid="split-panel">
+      <div data-testid="split-left">{left}</div>
+      <div data-testid="split-right">{right}</div>
+    </div>
+  )
+}))
+
+const mockApi = {
+  readTaskDocument: vi.fn()
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  ;(window as any).api = { ...((window as any).api ?? {}), ...mockApi }
+  mockApi.readTaskDocument.mockResolvedValue('# Hello')
+  useUIStore.setState({
+    editorPanelWidth: 400,
+    setEditorPanelWidth: vi.fn()
+  })
+})
+
+describe('TaskDetailContent', () => {
+  it('shows loading state before document loads', () => {
+    // Make readTaskDocument hang
+    mockApi.readTaskDocument.mockReturnValue(new Promise(() => {}))
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  })
+
+  it('renders BlockEditor after document loads', async () => {
+    mockApi.readTaskDocument.mockResolvedValue('# Hello')
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('block-editor')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/Editor for tsk_abc/)).toBeInTheDocument()
+  })
+
+  it('renders TerminalPanel', async () => {
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('terminal-panel')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Terminal for tsk_abc')).toBeInTheDocument()
+  })
+
+  it('renders ActivityTimeline', async () => {
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('activity-timeline')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Activity for tsk_abc')).toBeInTheDocument()
+  })
+
+  it('handles document load failure gracefully', async () => {
+    mockApi.readTaskDocument.mockRejectedValue(new Error('Not found'))
+    render(<TaskDetailContent taskId="tsk_abc" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('block-editor')).toBeInTheDocument()
+    })
+  })
+
+  it('loads document for the given taskId', async () => {
+    render(<TaskDetailContent taskId="tsk_xyz" />)
+
+    await waitFor(() => {
+      expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_xyz')
+    })
+  })
+
+  it('renders inside a SplitPanel', () => {
+    render(<TaskDetailContent taskId="tsk_abc" />)
+    expect(screen.getByTestId('split-panel')).toBeInTheDocument()
+  })
+
+  it('re-loads document when taskId changes', async () => {
+    const { rerender } = render(<TaskDetailContent taskId="tsk_first" />)
+
+    await waitFor(() => {
+      expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_first')
+    })
+
+    rerender(<TaskDetailContent taskId="tsk_second" />)
+
+    await waitFor(() => {
+      expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_second')
+    })
+  })
+})

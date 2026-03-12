@@ -975,7 +975,7 @@ Expected: All tests pass
 
 1. `npm run dev`
 2. Click gear icon in navbar → settings page opens
-3. Edit default command → Save → verify saved to `.kanban-agent/settings.json`
+3. Edit default command → Save → verify saved to `.familiar/settings.json`
 4. Add/remove/edit snippets → Save → verify snippets update in terminal panel
 5. Open settings via Cmd+, → works
 6. Open settings via command palette (Cmd+K → "Settings") → works

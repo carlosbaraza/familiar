@@ -17,8 +17,8 @@ import { agentsCommand } from './commands/agents'
 const program = new Command()
 
 program
-  .name('kanban-agent')
-  .description('CLI for Kanban Agent \u2014 manage tasks from the terminal')
+  .name('familiar')
+  .description('CLI for Familiar \u2014 manage tasks from the terminal')
   .version('0.1.0')
 
 program.addCommand(initCommand())

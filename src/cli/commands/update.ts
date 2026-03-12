@@ -30,7 +30,7 @@ export function updateCommand(): Command {
       try {
         state = await readProjectState(root)
       } catch {
-        console.error(chalk.red('Project not initialized. Run `kanban-agent init` first.'))
+        console.error(chalk.red('Project not initialized. Run `familiar init` first.'))
         process.exit(1)
       }
 

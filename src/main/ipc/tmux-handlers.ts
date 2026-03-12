@@ -35,14 +35,14 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
   )
 
   ipcMain.handle('tmux:warmup', async (_event, taskId: string) => {
-    const sessionName = `kanban-${taskId}`
+    const sessionName = `familiar-${taskId}`
     const exists = await tmuxManager.hasSession(sessionName)
     if (exists) return
 
     const projectRoot = dataService.getProjectRoot()
     const env = {
-      KANBAN_TASK_ID: taskId,
-      KANBAN_PROJECT_ROOT: projectRoot
+      FAMILIAR_TASK_ID: taskId,
+      FAMILIAR_PROJECT_ROOT: projectRoot
     }
 
     await tmuxManager.createSession(sessionName, projectRoot, env)

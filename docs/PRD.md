@@ -1,8 +1,8 @@
-# Kanban Agent — Product Requirements Document
+# Familiar — Product Requirements Document
 
 ## Overview
 
-Kanban Agent is a macOS Electron desktop application that provides a Linear-style kanban board with embedded terminal emulators, purpose-built for agentic AI coding workflows. Each task card can have its own rich block editor and one or more terminal panes running persistent tmux sessions. A companion CLI (`kanban-agent`) allows agents and scripts to create/update tasks, log activity, and send notifications without the GUI.
+Familiar is a macOS Electron desktop application that provides a Linear-style kanban board with embedded terminal emulators, purpose-built for agentic AI coding workflows. Each task card can have its own rich block editor and one or more terminal panes running persistent tmux sessions. A companion CLI (`familiar`) allows agents and scripts to create/update tasks, log activity, and send notifications without the GUI.
 
 ## Architecture
 
@@ -28,8 +28,8 @@ Kanban Agent is a macOS Electron desktop application that provides a Linear-styl
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                     CLI (kanban-agent)                    │
-│  Reads/writes .kanban-agent/ directly, sends IPC notify  │
+│                     CLI (familiar)                    │
+│  Reads/writes .familiar/ directly, sends IPC notify  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -39,16 +39,16 @@ Kanban Agent is a macOS Electron desktop application that provides a Linear-styl
 
 2. **Zustand store in renderer only** — State lives in the renderer process via Zustand. The main process does not hold application state; it provides services (file I/O, PTY, tmux) via IPC handlers.
 
-3. **File-based persistence** — The `.kanban-agent/` folder is the single source of truth. The Zustand store hydrates from disk on startup and persists on mutations (debounced writes). No database.
+3. **File-based persistence** — The `.familiar/` folder is the single source of truth. The Zustand store hydrates from disk on startup and persists on mutations (debounced writes). No database.
 
-4. **tmux as session manager** — Terminal sessions use real tmux sessions. The app creates/attaches tmux sessions named `kanban-<taskid>-<pane>`. This gives persistence across app restarts for free.
+4. **tmux as session manager** — Terminal sessions use real tmux sessions. The app creates/attaches tmux sessions named `familiar-<taskid>-<pane>`. This gives persistence across app restarts for free.
 
 ---
 
 ## Project Structure
 
 ```
-kanban-agent/
+familiar/
 ├── src/
 │   ├── main/                          # Electron main process
 │   │   ├── index.ts                   # App entry, window creation
@@ -138,10 +138,10 @@ kanban-agent/
 
 ## Data Model
 
-### File Structure (`.kanban-agent/`)
+### File Structure (`.familiar/`)
 
 ```
-.kanban-agent/
+.familiar/
 ├── state.json                    # Project state (task list, ordering)
 └── tasks/
     └── <taskid>/
@@ -261,7 +261,7 @@ interface ElectronAPI {
 
 - **Backend**: Real tmux sessions (requires tmux installed)
 - **Rendering**: xterm.js with WebGL renderer, fit addon for auto-resize
-- **Session naming**: `kanban-<taskId>-<paneIndex>`
+- **Session naming**: `familiar-<taskId>-<paneIndex>`
 - **Multiple panes**: Tab bar above terminal area, "+" button to add new pane
 - **Persistence**: Sessions survive app restarts via tmux detach/reattach
 - **Agent-agnostic**: Any CLI command can be spawned
@@ -282,11 +282,11 @@ interface ElectronAPI {
 - **Linear-style styling**: Dark modal, subtle borders, monospace hints
 - **Keyboard**: Up/down navigate, Enter select
 
-### F7: CLI (`kanban-agent`)
+### F7: CLI (`familiar`)
 
 - **Library**: Commander.js
 - **Commands**:
-  - `init` — Create `.kanban-agent/` directory structure
+  - `init` — Create `.familiar/` directory structure
   - `add <title>` — Create task with generated ID
   - `list` — Print tasks table (ID, title, status, priority)
   - `status <id> <status>` — Update task status, log activity
@@ -297,7 +297,7 @@ interface ElectronAPI {
   - `open [id]` — Launch app, optionally to specific task
   - `sync` — Future: push/pull state
   - `import <file>` — Parse markdown spec into tasks
-- **Standalone**: CLI reads/writes `.kanban-agent/` directly (no Electron dependency)
+- **Standalone**: CLI reads/writes `.familiar/` directly (no Electron dependency)
 - **Build**: esbuild/tsup to standalone Node.js script
 
 ### F8: Notifications
@@ -308,7 +308,7 @@ interface ElectronAPI {
 
 ### F9: File Watching
 
-- Watch `.kanban-agent/` for external changes (CLI writes)
+- Watch `.familiar/` for external changes (CLI writes)
 - Chokidar in main process, emit to renderer via IPC
 - Renderer re-reads state and reconciles Zustand store
 - Debounced, ignore self-triggered changes

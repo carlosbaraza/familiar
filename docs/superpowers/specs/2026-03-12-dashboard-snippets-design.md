@@ -55,7 +55,7 @@ No changes to `Task` or `ProjectState` types. All snippet config lives in `Proje
 
 **Snippet execution from dashboard:**
 - On click, send command to the task's tmux session via `window.api.tmuxSendKeys(sessionName, command, pressEnter)`
-- Session name follows existing convention: `kanban-<taskId>`
+- Session name follows existing convention: `familiar-<taskId>`
 - This intentionally uses `tmux send-keys` directly (not PTY write) because no PTY session exists at dashboard level — only the raw tmux session created during warmup
 - The IPC handler calls `tmux send-keys -t <session> <command>` and conditionally appends the tmux key name `Enter` (not `\r`) when `pressEnter` is true, matching tmux send-keys conventions
 
@@ -117,8 +117,8 @@ After creating task files, fire-and-forget a tmux warmup:
 1. Call a new IPC method `window.api.warmupTmuxSession(taskId)` (no await needed in the UI flow)
 2. Main process handler (`src/main/ipc/tmux-handlers.ts`):
    - Get project root
-   - Create tmux session: `tmux new-session -d -s kanban-<taskId> -c <projectRoot>`
-   - Inject env vars: `KANBAN_TASK_ID`, `KANBAN_PROJECT_ROOT`
+   - Create tmux session: `tmux new-session -d -s familiar-<taskId> -c <projectRoot>`
+   - Inject env vars: `FAMILIAR_TASK_ID`, `FAMILIAR_PROJECT_ROOT`
    - Clear screen
    - Read settings, if `defaultCommand` exists, send it via `tmux send-keys`
 3. If session already exists (edge case), skip silently

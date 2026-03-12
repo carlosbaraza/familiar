@@ -2,8 +2,8 @@
  * @type {import('electron-builder').Configuration}
  */
 module.exports = {
-  appId: 'com.kanban-agent.app',
-  productName: 'Kanban Agent',
+  appId: 'com.familiar.app',
+  productName: 'Familiar',
   directories: {
     buildResources: 'build',
     output: 'release'

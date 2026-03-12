@@ -120,7 +120,7 @@ describe('DataService workflow integration test', () => {
     expect(state.tasks.find((t) => t.id === 'tsk_wf_003')).toBeUndefined()
 
     // Verify task directory is gone
-    const task3Dir = path.join(tmpDir, '.kanban-agent', 'tasks', 'tsk_wf_003')
+    const task3Dir = path.join(tmpDir, '.familiar', 'tasks', 'tsk_wf_003')
     await expect(fs.access(task3Dir)).rejects.toThrow()
 
     // Verify remaining tasks still exist

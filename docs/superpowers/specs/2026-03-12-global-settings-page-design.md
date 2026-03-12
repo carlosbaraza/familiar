@@ -26,7 +26,7 @@ Full-page view replacing board content area. Navbar stays visible.
 │   ── Terminal ──────────────────────────────  │
 │   Default Command                            │
 │   Command to run when a new terminal starts  │
-│   [ /kanban-agent                         ]  │
+│   [ /familiar                             ]  │
 │                                              │
 │   ── Snippets ─────────────────────────────  │
 │   Terminal command shortcuts shown as buttons │

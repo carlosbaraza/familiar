@@ -63,7 +63,7 @@ describe('CLI file-ops', () => {
   }
 
   describe('getDataPath', () => {
-    it('returns root + .kanban-agent', () => {
+    it('returns root + .familiar', () => {
       const result = getDataPath('/some/path')
       expect(result).toBe(path.join('/some/path', DATA_DIR))
     })

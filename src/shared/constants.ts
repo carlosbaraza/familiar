@@ -50,7 +50,7 @@ export const DEFAULT_LABELS: LabelConfig[] = [
 ]
 
 // File system paths
-export const DATA_DIR = '.kanban-agent'
+export const DATA_DIR = '.familiar'
 export const STATE_FILE = 'state.json'
 export const TASKS_DIR = 'tasks'
 export const TASK_FILE = 'task.json'
@@ -60,4 +60,4 @@ export const ATTACHMENTS_DIR = 'attachments'
 export const SETTINGS_FILE = 'settings.json'
 export const NOTIFICATIONS_FILE = 'notifications.json'
 
-export const APP_NAME = 'Kanban Agent'
+export const APP_NAME = 'Familiar'

@@ -181,7 +181,7 @@ export function registerTmuxHandlers(
   )
 
   ipcMain.handle('tmux:warmup', async (_event, taskId: string) => {
-    const sessionName = `kanban-${taskId}`
+    const sessionName = `familiar-${taskId}`
 
     // Skip if session already exists
     const exists = await tmuxManager.hasSession(sessionName)
@@ -189,8 +189,8 @@ export function registerTmuxHandlers(
 
     const projectRoot = dataService.getProjectRoot()
     const env = {
-      KANBAN_TASK_ID: taskId,
-      KANBAN_PROJECT_ROOT: projectRoot
+      FAMILIAR_TASK_ID: taskId,
+      FAMILIAR_PROJECT_ROOT: projectRoot
     }
 
     await tmuxManager.createSession(sessionName, projectRoot, env)
@@ -1373,7 +1373,7 @@ Add snippet click handler inside the component:
 const handleSnippetClick = useCallback(
   (e: React.MouseEvent, snippet: Snippet) => {
     e.stopPropagation()
-    const sessionName = `kanban-${task.id}`
+    const sessionName = `familiar-${task.id}`
     window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter).catch((err) => {
       console.warn('Failed to send snippet command:', err)
     })

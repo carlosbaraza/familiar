@@ -21,7 +21,7 @@ let fileWatcher: FileWatcher | null = null
 // Must be called before app is ready
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'kanban-attachment',
+    scheme: 'familiar-attachment',
     privileges: {
       standard: true,
       secure: true,
@@ -102,7 +102,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   // Set app user model id for macOS
-  electronApp.setAppUserModelId('com.kanban-agent')
+  electronApp.setAppUserModelId('com.familiar')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -110,9 +110,9 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // Handle kanban-attachment:// protocol requests by serving local files
-  protocol.handle('kanban-attachment', (request) => {
-    // URL format: kanban-attachment://file/<absolute-path>
+  // Handle familiar-attachment:// protocol requests by serving local files
+  protocol.handle('familiar-attachment', (request) => {
+    // URL format: familiar-attachment://file/<absolute-path>
     const url = new URL(request.url)
     const filePath = decodeURIComponent(url.pathname)
     return net.fetch(`file://${filePath}`)
