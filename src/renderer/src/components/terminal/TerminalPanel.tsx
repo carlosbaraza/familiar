@@ -6,7 +6,6 @@ import type { Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
-import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
 
 interface TerminalPanelProps {
   taskId: string
@@ -19,9 +18,6 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const [isStopping, setIsStopping] = useState(false)
   const [isStopped, setIsStopped] = useState(false)
   const [isRestarting, setIsRestarting] = useState(false)
-  const [showHelpMenu, setShowHelpMenu] = useState(false)
-  const [copiedItem, setCopiedItem] = useState<string | null>(null)
-  const helpMenuRef = useRef<HTMLDivElement>(null)
   const sessionIdRef = useRef<string | null>(null)
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
@@ -80,28 +76,6 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
     }
     loadSnippets()
   }, [])
-
-  const handleCopyPrompt = useCallback(async (label: string, content: string) => {
-    try {
-      await navigator.clipboard.writeText(content)
-      setCopiedItem(label)
-      setTimeout(() => setCopiedItem(null), 1500)
-    } catch {
-      console.error('Failed to copy to clipboard')
-    }
-  }, [])
-
-  // Close help menu on click outside
-  useEffect(() => {
-    if (!showHelpMenu) return
-    function handleClickOutside(e: MouseEvent): void {
-      if (helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node)) {
-        setShowHelpMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showHelpMenu])
 
   const handleSnippet = useCallback(
     (snippet: Snippet) => {
@@ -266,53 +240,6 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
             &#9881;
           </button>
         </Tooltip>
-        <div style={{ position: 'relative' }} ref={helpMenuRef}>
-          <Tooltip placement="bottom" content="Agent setup prompts">
-            <button
-              style={panelStyles.gearButton}
-              onClick={() => setShowHelpMenu((prev) => !prev)}
-            >
-              ?
-            </button>
-          </Tooltip>
-          {showHelpMenu && (
-            <div style={panelStyles.helpDropdown}>
-              <button
-                style={panelStyles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('setup', TMUX_SETUP_PROMPT)}
-              >
-                <span style={panelStyles.helpDropdownIcon}>&#9881;</span>
-                <span style={panelStyles.helpDropdownText}>
-                  <span style={panelStyles.helpDropdownTitle}>Copy Tmux Setup Prompt</span>
-                  <span style={panelStyles.helpDropdownDesc}>Configure tmux for Kanban Agent</span>
-                </span>
-                {copiedItem === 'setup' && <span style={panelStyles.copiedBadge}>Copied!</span>}
-              </button>
-              <button
-                style={panelStyles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('doctor', DOCTOR_PROMPT)}
-              >
-                <span style={panelStyles.helpDropdownIcon}>&#128269;</span>
-                <span style={panelStyles.helpDropdownText}>
-                  <span style={panelStyles.helpDropdownTitle}>Copy Doctor Prompt</span>
-                  <span style={panelStyles.helpDropdownDesc}>Diagnose environment issues</span>
-                </span>
-                {copiedItem === 'doctor' && <span style={panelStyles.copiedBadge}>Copied!</span>}
-              </button>
-              <button
-                style={panelStyles.helpDropdownItem}
-                onClick={() => handleCopyPrompt('agents', BASE_AGENTS_MD)}
-              >
-                <span style={panelStyles.helpDropdownIcon}>&#128196;</span>
-                <span style={panelStyles.helpDropdownText}>
-                  <span style={panelStyles.helpDropdownTitle}>Copy AGENTS.md</span>
-                  <span style={panelStyles.helpDropdownDesc}>Agent onboarding instructions</span>
-                </span>
-                {copiedItem === 'agents' && <span style={panelStyles.copiedBadge}>Copied!</span>}
-              </button>
-            </div>
-          )}
-        </div>
         <div style={{ flex: 1 }} />
         <Tooltip placement="bottom" content="Terminate the running agent and kill the tmux session">
           <button
@@ -438,59 +365,4 @@ const panelStyles: Record<string, React.CSSProperties> = {
     flex: 1,
     overflow: 'hidden'
   },
-  helpDropdown: {
-    position: 'absolute' as const,
-    top: '100%',
-    left: 0,
-    marginTop: '4px',
-    width: '260px',
-    backgroundColor: 'var(--bg-elevated)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-    zIndex: 100,
-    overflow: 'hidden'
-  },
-  helpDropdownItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    width: '100%',
-    padding: '10px 12px',
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--text-primary)',
-    cursor: 'pointer',
-    textAlign: 'left' as const,
-    transition: 'background-color 0.1s',
-    borderBottom: '1px solid var(--border)'
-  },
-  helpDropdownIcon: {
-    fontSize: '16px',
-    flexShrink: 0,
-    width: '20px',
-    textAlign: 'center' as const
-  },
-  helpDropdownText: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '2px',
-    flex: 1,
-    minWidth: 0
-  },
-  helpDropdownTitle: {
-    fontSize: '12px',
-    fontWeight: 500,
-    color: 'var(--text-primary)'
-  },
-  helpDropdownDesc: {
-    fontSize: '11px',
-    color: 'var(--text-tertiary)'
-  },
-  copiedBadge: {
-    fontSize: '11px',
-    fontWeight: 500,
-    color: '#4caf50',
-    flexShrink: 0
-  }
 }

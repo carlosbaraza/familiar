@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
+import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
@@ -38,6 +39,10 @@ export function Navbar(): React.JSX.Element {
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  const [showHelpMenu, setShowHelpMenu] = useState(false)
+  const [copiedItem, setCopiedItem] = useState<string | null>(null)
+  const helpMenuRef = useRef<HTMLDivElement>(null)
+
   // Close dropdown on outside click
   useEffect(() => {
     if (!showDropdown) return
@@ -49,6 +54,28 @@ export function Navbar(): React.JSX.Element {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showDropdown])
+
+  // Close help menu on click outside
+  useEffect(() => {
+    if (!showHelpMenu) return
+    const handleClick = (e: MouseEvent): void => {
+      if (helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node)) {
+        setShowHelpMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showHelpMenu])
+
+  const handleCopyPrompt = useCallback(async (label: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedItem(label)
+      setTimeout(() => setCopiedItem(null), 1500)
+    } catch {
+      console.error('Failed to copy to clipboard')
+    }
+  }, [])
 
   const count = unreadCount()
 
@@ -115,6 +142,59 @@ export function Navbar(): React.JSX.Element {
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
+
+        {/* Help / agent setup prompts */}
+        <div className={styles.dropdownAnchor} ref={helpMenuRef}>
+          <button
+            className={`${styles.navButton} ${showHelpMenu ? styles.navButtonActive : ''}`}
+            onClick={() => setShowHelpMenu(!showHelpMenu)}
+            title="Agent setup prompts"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </button>
+
+          {showHelpMenu && (
+            <div className={styles.helpDropdown}>
+              <button
+                className={styles.helpDropdownItem}
+                onClick={() => handleCopyPrompt('setup', TMUX_SETUP_PROMPT)}
+              >
+                <span className={styles.helpDropdownIcon}>&#9881;</span>
+                <span className={styles.helpDropdownText}>
+                  <span className={styles.helpDropdownTitle}>Copy Tmux Setup Prompt</span>
+                  <span className={styles.helpDropdownDesc}>Configure tmux for Kanban Agent</span>
+                </span>
+                {copiedItem === 'setup' && <span className={styles.copiedBadge}>Copied!</span>}
+              </button>
+              <button
+                className={styles.helpDropdownItem}
+                onClick={() => handleCopyPrompt('doctor', DOCTOR_PROMPT)}
+              >
+                <span className={styles.helpDropdownIcon}>&#128269;</span>
+                <span className={styles.helpDropdownText}>
+                  <span className={styles.helpDropdownTitle}>Copy Doctor Prompt</span>
+                  <span className={styles.helpDropdownDesc}>Diagnose environment issues</span>
+                </span>
+                {copiedItem === 'doctor' && <span className={styles.copiedBadge}>Copied!</span>}
+              </button>
+              <button
+                className={styles.helpDropdownItem}
+                onClick={() => handleCopyPrompt('agents', BASE_AGENTS_MD)}
+              >
+                <span className={styles.helpDropdownIcon}>&#128196;</span>
+                <span className={styles.helpDropdownText}>
+                  <span className={styles.helpDropdownTitle}>Copy AGENTS.md</span>
+                  <span className={styles.helpDropdownDesc}>Agent onboarding instructions</span>
+                </span>
+                {copiedItem === 'agents' && <span className={styles.copiedBadge}>Copied!</span>}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Agent quick-swap dots */}
         <AgentSwapWidget />

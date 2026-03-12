@@ -195,3 +195,73 @@
 .dropdownAnchor {
   position: relative;
 }
+
+/* Help dropdown */
+.helpDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: calc(var(--z-modal) + 20);
+  width: 260px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.helpDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background-color: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition-fast);
+  border-bottom: 1px solid var(--border);
+}
+
+.helpDropdownItem:last-child {
+  border-bottom: none;
+}
+
+.helpDropdownItem:hover {
+  background-color: var(--bg-elevated);
+}
+
+.helpDropdownIcon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.helpDropdownText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.helpDropdownTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.helpDropdownDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.copiedBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: #4caf50;
+  flex-shrink: 0;
+}
