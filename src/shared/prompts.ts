@@ -24,11 +24,23 @@ brew install tmux
 Check if ~/.tmux.conf exists. If not, create it. Add or verify the following minimal settings required for Kanban Agent:
 
 \`\`\`tmux
-# Enable mouse support (required for terminal interaction in Kanban Agent)
+# Enable mouse support (required for scrolling, selecting, and clicking in Kanban Agent)
 set -g mouse on
 
 # Scrollback buffer — generous size for agent output
 set -g history-limit 10000
+
+# Use vim keybindings in copy mode (for text selection and navigation)
+setw -g mode-keys vi
+
+# Enable OSC 52 clipboard (allows tmux to copy to system clipboard)
+set -g set-clipboard on
+
+# Copy to macOS clipboard — select with mouse or vim keys, copies to system clipboard
+bind-key -T copy-mode-vi v send-keys -X begin-selection
+bind-key -T copy-mode-vi y send-keys -X copy-pipe-and-cancel "pbcopy"
+bind-key -T copy-mode-vi Enter send-keys -X copy-pipe-and-cancel "pbcopy"
+bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "pbcopy"
 
 # Start window numbering at 1
 set -g base-index 1
@@ -41,6 +53,12 @@ set -g allow-rename off
 set -s extended-keys on
 set -as terminal-features 'xterm*:extkeys'
 \`\`\`
+
+**How scrolling, selecting, and copying work after this config:**
+- **Scroll**: mouse wheel or trackpad scroll enters copy mode and scrolls through history
+- **Select text**: click and drag with mouse to select, or press \`prefix + [\` to enter copy mode and use vim keys (\`v\` to select, arrow keys or \`hjkl\` to move)
+- **Copy**: mouse drag auto-copies to clipboard on release; in vim copy mode press \`y\` or \`Enter\` to copy
+- **Paste**: \`Cmd+V\` in the terminal, or \`prefix + ]\` for tmux paste buffer
 
 ## 3. Verify tmux works
 
@@ -73,6 +91,16 @@ test -f ~/.tmux.conf && echo "OK: ~/.tmux.conf exists" || echo "WARN: no ~/.tmux
 
 # Does the config have mouse support?
 grep -q "set -g mouse on" ~/.tmux.conf 2>/dev/null && echo "OK: mouse support enabled" || echo "WARN: mouse support not configured"
+
+# Does the config have vim copy-mode keys?
+grep -q "mode-keys vi" ~/.tmux.conf 2>/dev/null && echo "OK: vim copy-mode keys configured" || echo "WARN: vim copy-mode keys not configured"
+
+# Does the config have clipboard integration?
+grep -q "set-clipboard on" ~/.tmux.conf 2>/dev/null && echo "OK: OSC 52 clipboard enabled" || echo "WARN: OSC 52 clipboard not configured"
+grep -q "pbcopy" ~/.tmux.conf 2>/dev/null && echo "OK: pbcopy clipboard integration found" || echo "WARN: pbcopy clipboard integration not configured"
+
+# Does the config have scrollback buffer?
+grep -q "history-limit" ~/.tmux.conf 2>/dev/null && echo "OK: scrollback buffer configured" || echo "WARN: scrollback buffer not configured"
 
 # Can we create and destroy a tmux session?
 tmux new-session -d -s kanban-doctor-test 2>/dev/null && tmux kill-session -t kanban-doctor-test 2>/dev/null && echo "OK: tmux sessions work" || echo "FAIL: cannot create tmux sessions"
