@@ -154,6 +154,23 @@ familiar import <markdown-file>
 - `@shared/*` → `src/shared/*` (available in main, preload, and renderer)
 - `@renderer/*` → `src/renderer/src/*` (renderer only)
 
+## Status Change Logic
+
+Task status and agent status are independent. Here is every trigger that changes them:
+
+| Trigger | Task Status | Agent Status | Notification |
+|---------|-------------|-------------|-------------|
+| **User sends message** (hook: `on-prompt-submit.sh`) | → `in-progress` | → `running` | — |
+| **Claude stops responding** (hook: `on-stop.sh`) | *(unchanged)* | → `idle` | "Agent Stopped" |
+| **Agent completes — needs review** (CLI) | → `in-review` | → `done` | "Task Done" |
+| **Agent completes — no review** (CLI) | *(unchanged)* | → `done` | "Task Done" |
+| **Agent fails** (CLI) | *(unchanged)* | → `error` | "Task Failed" |
+| **CLI `familiar status` → `in-review`/`done`** | as specified | `running` → `done` (auto) | — |
+| **CLI `familiar status` → `archived`** | as specified | → `idle` (auto, kills tmux) | — |
+| **Stop Agent button** (UI) | *(unchanged)* | → `idle` (if `running`) | — |
+
+Key files: `.claude/hooks/on-prompt-submit.sh`, `.claude/hooks/on-stop.sh`, `src/cli/commands/status.ts` (auto-transitions), `src/renderer/src/stores/task-store.ts` (`updateTask`/`moveTask` auto-transitions), `src/renderer/src/components/terminal/TerminalPanel.tsx` (stop button).
+
 ## Common Tasks for Contributing Agents
 
 ### Adding a new IPC method
