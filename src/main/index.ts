@@ -84,7 +84,7 @@ function createWindow(): void {
 
   // Register IPC handlers
   registerPtyHandlers(ptyManager, mainWindow)
-  registerTmuxHandlers(tmuxManager)
+  registerTmuxHandlers(tmuxManager, dataService)
   registerFileHandlers(dataService, () => fileWatcher)
   registerNotificationHandlers(dataService)
   registerWindowHandlers(
