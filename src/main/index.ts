@@ -13,6 +13,14 @@ import { DataService } from './services/data-service'
 import { FileWatcher } from './services/file-watcher'
 import { buildAppMenu } from './menu'
 
+// Prevent unhandled errors from crashing the app (e.g. PTY spawn failures under EMFILE)
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception in main process:', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection in main process:', reason)
+})
+
 const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
 let fileWatcher: FileWatcher | null = null
@@ -32,17 +40,19 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 // Parse --project-root from command line arguments
-function getProjectRootFromArgs(): string {
+function getProjectRootFromArgs(): { root: string; explicit: boolean } {
   const args = process.argv
   const idx = args.indexOf('--project-root')
   if (idx !== -1 && args[idx + 1]) {
-    return args[idx + 1]
+    return { root: args[idx + 1], explicit: true }
   }
-  return process.cwd()
+  return { root: process.cwd(), explicit: false }
 }
 
+const projectRootInfo = getProjectRootFromArgs()
+
 // Default project root to --project-root arg or current working directory
-const dataService = new DataService(getProjectRootFromArgs())
+const dataService = new DataService(projectRootInfo.root)
 ptyManager.setDataService(dataService)
 
 function createWindow(): void {
@@ -100,7 +110,7 @@ function createWindow(): void {
   Menu.setApplicationMenu(appMenu)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for macOS
   electronApp.setAppUserModelId('com.familiar')
 
@@ -117,6 +127,16 @@ app.whenReady().then(() => {
     const filePath = decodeURIComponent(url.pathname)
     return net.fetch(`file://${filePath}`)
   })
+
+  // When --project-root was explicitly provided (e.g. "Open Workspace in New Window"),
+  // auto-initialize the .familiar/ folder so the renderer doesn't prompt again.
+  if (projectRootInfo.explicit) {
+    const initialized = await dataService.isInitialized()
+    if (!initialized) {
+      const folderName = projectRootInfo.root.split('/').pop() || 'Untitled'
+      await dataService.initProject(folderName)
+    }
+  }
 
   createWindow()
 

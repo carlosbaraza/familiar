@@ -56,26 +56,31 @@ export function KanbanBoard(): React.JSX.Element {
   const [dragSourceColumn, setDragSourceColumn] = useState<TaskStatus | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
 
-  // Onboarding: track whether we need to show the onboarding wizard
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  // Onboarding: show when no project, or when explicitly reopened from help menu
+  const onboardingOpen = useUIStore((s) => s.onboardingOpen)
+  const closeOnboarding = useUIStore((s) => s.closeOnboarding)
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null) // null = not checked yet
 
   // Check if onboarding is needed when project state changes
   useEffect(() => {
+    if (isLoading) return // Don't decide while still loading
     if (!projectState) {
       setNeedsOnboarding(true)
       return
     }
-    // Project is loaded — check if coding agent has been configured
+    // Project is loaded — check if user has explicitly completed onboarding
+    // (both codingAgent set AND skipDoctor explicitly chosen)
     window.api
       .readSettings()
       .then((settings) => {
-        setNeedsOnboarding(!settings.codingAgent)
+        const agentConfigured = !!settings.codingAgent
+        const doctorHandled = settings.skipDoctor === true
+        setNeedsOnboarding(!agentConfigured || !doctorHandled)
       })
       .catch(() => {
         setNeedsOnboarding(false)
       })
-  }, [projectState])
+  }, [projectState, isLoading])
 
   // Drop indicator: tracks where the card would land.
   // Uses state for rendering but avoids DOM-changing updates that cause
@@ -524,12 +529,15 @@ export function KanbanBoard(): React.JSX.Element {
     )
   }
 
-  // Show onboarding wizard when needed (first launch or agent not configured)
-  if (needsOnboarding && !onboardingDismissed) {
+  // Show onboarding wizard when needed (first launch, not fully configured, or re-triggered)
+  if (needsOnboarding || onboardingOpen) {
     return (
       <Onboarding
         hasProject={!!projectState}
-        onComplete={() => setOnboardingDismissed(true)}
+        onComplete={() => {
+          setNeedsOnboarding(false)
+          closeOnboarding()
+        }}
       />
     )
   }
