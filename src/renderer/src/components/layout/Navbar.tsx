@@ -26,6 +26,8 @@ export function Navbar(): React.JSX.Element {
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
+  const settingsOpen = useUIStore((s) => s.settingsOpen)
+  const openSettings = useUIStore((s) => s.openSettings)
 
   const notifications = useNotificationStore((s) => s.notifications)
   const markRead = useNotificationStore((s) => s.markRead)
@@ -102,6 +104,23 @@ export function Navbar(): React.JSX.Element {
       </div>
 
       <div className={styles.navGroupRight}>
+        {/* Settings gear */}
+        <button
+          className={`${styles.navButton} ${settingsOpen ? styles.navButtonActive : ''}`}
+          onClick={openSettings}
+          title="Settings (⌘,)"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M6.5 1.5h3l.4 1.6.8.4 1.5-.7 2.1 2.1-.7 1.5.4.8 1.6.4v3l-1.6.4-.4.8.7 1.5-2.1 2.1-1.5-.7-.8.4-.4 1.6h-3l-.4-1.6-.8-.4-1.5.7-2.1-2.1.7-1.5-.4-.8L1.4 9.5v-3l1.6-.4.4-.8-.7-1.5 2.1-2.1 1.5.7.8-.4.4-1.5z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+        </button>
+
         {/* Agent quick-swap dots */}
         <AgentSwapWidget />
 
