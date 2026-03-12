@@ -56,6 +56,11 @@ describe('Claude Code hooks', () => {
       expect(content).not.toContain('familiar status')
     })
 
+    it('sends a notification that the agent stopped', async () => {
+      const content = await fs.readFile(path.join(HOOKS_DIR, 'on-stop.sh'), 'utf-8')
+      expect(content).toContain('familiar notify')
+    })
+
     it('exits with 0 to not block Claude', async () => {
       const content = await fs.readFile(path.join(HOOKS_DIR, 'on-stop.sh'), 'utf-8')
       expect(content).toContain('exit 0')
