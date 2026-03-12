@@ -70,11 +70,7 @@ export function TaskFiles({ taskId }: TaskFilesProps): React.JSX.Element {
   const loadFiles = useCallback(async () => {
     try {
       const entries = await window.api.listTaskFiles(taskId)
-      // Sort: directories first, then alphabetical
-      entries.sort((a, b) => {
-        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
-        return a.name.localeCompare(b.name)
-      })
+      entries.sort((a, b) => a.name.localeCompare(b.name))
       setFiles(entries)
     } catch {
       setFiles([])

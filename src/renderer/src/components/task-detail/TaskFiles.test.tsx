@@ -27,16 +27,16 @@ describe('TaskFiles', () => {
     })
   })
 
-  it('renders file list', async () => {
+  it('renders file list with flattened attachment paths', async () => {
     mockApi.listTaskFiles.mockResolvedValue([
-      { name: 'attachments', size: 0, isDir: true, path: '/project/.familiar/tasks/tsk_abc/attachments' },
+      { name: 'attachments/image.png', size: 1024, isDir: false, path: '/project/.familiar/tasks/tsk_abc/attachments/image.png' },
       { name: 'document.md', size: 256, isDir: false, path: '/project/.familiar/tasks/tsk_abc/document.md' }
     ])
 
     render(<TaskFiles taskId="tsk_abc" />)
 
     await waitFor(() => {
-      expect(screen.getByText('attachments')).toBeInTheDocument()
+      expect(screen.getByText('attachments/image.png')).toBeInTheDocument()
     })
     expect(screen.getByText('document.md')).toBeInTheDocument()
     expect(screen.getByText('256 B')).toBeInTheDocument()
@@ -98,18 +98,17 @@ describe('TaskFiles', () => {
     expect(screen.getByText('1.0 MB')).toBeInTheDocument()
   })
 
-  it('does not show size for directories', async () => {
+  it('shows attachment files with path prefix', async () => {
     mockApi.listTaskFiles.mockResolvedValue([
-      { name: 'attachments', size: 0, isDir: true, path: '/p/attachments' }
+      { name: 'attachments/screenshot.png', size: 50000, isDir: false, path: '/p/attachments/screenshot.png' }
     ])
 
     render(<TaskFiles taskId="tsk_abc" />)
 
     await waitFor(() => {
-      expect(screen.getByText('attachments')).toBeInTheDocument()
+      expect(screen.getByText('attachments/screenshot.png')).toBeInTheDocument()
     })
-    // Should not render "0 B" for directory
-    expect(screen.queryByText('0 B')).not.toBeInTheDocument()
+    expect(screen.getByText('48.8 KB')).toBeInTheDocument()
   })
 
   it('subscribes to file watcher on mount', async () => {

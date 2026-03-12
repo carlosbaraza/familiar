@@ -193,29 +193,43 @@ export class DataService {
   async listTaskFiles(taskId: string): Promise<{ name: string; size: number; isDir: boolean; path: string }[]> {
     const taskDir = this.getDataPath(TASKS_DIR, taskId)
     const { stat } = await import('fs/promises')
-    try {
-      const entries = await this.fs.readDir(taskDir)
-      const results: { name: string; size: number; isDir: boolean; path: string }[] = []
-      for (const entry of entries) {
-        // Skip internal metadata files
-        if (entry === TASK_FILE || entry === ACTIVITY_FILE) continue
-        const fullPath = path.join(taskDir, entry)
-        try {
-          const s = await stat(fullPath)
-          results.push({
-            name: entry,
-            size: s.size,
-            isDir: s.isDirectory(),
-            path: fullPath
-          })
-        } catch {
-          // File may have been deleted between readdir and stat
+
+    const SKIP = new Set([TASK_FILE, ACTIVITY_FILE])
+
+    const listDir = async (dir: string, prefix: string): Promise<{ name: string; size: number; isDir: boolean; path: string }[]> => {
+      try {
+        const entries = await this.fs.readDir(dir)
+        const results: { name: string; size: number; isDir: boolean; path: string }[] = []
+        for (const entry of entries) {
+          if (entry.startsWith('.')) continue // skip hidden files
+          if (!prefix && SKIP.has(entry)) continue // skip metadata at root level
+          const fullPath = path.join(dir, entry)
+          try {
+            const s = await stat(fullPath)
+            const displayName = prefix ? `${prefix}/${entry}` : entry
+            if (s.isDirectory()) {
+              // Recurse into subdirectories (e.g. attachments/)
+              const children = await listDir(fullPath, displayName)
+              results.push(...children)
+            } else {
+              results.push({
+                name: displayName,
+                size: s.size,
+                isDir: false,
+                path: fullPath
+              })
+            }
+          } catch {
+            // File may have been deleted between readdir and stat
+          }
         }
+        return results
+      } catch {
+        return []
       }
-      return results
-    } catch {
-      return []
     }
+
+    return listDir(taskDir, '')
   }
 
   // ─── Pasted Files ────────────────────────────────────────────────

@@ -176,7 +176,7 @@ describe('DataService', () => {
   })
 
   describe('listTaskFiles', () => {
-    it('lists files in the task directory excluding metadata files', async () => {
+    it('lists files recursively, excluding metadata and hidden files', async () => {
       await service.initProject('Test')
       const task = makeTask()
       await service.createTask(task)
@@ -188,14 +188,15 @@ describe('DataService', () => {
       const files = await service.listTaskFiles(task.id)
       const names = files.map((f) => f.name)
 
-      // Should include document.md, attachments dir, but NOT task.json or activity.json
+      // Should include document.md and flattened attachment path
       expect(names).toContain('document.md')
-      expect(names).toContain('attachments')
+      expect(names).toContain('attachments/image.png')
+      // Should NOT include metadata files
       expect(names).not.toContain('task.json')
       expect(names).not.toContain('activity.json')
     })
 
-    it('marks directories correctly', async () => {
+    it('flattens attachments directory into prefixed names', async () => {
       await service.initProject('Test')
       const task = makeTask()
       await service.createTask(task)
@@ -203,9 +204,10 @@ describe('DataService', () => {
       await service.saveAttachment(task.id, 'img.png', new ArrayBuffer(8))
 
       const files = await service.listTaskFiles(task.id)
-      const attachDir = files.find((f) => f.name === 'attachments')
-      expect(attachDir).toBeDefined()
-      expect(attachDir!.isDir).toBe(true)
+      const attachment = files.find((f) => f.name === 'attachments/img.png')
+      expect(attachment).toBeDefined()
+      expect(attachment!.isDir).toBe(false)
+      expect(attachment!.size).toBe(8)
     })
 
     it('returns empty array for nonexistent task', async () => {
