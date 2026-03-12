@@ -101,8 +101,12 @@ export class ElectronTmuxManager implements ITmuxManager {
     // Internal tracking only — detaching is handled by destroying the PTY
   }
 
-  async sendKeys(sessionName: string, keys: string): Promise<void> {
-    await this._exec(['send-keys', '-t', sessionName, keys, 'Enter'])
+  async sendKeys(sessionName: string, keys: string, pressEnter = true): Promise<void> {
+    const args = ['send-keys', '-t', sessionName, keys]
+    if (pressEnter) {
+      args.push('Enter')
+    }
+    await this._exec(args)
   }
 
   async killSession(sessionName: string): Promise<void> {

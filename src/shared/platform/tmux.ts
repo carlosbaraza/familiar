@@ -10,4 +10,5 @@ export interface ITmuxManager {
   killSession(sessionName: string): Promise<void>
   hasSession(sessionName: string): Promise<boolean>
   getSessionName(taskId: string, paneIndex: number): string
+  sendKeys(sessionName: string, keys: string, pressEnter?: boolean): Promise<void>
 }
