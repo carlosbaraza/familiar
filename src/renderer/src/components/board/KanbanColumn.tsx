@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus, Snippet, TaskPastedFile } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
@@ -263,6 +264,11 @@ export function KanbanColumn({
     [newTaskTitle, pendingImages, pendingPastedFiles, onCreateTask, alwaysShowInput, onInputExit, updateDraft, allSnippets, enabledSnippetIndices]
   )
 
+  const handleInputFocus = useCallback(() => {
+    // Clear card keyboard focus so only the input shows as focused
+    useUIStore.getState().setFocusedColumn(-1)
+  }, [])
+
   const handleBlur = useCallback(() => {
     if (!alwaysShowInput && !newTaskTitle.trim()) {
       setIsCreating(false)
@@ -377,6 +383,7 @@ export function KanbanColumn({
             onChange={(e) => updateDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
+            onFocus={handleInputFocus}
             onBlur={handleBlur}
             rows={1}
           />

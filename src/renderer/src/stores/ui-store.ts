@@ -99,9 +99,9 @@ export const useUIStore = create<UIState>((set) => ({
   // Board filters
   filters: { ...defaultFilters },
 
-  // Board keyboard navigation
-  focusedColumnIndex: 0,
-  focusedTaskIndex: 0,
+  // Board keyboard navigation (-1 means no card is focused, e.g. when input has focus)
+  focusedColumnIndex: -1,
+  focusedTaskIndex: -1,
 
   // Split panel
   editorPanelWidth: DEFAULT_EDITOR_PANEL_WIDTH,
@@ -157,7 +157,7 @@ export const useUIStore = create<UIState>((set) => ({
     set({ filters: { ...defaultFilters } }),
 
   setFocusedColumn: (index: number) =>
-    set({ focusedColumnIndex: index, focusedTaskIndex: 0 }),
+    set({ focusedColumnIndex: index, focusedTaskIndex: index < 0 ? -1 : 0 }),
 
   setFocusedTask: (index: number) =>
     set({ focusedTaskIndex: index }),

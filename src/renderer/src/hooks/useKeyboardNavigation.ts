@@ -85,6 +85,17 @@ export function useKeyboardNavigation({
         return
       }
 
+      // When no card is focused yet (-1), activate focus on first navigation key
+      if (focusedColumnIndex < 0 || focusedTaskIndex < 0) {
+        const navKeys = ['j', 'k', 'h', 'l', 'ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight']
+        if (navKeys.includes(e.key)) {
+          e.preventDefault()
+          setFocusedColumn(0)
+          setFocusedTask(0)
+          return
+        }
+      }
+
       const currentColumn = columnOrder[focusedColumnIndex]
       const currentTasks = currentColumn ? (tasksByStatus[currentColumn] ?? []) : []
 
