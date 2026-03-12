@@ -35,6 +35,7 @@ interface KanbanColumnProps {
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
+  dragSourceColumn?: TaskStatus | null
   dropIndicator?: DropIndicator | null
   focusedTaskIndex?: number
   isFocusedColumn?: boolean
@@ -64,6 +65,7 @@ export function KanbanColumn({
   selectedTaskId,
   multiSelectedIds,
   draggedTaskId,
+  dragSourceColumn = null,
   dropIndicator,
   focusedTaskIndex = -1,
   isFocusedColumn = false,
@@ -355,10 +357,13 @@ export function KanbanColumn({
     return elements
   }
 
+  // Only highlight column as a drop target for cross-column drags
+  const isCrossColumnDrag = isOver && dragSourceColumn !== null && dragSourceColumn !== status
+
   return (
     <div
       ref={setNodeRef}
-      className={`${styles.column} ${isOver ? styles.columnDragOver : ''}`}
+      className={`${styles.column} ${isCrossColumnDrag ? styles.columnDragOver : ''}`}
       onContextMenu={contextMenu.open}
     >
       <div className={styles.header}>
@@ -461,7 +466,7 @@ export function KanbanColumn({
       )}
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-        <div className={`${styles.taskList} ${isOver ? styles.dropTarget : ''}`}>
+        <div className={`${styles.taskList} ${isCrossColumnDrag ? styles.dropTarget : ''}`}>
           {renderTasks()}
         </div>
       </SortableContext>

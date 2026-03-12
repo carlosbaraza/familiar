@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { KanbanColumn } from './KanbanColumn'
 import type { Snippet } from '@shared/types'
 
-// Mock dnd-kit
+// Mock dnd-kit — isOver can be toggled per test
+let mockIsOver = false
 vi.mock('@dnd-kit/core', () => ({
-  useDroppable: () => ({ isOver: false, setNodeRef: vi.fn() })
+  useDroppable: () => ({ isOver: mockIsOver, setNodeRef: vi.fn() })
 }))
 vi.mock('@dnd-kit/sortable', () => ({
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -331,5 +332,60 @@ describe('KanbanColumn — input focus guard', () => {
 
     // State should not change since this column is 'todo'
     expect(useUIStore.getState().focusedColumnIndex).toBe(1)
+  })
+})
+
+describe('KanbanColumn — drag target highlighting', () => {
+  afterEach(() => {
+    mockIsOver = false
+  })
+
+  it('does not highlight column as drop target for same-column drag', () => {
+    mockIsOver = true
+    const { container } = render(
+      <KanbanColumn
+        {...defaultProps}
+        draggedTaskId="tsk_a"
+        dragSourceColumn="todo"
+        status="todo"
+      />
+    )
+
+    // The column should NOT have the drag-over highlight since the drag
+    // originates from the same column
+    const column = container.firstChild as HTMLElement
+    expect(column.className).not.toContain('columnDragOver')
+  })
+
+  it('highlights column as drop target for cross-column drag', () => {
+    mockIsOver = true
+    const { container } = render(
+      <KanbanColumn
+        {...defaultProps}
+        draggedTaskId="tsk_a"
+        dragSourceColumn="in-progress"
+        status="todo"
+      />
+    )
+
+    // The column SHOULD have the drag-over highlight since the drag
+    // comes from a different column
+    const column = container.firstChild as HTMLElement
+    expect(column.className).toContain('columnDragOver')
+  })
+
+  it('does not highlight column when not being dragged over', () => {
+    mockIsOver = false
+    const { container } = render(
+      <KanbanColumn
+        {...defaultProps}
+        draggedTaskId="tsk_a"
+        dragSourceColumn="in-progress"
+        status="todo"
+      />
+    )
+
+    const column = container.firstChild as HTMLElement
+    expect(column.className).not.toContain('columnDragOver')
   })
 })

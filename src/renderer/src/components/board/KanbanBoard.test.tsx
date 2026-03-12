@@ -206,6 +206,28 @@ describe('KanbanBoard', () => {
     vi.useRealTimers()
   })
 
+  it('clears drag state when task detail opens', () => {
+    const state = makeProjectState([
+      makeTask({ id: 'tsk_a', title: 'Task A', status: 'todo' })
+    ])
+    useTaskStore.setState({ isLoading: false, projectState: state })
+    useBoardStore.setState({
+      draggedTaskId: 'tsk_a',
+      dragOverColumn: 'in-progress'
+    })
+
+    render(<KanbanBoard />)
+
+    // Simulate task detail opening (e.g., after a card click)
+    act(() => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+    })
+
+    // Drag state in board store should be cleared
+    expect(useBoardStore.getState().draggedTaskId).toBeNull()
+    expect(useBoardStore.getState().dragOverColumn).toBeNull()
+  })
+
   it('dispatches focus-new-task-input when no card is keyboard-focused', async () => {
     vi.useFakeTimers()
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')

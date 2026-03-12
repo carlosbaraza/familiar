@@ -52,6 +52,7 @@ export function KanbanBoard(): React.JSX.Element {
   } = useBoardStore()
 
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [dragSourceColumn, setDragSourceColumn] = useState<TaskStatus | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
 
   // Drop indicator: tracks where the card would land.
@@ -166,6 +167,20 @@ export function KanbanBoard(): React.JSX.Element {
     onFocusInput: handleFocusInput
   })
 
+  // Clear any active drag state when the task detail opens. This prevents
+  // the DragOverlay (z-index 999) from rendering on top of the task detail
+  // overlay (z-index 400) if a drag was accidentally started before opening.
+  useEffect(() => {
+    if (taskDetailOpen) {
+      setActiveTask(null)
+      setDraggedTask(null)
+      setDragSourceColumn(null)
+      setDragOverColumn(null)
+      setDropIndicator(null)
+      dropIndicatorRef.current = null
+    }
+  }, [taskDetailOpen, setDraggedTask, setDragOverColumn])
+
   // When the board becomes the active view, decide where DOM focus goes:
   // - If a card is keyboard-focused, focus the board container so keyboard
   //   events are captured by the navigation handler (not the input).
@@ -210,6 +225,14 @@ export function KanbanBoard(): React.JSX.Element {
 
   const handleTaskClick = useCallback(
     (taskId: string) => {
+      // Clear any lingering drag state before opening task detail
+      setActiveTask(null)
+      setDraggedTask(null)
+      setDragSourceColumn(null)
+      setDragOverColumn(null)
+      setDropIndicator(null)
+      dropIndicatorRef.current = null
+
       clearSelection()
       // Set keyboard focus to the clicked card so closing the detail view
       // returns focus to this card regardless of how it was opened
@@ -224,7 +247,7 @@ export function KanbanBoard(): React.JSX.Element {
       }
       openTaskDetail(taskId)
     },
-    [openTaskDetail, clearSelection, columnOrder, tasksByStatus]
+    [openTaskDetail, clearSelection, setDraggedTask, setDragOverColumn, columnOrder, tasksByStatus]
   )
 
   const handleMultiSelect = useCallback(
@@ -321,12 +344,13 @@ export function KanbanBoard(): React.JSX.Element {
       if (task) {
         setActiveTask(task)
         setDraggedTask(task.id)
+        setDragSourceColumn(findTaskColumn(task.id))
         if (!selectedTaskIds.has(task.id)) {
           clearSelection()
         }
       }
     },
-    [findTask, setDraggedTask, selectedTaskIds, clearSelection]
+    [findTask, findTaskColumn, setDraggedTask, selectedTaskIds, clearSelection]
   )
 
   const handleDragOver = useCallback(
@@ -380,6 +404,7 @@ export function KanbanBoard(): React.JSX.Element {
       const indicator = dropIndicatorRef.current
       setActiveTask(null)
       setDraggedTask(null)
+      setDragSourceColumn(null)
       setDragOverColumn(null)
       setDropIndicator(null)
       dropIndicatorRef.current = null
@@ -427,6 +452,7 @@ export function KanbanBoard(): React.JSX.Element {
   const handleDragCancel = useCallback(() => {
     setActiveTask(null)
     setDraggedTask(null)
+    setDragSourceColumn(null)
     setDragOverColumn(null)
     setDropIndicator(null)
     dropIndicatorRef.current = null
@@ -516,6 +542,7 @@ export function KanbanBoard(): React.JSX.Element {
               selectedTaskId={activeTaskId}
               multiSelectedIds={selectedTaskIds}
               draggedTaskId={activeTask?.id ?? null}
+              dragSourceColumn={dragSourceColumn}
               dropIndicator={
                 dropIndicator && dropIndicator.column === status ? dropIndicator : null
               }
