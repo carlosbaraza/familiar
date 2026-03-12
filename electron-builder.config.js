@@ -25,6 +25,7 @@ module.exports = {
     }
   ],
   mac: {
+    icon: 'build/icon.icns',
     category: 'public.app-category.developer-tools',
     target: [
       {

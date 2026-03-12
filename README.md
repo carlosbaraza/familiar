@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
   <img src="https://img.shields.io/badge/platform-macOS-lightgrey" alt="Platform" />
-  <img src="https://img.shields.io/badge/version-0.2.0-green" alt="Version" />
+  <img src="https://img.shields.io/badge/version-0.3.0-green" alt="Version" />
 </p>
 
 A macOS desktop app that gives AI coding agents their own kanban board, terminals, and editor — so you can manage agentic workflows the way you'd manage a team.
