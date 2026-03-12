@@ -149,7 +149,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     }
   }, [])
 
-  const handleRunDoctor = useCallback(async () => {
+  const handleRunDoctor = useCallback(async (autoMode = false) => {
     // Save settings
     try {
       const settings = await window.api.readSettings()
@@ -202,6 +202,9 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     term.open(terminalRef.current)
     fitAddon.fit()
 
+    // Focus the terminal so user can interact immediately
+    term.focus()
+
     // Create a PTY session (will fall back to plain shell if tmux unavailable)
     let cwd: string
     try {
@@ -248,7 +251,8 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     setTimeout(() => {
       if (sessionIdRef.current) {
         if (selectedAgent === 'claude-code') {
-          window.api.ptyWrite(sessionIdRef.current, 'familiar doctor | claude\n')
+          const flags = autoMode ? ' --dangerously-skip-permissions' : ''
+          window.api.ptyWrite(sessionIdRef.current, `familiar doctor | claude${flags}\n`)
         } else {
           window.api.ptyWrite(sessionIdRef.current, 'familiar doctor\n')
         }
@@ -515,10 +519,18 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           <div
             ref={terminalRef}
             style={styles.terminalContainer}
+            onClick={() => xtermRef.current?.focus()}
           />
 
           <div style={styles.doctorActions}>
-            <button style={styles.primaryButton} onClick={onComplete}>
+            <button
+              style={styles.primaryButton}
+              onClick={onComplete}
+              tabIndex={-1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault()
+              }}
+            >
               Done
             </button>
           </div>
@@ -563,10 +575,16 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
         </div>
 
         <div style={styles.doctorActions}>
-          <button style={styles.primaryButton} onClick={handleRunDoctor}>
+          <button style={styles.primaryButton} onClick={() => handleRunDoctor(false)}>
             <PlayIcon size={16} />
             Run Doctor
           </button>
+          {selectedAgent === 'claude-code' && (
+            <button style={styles.autoButton} onClick={() => handleRunDoctor(true)}>
+              <ZapIcon size={16} />
+              Run Doctor Auto
+            </button>
+          )}
           <button style={styles.secondaryButton} onClick={handleSkipDoctor}>
             Skip
           </button>
@@ -626,6 +644,14 @@ function PlayIcon({ size }: { size: number }): React.JSX.Element {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  )
+}
+
+function ZapIcon({ size }: { size: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
     </svg>
   )
 }
@@ -808,6 +834,23 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
     transition: 'all 150ms ease'
+  },
+  autoButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    height: '40px',
+    padding: '8px 24px',
+    backgroundColor: '#c026d3',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    cursor: 'pointer',
+    transition: 'background-color 150ms ease',
+    marginTop: '4px'
   },
   checkboxLabel: {
     display: 'flex',

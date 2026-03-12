@@ -22,6 +22,7 @@ vi.mock('@xterm/xterm', () => {
     loadAddon = vi.fn()
     open = vi.fn()
     write = vi.fn()
+    focus = vi.fn()
     onData = vi.fn(() => ({ dispose: vi.fn() }))
     dispose = vi.fn()
     cols = 80
@@ -335,6 +336,43 @@ describe('Onboarding', () => {
     await waitFor(() => screen.getByText('Done'))
     fireEvent.click(screen.getByText('Done'))
     expect(onComplete).toHaveBeenCalled()
+  })
+
+  it('shows Run Doctor Auto button for claude-code agent', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => {
+      expect(screen.getByText('Run Doctor Auto')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show Run Doctor Auto button for other agent', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Other'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    expect(screen.queryByText('Run Doctor Auto')).not.toBeInTheDocument()
+  })
+
+  it('sends --dangerously-skip-permissions flag when Run Doctor Auto is clicked', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor Auto'))
+    fireEvent.click(screen.getByText('Run Doctor Auto'))
+    await waitFor(() => {
+      expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
+    })
+    // Wait for the delayed ptyWrite call (500ms)
+    await waitFor(() => {
+      const writeCalls = mockApi.ptyWrite.mock.calls
+      const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('--dangerously-skip-permissions'))
+      expect(doctorCall).toBeTruthy()
+    }, { timeout: 2000 })
   })
 
   it('cleans up PTY session on unmount', async () => {
