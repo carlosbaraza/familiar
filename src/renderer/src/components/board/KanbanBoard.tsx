@@ -166,17 +166,19 @@ export function KanbanBoard(): React.JSX.Element {
     onFocusInput: handleFocusInput
   })
 
-  // Auto-focus the new task input when the board is the active view
+  // Auto-focus the new task input when the board is the active view,
+  // but only if no card is keyboard-focused (so returning from task detail
+  // preserves the focused card for immediate re-entry with Enter)
   const boardIsActive = !taskDetailOpen && !settingsOpen && !isLoading
   useEffect(() => {
-    if (boardIsActive) {
+    if (boardIsActive && focusedColumnIndex < 0) {
       // Small delay to let any closing animations/transitions complete
       const timer = setTimeout(() => {
         window.dispatchEvent(new Event('focus-new-task-input'))
       }, 50)
       return () => clearTimeout(timer)
     }
-  }, [boardIsActive])
+  }, [boardIsActive, focusedColumnIndex])
 
   // Marquee (lasso) selection
   const handleMarqueeSelect = useCallback(

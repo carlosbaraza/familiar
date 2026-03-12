@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { render, screen, act } from '@testing-library/react'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
@@ -167,5 +167,71 @@ describe('KanbanBoard', () => {
 
     expect(screen.getByText('Task A')).toBeInTheDocument()
     expect(screen.getByText('Task B')).toBeInTheDocument()
+  })
+
+  it('does not dispatch focus-new-task-input when a card is keyboard-focused', async () => {
+    vi.useFakeTimers()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    const state = makeProjectState([makeTask()])
+    useTaskStore.setState({ isLoading: false, projectState: state })
+
+    // Simulate returning from task detail with a card still focused
+    useUIStore.setState({
+      taskDetailOpen: true,
+      activeTaskId: 'tsk_test01',
+      focusedColumnIndex: 0,
+      focusedTaskIndex: 0
+    })
+
+    render(<KanbanBoard />)
+    dispatchSpy.mockClear()
+
+    // Close task detail (simulates Shift+Esc)
+    act(() => {
+      useUIStore.setState({ taskDetailOpen: false, activeTaskId: null })
+    })
+
+    // Advance past the 50ms timer
+    await act(async () => {
+      vi.advanceTimersByTime(100)
+    })
+
+    // Should NOT have dispatched focus-new-task-input since a card is focused
+    const focusEvents = dispatchSpy.mock.calls.filter(
+      ([event]) => (event as Event).type === 'focus-new-task-input'
+    )
+    expect(focusEvents).toHaveLength(0)
+
+    dispatchSpy.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it('dispatches focus-new-task-input when no card is keyboard-focused', async () => {
+    vi.useFakeTimers()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    const state = makeProjectState([makeTask()])
+    useTaskStore.setState({ isLoading: false, projectState: state })
+
+    // No card focused (e.g., app just loaded or user clicked elsewhere)
+    useUIStore.setState({
+      taskDetailOpen: false,
+      focusedColumnIndex: -1,
+      focusedTaskIndex: -1
+    })
+
+    render(<KanbanBoard />)
+
+    // Advance past the 50ms timer
+    await act(async () => {
+      vi.advanceTimersByTime(100)
+    })
+
+    const focusEvents = dispatchSpy.mock.calls.filter(
+      ([event]) => (event as Event).type === 'focus-new-task-input'
+    )
+    expect(focusEvents.length).toBeGreaterThanOrEqual(1)
+
+    dispatchSpy.mockRestore()
+    vi.useRealTimers()
   })
 })
