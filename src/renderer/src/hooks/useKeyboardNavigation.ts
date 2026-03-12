@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useBoardStore } from '@renderer/stores/board-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import type { Task, TaskStatus, Priority } from '@shared/types'
 
 interface UseKeyboardNavigationOptions {
@@ -29,6 +30,11 @@ export function useKeyboardNavigation({
 
   const { updateTask, deleteTask, deleteTasks } = useTaskStore()
   const { selectedTaskIds, clearSelection } = useBoardStore()
+  const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
+
+  // Track 's' key prefix for status-change chord (s + 1-5)
+  const statusPending = useRef(false)
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const getFocusedTask = useCallback((): Task | undefined => {
     const column = columnOrder[focusedColumnIndex]
@@ -49,6 +55,29 @@ export function useKeyboardNavigation({
         target.isContentEditable
       ) {
         return
+      }
+
+      // Handle status chord: if 's' was pressed, next key 1-5 sets status
+      if (statusPending.current) {
+        statusPending.current = false
+        if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
+        const statusMap: Record<string, TaskStatus> = {
+          '1': 'todo',
+          '2': 'in-progress',
+          '3': 'in-review',
+          '4': 'done',
+          '5': 'archived'
+        }
+        const newStatus = statusMap[e.key]
+        if (newStatus) {
+          e.preventDefault()
+          const task = getFocusedTask()
+          if (task) {
+            updateTask({ ...task, status: newStatus })
+          }
+          return
+        }
+        // If key wasn't 1-5, fall through to normal handling
       }
 
       // When task detail is open, only allow Escape to close it
@@ -155,6 +184,36 @@ export function useKeyboardNavigation({
           break
         }
 
+        case 'r': {
+          // Mark focused task (or selected tasks) notifications as read
+          e.preventDefault()
+          if (selectedTaskIds.size > 0) {
+            for (const id of selectedTaskIds) {
+              markReadByTaskId(id)
+            }
+          } else {
+            const task = getFocusedTask()
+            if (task) {
+              markReadByTaskId(task.id)
+            }
+          }
+          break
+        }
+
+        case 's': {
+          // Start status-change chord: s + 1-5
+          e.preventDefault()
+          const task = getFocusedTask()
+          if (task) {
+            statusPending.current = true
+            if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
+            statusTimeoutRef.current = setTimeout(() => {
+              statusPending.current = false
+            }, 1500)
+          }
+          break
+        }
+
         case 'Backspace':
         case 'Delete': {
           // Delete selected tasks (multi-select) or focused task
@@ -207,6 +266,7 @@ export function useKeyboardNavigation({
     onCreateTask,
     onFocusInput,
     selectedTaskIds,
-    clearSelection
+    clearSelection,
+    markReadByTaskId
   ])
 }

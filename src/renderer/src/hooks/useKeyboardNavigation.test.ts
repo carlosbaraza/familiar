@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useBoardStore } from '@renderer/stores/board-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useKeyboardNavigation } from './useKeyboardNavigation'
 import type { Task, TaskStatus } from '@shared/types'
 
@@ -14,7 +15,9 @@ const mockApi = {
   createTask: vi.fn(),
   updateTask: vi.fn().mockResolvedValue(undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
-  writeProjectState: vi.fn().mockResolvedValue(undefined)
+  writeProjectState: vi.fn().mockResolvedValue(undefined),
+  markNotificationsByTaskRead: vi.fn().mockResolvedValue(undefined),
+  listNotifications: vi.fn().mockResolvedValue([])
 }
 
 ;(window as any).api = mockApi
@@ -394,6 +397,37 @@ describe('useKeyboardNavigation', () => {
     expect(mockApi.deleteTask).not.toHaveBeenCalled()
     // Selection should remain
     expect(useBoardStore.getState().selectedTaskIds.size).toBe(2)
+  })
+
+  it('r marks focused task notifications as read', async () => {
+    useNotificationStore.setState({
+      notifications: [
+        { id: 'n1', title: 'Test', body: 'msg', taskId: 'tsk_a', read: false, createdAt: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    await act(async () => fireKey('r'))
+    expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_a')
+  })
+
+  it('r marks all selected tasks as read when multi-selected', async () => {
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    useNotificationStore.setState({
+      notifications: [
+        { id: 'n1', title: 'Test', body: 'msg', taskId: 'tsk_a', read: false, createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'n2', title: 'Test2', body: 'msg', taskId: 'tsk_b', read: false, createdAt: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    await act(async () => fireKey('r'))
+    expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_a')
+    expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_b')
   })
 
   it('does not intercept keys when target is an input', () => {
