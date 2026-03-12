@@ -119,7 +119,19 @@ export class ElectronPtyManager implements IPtyManager {
   private _lastActivityCheck = new Map<string, number>()
   private static readonly ACTIVITY_CHECK_INTERVAL_MS = 10_000
 
-  constructor(private _tmux: ElectronTmuxManager) {}
+  /** Tracks last terminal output time per task for inactivity detection */
+  private _lastActivityTime = new Map<string, number>()
+  /** Timer that periodically checks for inactive tasks — stored to allow future cleanup */
+  // @ts-expect-error assigned for cleanup reference but not read within class
+  private _inactivityTimer: ReturnType<typeof setInterval> | null = null
+  /** How long (ms) before a task with no terminal output is reset to idle */
+  private static readonly INACTIVITY_TIMEOUT_MS = 60_000
+  /** How often (ms) to check for inactive tasks */
+  private static readonly INACTIVITY_CHECK_INTERVAL_MS = 15_000
+
+  constructor(private _tmux: ElectronTmuxManager) {
+    this._startInactivityChecker()
+  }
 
   setDataService(dataService: DataService): void {
     this._dataService = dataService
@@ -133,6 +145,9 @@ export class ElectronPtyManager implements IPtyManager {
     if (!this._dataService) return
 
     const now = Date.now()
+    // Always track last activity time for inactivity detection
+    this._lastActivityTime.set(taskId, now)
+
     const lastCheck = this._lastActivityCheck.get(taskId) ?? 0
     if (now - lastCheck < ElectronPtyManager.ACTIVITY_CHECK_INTERVAL_MS) return
 
@@ -159,6 +174,82 @@ export class ElectronPtyManager implements IPtyManager {
       })
       .catch(() => {
         // Task may not exist or file may be locked — ignore silently
+      })
+  }
+
+  /**
+   * Periodically check for tasks whose terminals have gone quiet and reset
+   * their agentStatus from 'running' back to 'idle'.
+   */
+  private _startInactivityChecker(): void {
+    this._inactivityTimer = setInterval(() => {
+      this._checkInactiveAgents()
+    }, ElectronPtyManager.INACTIVITY_CHECK_INTERVAL_MS)
+  }
+
+  private _checkInactiveAgents(): void {
+    if (!this._dataService) return
+
+    const now = Date.now()
+    const ds = this._dataService
+
+    // Find tasks that have active PTY sessions (we only track activity for those)
+    // Build set of taskIds with active sessions
+    const activeTaskIds = new Set<string>()
+    for (const session of this._sessions.values()) {
+      activeTaskIds.add(session.taskId)
+    }
+
+    ds.readProjectState()
+      .then((state) => {
+        let changed = false
+        const taskUpdates: Promise<void>[] = []
+
+        for (const task of state.tasks) {
+          if (task.agentStatus !== 'running') continue
+          if (task.status === 'archived') continue
+
+          const lastActivity = this._lastActivityTime.get(task.id)
+
+          // If the task has an active PTY session, check if it's been inactive
+          if (activeTaskIds.has(task.id)) {
+            if (lastActivity && now - lastActivity > ElectronPtyManager.INACTIVITY_TIMEOUT_MS) {
+              task.agentStatus = 'idle'
+              task.updatedAt = new Date().toISOString()
+              changed = true
+              // Also update the individual task file
+              taskUpdates.push(
+                ds.readTask(task.id).then((taskData) => {
+                  taskData.agentStatus = 'idle'
+                  taskData.updatedAt = task.updatedAt
+                  return ds.updateTask(taskData)
+                }).catch(() => { /* ignore */ })
+              )
+            }
+          } else {
+            // No active PTY session for this task — it shouldn't be 'running'
+            // (agent was set to running but terminal was closed/detached)
+            task.agentStatus = 'idle'
+            task.updatedAt = new Date().toISOString()
+            changed = true
+            taskUpdates.push(
+              ds.readTask(task.id).then((taskData) => {
+                taskData.agentStatus = 'idle'
+                taskData.updatedAt = task.updatedAt
+                return ds.updateTask(taskData)
+              }).catch(() => { /* ignore */ })
+            )
+          }
+        }
+
+        if (changed) {
+          Promise.all([ds.writeProjectState(state), ...taskUpdates]).catch(() => {
+            // ignore write errors
+          })
+        }
+      })
+      .catch(() => {
+        // ignore read errors
       })
   }
 
@@ -282,6 +373,7 @@ export class ElectronPtyManager implements IPtyManager {
 
   /**
    * Spawn a plain shell (no tmux) as a fallback.
+   * Throws with a descriptive error if spawning fails (e.g. EMFILE).
    */
   private _spawnPlainShell(
     taskId: string,
@@ -291,13 +383,20 @@ export class ElectronPtyManager implements IPtyManager {
   ): string {
     const shellPath = getShellPath()
 
-    const ptyProcess = pty.spawn(shellPath, [], {
-      name: 'xterm-256color',
-      cols: 80,
-      rows: 24,
-      cwd,
-      env
-    })
+    let ptyProcess: pty.IPty
+    try {
+      ptyProcess = pty.spawn(shellPath, [], {
+        name: 'xterm-256color',
+        cols: 80,
+        rows: 24,
+        cwd,
+        env
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`Failed to spawn plain shell for task ${taskId}: ${msg}`)
+      throw new Error(`Cannot create terminal session: ${msg}`)
+    }
 
     const sessionId = `pty-${this._nextId++}`
     const session: PtySession = {
@@ -349,8 +448,11 @@ export class ElectronPtyManager implements IPtyManager {
     if (!session) {
       return
     }
-    // Kill the PTY process but leave the tmux session alive for persistence
-    session.ptyProcess.kill()
+    // Properly close the PTY master fd and then signal the child process.
+    // Using destroy() instead of kill() ensures the master file descriptor is
+    // closed, preventing PTY fd leaks that exhaust /dev/ptmx.
+    // The underlying tmux session survives — only the attach client is killed.
+    ;(session.ptyProcess as unknown as { destroy: () => void }).destroy()
     this._sessions.delete(sessionId)
   }
 
