@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { Task, TaskStatus, Priority } from '@shared/types'
+import type { Task, TaskStatus, Priority, AgentStatus } from '@shared/types'
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { Tooltip } from '@renderer/components/common'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { StatusSelect } from './StatusSelect'
+import { AgentStatusSelect } from './AgentStatusSelect'
 import { PrioritySelect } from './PrioritySelect'
 import { LabelSelect } from './LabelSelect'
 import styles from './TaskDetailHeader.module.css'
@@ -118,6 +119,13 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
     [onUpdate]
   )
 
+  const handleAgentStatusChange = useCallback(
+    (agentStatus: AgentStatus) => {
+      onUpdate({ agentStatus })
+    },
+    [onUpdate]
+  )
+
   const handlePriorityChange = useCallback(
     (priority: Priority) => {
       onUpdate({ priority })
@@ -200,6 +208,13 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
         <div className={styles.metaGroup}>
           <span className={styles.metaLabel}>Status</span>
           <StatusSelect value={task.status} onChange={handleStatusChange} />
+        </div>
+
+        <div className={styles.separator} />
+
+        <div className={styles.metaGroup}>
+          <span className={styles.metaLabel}>Agent</span>
+          <AgentStatusSelect value={task.agentStatus} onChange={handleAgentStatusChange} />
         </div>
 
         <div className={styles.separator} />

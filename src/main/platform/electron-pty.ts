@@ -157,13 +157,6 @@ export class ElectronPtyManager implements IPtyManager {
     const now = Date.now()
     const ds = this._dataService
 
-    // Find tasks that have active PTY sessions (we only track activity for those)
-    // Build set of taskIds with active sessions
-    const activeTaskIds = new Set<string>()
-    for (const session of this._sessions.values()) {
-      activeTaskIds.add(session.taskId)
-    }
-
     ds.readProjectState()
       .then((state) => {
         let changed = false
@@ -173,26 +166,13 @@ export class ElectronPtyManager implements IPtyManager {
           if (task.agentStatus !== 'running') continue
           if (task.status === 'archived') continue
 
+          // Only consider tasks we've actually observed terminal output from.
+          // If we've never seen output, the status was set externally (e.g. CLI)
+          // and we should not touch it.
           const lastActivity = this._lastActivityTime.get(task.id)
+          if (!lastActivity) continue
 
-          // If the task has an active PTY session, check if it's been inactive
-          if (activeTaskIds.has(task.id)) {
-            if (lastActivity && now - lastActivity > ElectronPtyManager.INACTIVITY_TIMEOUT_MS) {
-              task.agentStatus = 'idle'
-              task.updatedAt = new Date().toISOString()
-              changed = true
-              // Also update the individual task file
-              taskUpdates.push(
-                ds.readTask(task.id).then((taskData) => {
-                  taskData.agentStatus = 'idle'
-                  taskData.updatedAt = task.updatedAt
-                  return ds.updateTask(taskData)
-                }).catch(() => { /* ignore */ })
-              )
-            }
-          } else {
-            // No active PTY session for this task — it shouldn't be 'running'
-            // (agent was set to running but terminal was closed/detached)
+          if (now - lastActivity > ElectronPtyManager.INACTIVITY_TIMEOUT_MS) {
             task.agentStatus = 'idle'
             task.updatedAt = new Date().toISOString()
             changed = true
@@ -327,8 +307,7 @@ export class ElectronPtyManager implements IPtyManager {
       })
     }
 
-    ptyProcess.onExit(({ exitCode }) => {
-      console.log(`PTY session ${sessionId} exited with code ${exitCode}`)
+    ptyProcess.onExit(() => {
       this._sessions.delete(sessionId)
     })
 
@@ -380,8 +359,7 @@ export class ElectronPtyManager implements IPtyManager {
       this._trackTerminalActivity(taskId)
     })
 
-    ptyProcess.onExit(({ exitCode }) => {
-      console.log(`PTY session ${sessionId} (plain shell) exited with code ${exitCode}`)
+    ptyProcess.onExit(() => {
       this._sessions.delete(sessionId)
     })
 

@@ -93,12 +93,20 @@ describe('ElectronPtyManager inactivity detection', () => {
     vi.restoreAllMocks()
   })
 
-  it('should reset running tasks with no active PTY sessions to idle', async () => {
+  it('should reset running tasks after inactivity timeout when terminal activity was observed', async () => {
     const task = createMockTask({ id: 'task-1', agentStatus: 'running' })
     const ds = createMockDataService([task])
     manager.setDataService(ds)
 
-    vi.advanceTimersByTime(15_000)
+    // Simulate that we observed terminal activity for this task
+    const mgr = manager as unknown as {
+      _trackTerminalActivity: (taskId: string) => void
+      _lastActivityTime: Map<string, number>
+    }
+    mgr._trackTerminalActivity('task-1')
+
+    // Advance past inactivity timeout (60s) + check interval (15s)
+    vi.advanceTimersByTime(75_000)
 
     await vi.waitFor(() => {
       expect(ds.readProjectState).toHaveBeenCalled()
@@ -108,6 +116,22 @@ describe('ElectronPtyManager inactivity detection', () => {
     expect(writeCall).toBeDefined()
     const updatedState = writeCall[0] as ProjectState
     expect(updatedState.tasks[0].agentStatus).toBe('idle')
+  })
+
+  it('should not reset running tasks we have never observed activity from', async () => {
+    const task = createMockTask({ id: 'task-1', agentStatus: 'running' })
+    const ds = createMockDataService([task])
+    manager.setDataService(ds)
+
+    // No _trackTerminalActivity called — status was set externally via CLI
+    vi.advanceTimersByTime(75_000)
+
+    await vi.waitFor(() => {
+      expect(ds.readProjectState).toHaveBeenCalled()
+    })
+
+    // Should NOT reset — we never observed this task's terminal
+    expect(ds.writeProjectState).not.toHaveBeenCalled()
   })
 
   it('should not reset tasks that are not running', async () => {
@@ -142,14 +166,21 @@ describe('ElectronPtyManager inactivity detection', () => {
     expect(ds.writeProjectState).not.toHaveBeenCalled()
   })
 
-  it('should handle multiple running tasks correctly', async () => {
+  it('should only reset tasks with observed activity that timed out', async () => {
     const task1 = createMockTask({ id: 'task-1', agentStatus: 'running' })
     const task2 = createMockTask({ id: 'task-2', agentStatus: 'running' })
     const task3 = createMockTask({ id: 'task-3', agentStatus: 'done' })
     const ds = createMockDataService([task1, task2, task3])
     manager.setDataService(ds)
 
-    vi.advanceTimersByTime(15_000)
+    // Only observe activity from task-1
+    const mgr = manager as unknown as {
+      _trackTerminalActivity: (taskId: string) => void
+    }
+    mgr._trackTerminalActivity('task-1')
+
+    // Advance past inactivity timeout
+    vi.advanceTimersByTime(75_000)
 
     await vi.waitFor(() => {
       expect(ds.writeProjectState).toHaveBeenCalled()
@@ -157,8 +188,11 @@ describe('ElectronPtyManager inactivity detection', () => {
 
     const updatedState = (ds.writeProjectState as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as ProjectState
+    // task-1 had observed activity that timed out → idle
     expect(updatedState.tasks[0].agentStatus).toBe('idle')
-    expect(updatedState.tasks[1].agentStatus).toBe('idle')
+    // task-2 had no observed activity → stays running (set via CLI)
+    expect(updatedState.tasks[1].agentStatus).toBe('running')
+    // task-3 was done → stays done
     expect(updatedState.tasks[2].agentStatus).toBe('done')
   })
 
