@@ -198,3 +198,58 @@
   line-height: 1.4;
 }
 
+/* ---- Footer row: snippet buttons + labels ---- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  flex-wrap: wrap;
+  overflow: hidden;
+  max-height: 30px;
+}
+
+.footerSpacer {
+  flex: 1;
+  min-width: 4px;
+}
+
+.snippetBtn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background-color 0.1s;
+}
+
+.snippetBtn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.snippetBtnPrimary {
+  border-color: rgba(99, 102, 241, 0.3);
+  background-color: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+}
+
+.snippetBtnPrimary:hover {
+  background-color: rgba(99, 102, 241, 0.2);
+}
+
+.snippetBtnIcon {
+  padding: 2px 5px;
+}
+

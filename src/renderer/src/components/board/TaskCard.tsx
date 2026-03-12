@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task, TaskStatus, Priority, AgentStatus } from '@shared/types'
+import type { Task, TaskStatus, Priority, AgentStatus, Snippet } from '@shared/types'
+import { LucideIconByName } from '@renderer/components/terminal/IconPicker'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
@@ -33,6 +34,7 @@ interface TaskCardProps {
   isSelected?: boolean
   isMultiSelected?: boolean
   isFocused?: boolean
+  dashboardSnippets?: Snippet[]
 }
 
 export function TaskCard({
@@ -42,7 +44,8 @@ export function TaskCard({
   isDragging = false,
   isSelected = false,
   isMultiSelected = false,
-  isFocused = false
+  isFocused = false,
+  dashboardSnippets = []
 }: TaskCardProps): React.JSX.Element {
   const {
     attributes,
@@ -119,6 +122,17 @@ export function TaskCard({
   const handleCopyId = useCallback(() => {
     navigator.clipboard.writeText(task.id)
   }, [task.id])
+
+  const handleSnippetClick = useCallback(
+    (e: React.MouseEvent, snippet: Snippet) => {
+      e.stopPropagation()
+      const sessionName = `kanban-${task.id}`
+      window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter).catch((err) => {
+        console.warn('Failed to send snippet command:', err)
+      })
+    },
+    [task.id]
+  )
 
   const handleMarkAsRead = useCallback(async () => {
     // If multiple cards are selected and this card is among them, mark all selected as read
@@ -226,8 +240,25 @@ export function TaskCard({
           {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
 
-        {task.labels.length > 0 && (
-          <div className={styles.bottomRow}>
+        {(dashboardSnippets.length > 0 || task.labels.length > 0) && (
+          <div className={styles.footer}>
+            {dashboardSnippets.slice(0, 4).map((snippet, i) => {
+              const iconOnly = snippet.icon && snippet.showIconInDashboard
+              return (
+                <button
+                  key={i}
+                  className={`${styles.snippetBtn} ${i === 0 ? styles.snippetBtnPrimary : ''} ${iconOnly ? styles.snippetBtnIcon : ''}`}
+                  onClick={(e) => handleSnippetClick(e, snippet)}
+                  title={`${snippet.title}: ${snippet.command}`}
+                >
+                  {snippet.icon && <LucideIconByName name={snippet.icon} size={12} />}
+                  {!iconOnly && snippet.title}
+                </button>
+              )
+            })}
+            {dashboardSnippets.length > 0 && task.labels.length > 0 && (
+              <div className={styles.footerSpacer} />
+            )}
             {task.labels.map((label) => (
               <span key={label} className={styles.label}>
                 {label}
