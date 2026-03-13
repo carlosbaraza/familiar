@@ -40,7 +40,7 @@ describe('SettingsPage', () => {
     // Reset the default mock implementation each time
     mockApi.readSettings.mockResolvedValue({
       defaultCommand: 'claude --resume',
-      snippets: [{ title: 'Start', command: '/familiar', pressEnter: true }]
+      snippets: [{ title: 'Start', command: '/familiar-agent', pressEnter: true }]
     })
     useUIStore.setState({
       settingsOpen: true,

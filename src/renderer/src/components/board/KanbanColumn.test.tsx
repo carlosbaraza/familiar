@@ -30,7 +30,7 @@ const defaultProps = {
 }
 
 const testSnippets: Snippet[] = [
-  { title: 'Start', command: '/familiar', pressEnter: true },
+  { title: 'Start', command: '/familiar-agent', pressEnter: true },
   { title: 'Test', command: 'npm test', pressEnter: true }
 ]
 

@@ -33,7 +33,7 @@ const mockApi = {
   tmuxKill: vi.fn().mockResolvedValue(undefined),
   readSettings: vi.fn().mockResolvedValue({
     snippets: [
-      { title: 'Start', command: '/familiar', pressEnter: true },
+      { title: 'Start', command: '/familiar-agent', pressEnter: true },
       { title: 'Test', command: 'npm test', pressEnter: false, icon: 'play' }
     ]
   }),
@@ -97,7 +97,7 @@ describe('TerminalPanel', () => {
     mockApi.ptyCreate.mockResolvedValue('session-123')
     mockApi.readSettings.mockResolvedValue({
       snippets: [
-        { title: 'Start', command: '/familiar', pressEnter: true },
+        { title: 'Start', command: '/familiar-agent', pressEnter: true },
         { title: 'Test', command: 'npm test', pressEnter: false, icon: 'play' }
       ]
     })
@@ -175,7 +175,7 @@ describe('TerminalPanel', () => {
     fireEvent.click(screen.getByText('Start'))
 
     // "Start" snippet has pressEnter: true, so command + '\r'
-    expect(mockApi.ptyWrite).toHaveBeenCalledWith('session-123', '/familiar\r')
+    expect(mockApi.ptyWrite).toHaveBeenCalledWith('session-123', '/familiar-agent\r')
   })
 
   it('writes snippet command without enter when pressEnter is false', async () => {
@@ -257,7 +257,7 @@ describe('TerminalPanel', () => {
 
     await renderActive()
 
-    // Default snippet is "Start" with command "/familiar"
+    // Default snippet is "Start" with command "/familiar-agent"
     expect(screen.getByText('Start')).toBeInTheDocument()
   })
 

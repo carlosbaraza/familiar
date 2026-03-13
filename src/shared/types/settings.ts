@@ -38,7 +38,7 @@ export interface ProjectSettings {
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [
-  { title: 'Start', command: '/familiar', pressEnter: true }
+  { title: 'Start', command: '/familiar-agent', pressEnter: true }
 ]
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
