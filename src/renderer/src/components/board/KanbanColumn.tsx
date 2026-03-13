@@ -169,10 +169,6 @@ export function KanbanColumn({
     return () => window.removeEventListener('focus-column-input', handleFocusColumn)
   }, [alwaysShowInput, isCreating, status])
 
-  const handlePlusClick = useCallback(() => {
-    setIsCreating(true)
-  }, [])
-
   const resizeCreateTextarea = useCallback(() => {
     const el = inputRef.current
     if (el) {
@@ -292,7 +288,7 @@ export function KanbanColumn({
   }, [newTaskTitle, alwaysShowInput])
 
   const columnContextItems: ContextMenuItem[] = [
-    ...(status !== 'archived'
+    ...(status === 'todo'
       ? [
           {
             label: 'Create task',
@@ -380,16 +376,6 @@ export function KanbanColumn({
         <span className={styles.statusName}>{COLUMN_LABELS[status]}</span>
         <span className={styles.taskCount}>{tasks.length}</span>
         {headerAction}
-        {status !== 'archived' && (
-          <button
-            className={styles.addButton}
-            onClick={handlePlusClick}
-            title="Create task (c)"
-            aria-label={`Create task in ${COLUMN_LABELS[status]}`}
-          >
-            +
-          </button>
-        )}
       </div>
 
       {(alwaysShowInput || isCreating) && (
