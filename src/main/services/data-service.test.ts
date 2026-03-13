@@ -435,4 +435,38 @@ describe('DataService', () => {
       expect(resolved).toBe(absPath)
     })
   })
+
+  describe('markNotificationsByTaskIds', () => {
+    it('marks notifications for multiple taskIds in a single write', async () => {
+      await service.initProject('Test')
+      await service.appendNotification({
+        id: 'n1', title: 'A', body: '', taskId: 'tsk_a', read: false, createdAt: '2026-01-01T00:00:00.000Z'
+      })
+      await service.appendNotification({
+        id: 'n2', title: 'B', body: '', taskId: 'tsk_b', read: false, createdAt: '2026-01-01T00:00:00.000Z'
+      })
+      await service.appendNotification({
+        id: 'n3', title: 'C', body: '', taskId: 'tsk_c', read: false, createdAt: '2026-01-01T00:00:00.000Z'
+      })
+
+      await service.markNotificationsByTaskIds(['tsk_a', 'tsk_b'])
+
+      const notifications = await service.readNotifications()
+      expect(notifications.find((n) => n.id === 'n1')!.read).toBe(true)
+      expect(notifications.find((n) => n.id === 'n2')!.read).toBe(true)
+      expect(notifications.find((n) => n.id === 'n3')!.read).toBe(false)
+    })
+
+    it('does not write when no notifications match', async () => {
+      await service.initProject('Test')
+      await service.appendNotification({
+        id: 'n1', title: 'A', body: '', taskId: 'tsk_a', read: false, createdAt: '2026-01-01T00:00:00.000Z'
+      })
+
+      await service.markNotificationsByTaskIds(['tsk_nonexistent'])
+
+      const notifications = await service.readNotifications()
+      expect(notifications[0].read).toBe(false)
+    })
+  })
 })

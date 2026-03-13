@@ -94,6 +94,8 @@ const api = {
     ipcRenderer.invoke('notification:mark-read', id),
   markNotificationsByTaskRead: (taskId: string): Promise<void> =>
     ipcRenderer.invoke('notification:mark-read-by-task', taskId),
+  markNotificationsByTaskIds: (taskIds: string[]): Promise<void> =>
+    ipcRenderer.invoke('notification:mark-read-by-tasks', taskIds),
   markAllNotificationsRead: (): Promise<void> =>
     ipcRenderer.invoke('notification:mark-all-read'),
   clearNotifications: (): Promise<void> =>

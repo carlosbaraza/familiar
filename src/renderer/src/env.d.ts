@@ -70,6 +70,7 @@ declare global {
       listNotifications(): Promise<AppNotification[]>
       markNotificationRead(id: string): Promise<void>
       markNotificationsByTaskRead(taskId: string): Promise<void>
+      markNotificationsByTaskIds(taskIds: string[]): Promise<void>
       markAllNotificationsRead(): Promise<void>
       clearNotifications(): Promise<void>
       appendNotification(notification: AppNotification): Promise<void>

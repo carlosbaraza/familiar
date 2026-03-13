@@ -19,6 +19,10 @@ export function registerNotificationHandlers(dataService: DataService): void {
     await dataService.markNotificationsByTaskRead(taskId)
   })
 
+  ipcMain.handle('notification:mark-read-by-tasks', async (_, taskIds: string[]) => {
+    await dataService.markNotificationsByTaskIds(taskIds)
+  })
+
   ipcMain.handle('notification:mark-all-read', async () => {
     await dataService.markAllNotificationsRead()
   })

@@ -8,6 +8,7 @@ interface NotificationState {
   loadNotifications: () => Promise<void>
   markRead: (id: string) => Promise<void>
   markReadByTaskId: (taskId: string) => Promise<void>
+  markReadByTaskIds: (taskIds: string[]) => Promise<void>
   markAllRead: () => Promise<void>
   clearAll: () => Promise<void>
   unreadCount: () => number
@@ -40,6 +41,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set((state) => ({
       notifications: state.notifications.map((n) =>
         n.taskId === taskId ? { ...n, read: true } : n
+      )
+    }))
+  },
+
+  markReadByTaskIds: async (taskIds: string[]) => {
+    await window.api.markNotificationsByTaskIds(taskIds)
+    const idSet = new Set(taskIds)
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        idSet.has(n.taskId) ? { ...n, read: true } : n
       )
     }))
   },

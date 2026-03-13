@@ -17,6 +17,7 @@ const mockApi = {
   deleteTask: vi.fn().mockResolvedValue(undefined),
   writeProjectState: vi.fn().mockResolvedValue(undefined),
   markNotificationsByTaskRead: vi.fn().mockResolvedValue(undefined),
+  markNotificationsByTaskIds: vi.fn().mockResolvedValue(undefined),
   listNotifications: vi.fn().mockResolvedValue([])
 }
 
@@ -457,7 +458,7 @@ describe('useKeyboardNavigation', () => {
     expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_a')
   })
 
-  it('r marks all selected tasks as read when multi-selected', async () => {
+  it('r marks all selected tasks as read when multi-selected (batch call including focused task)', async () => {
     useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
     useNotificationStore.setState({
       notifications: [
@@ -470,8 +471,10 @@ describe('useKeyboardNavigation', () => {
     )
 
     await act(async () => fireKey('r'))
-    expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_a')
-    expect(mockApi.markNotificationsByTaskRead).toHaveBeenCalledWith('tsk_b')
+    // Should use the batch API with all task IDs (including focused task tsk_a)
+    expect(mockApi.markNotificationsByTaskIds).toHaveBeenCalledWith(
+      expect.arrayContaining(['tsk_a', 'tsk_b'])
+    )
   })
 
   // Option+Arrow (Alt+Arrow) — reorder card within column
@@ -576,6 +579,66 @@ describe('useKeyboardNavigation', () => {
     expect(useBoardStore.getState().selectedTaskIds.has('tsk_b')).toBe(true)
     // Focus stays at 1 (can't go further)
     expect(useUIStore.getState().focusedTaskIndex).toBe(1)
+  })
+
+  it('batch operations include focused task when not in selection', async () => {
+    // Simulate Shift+Down selection: tsk_a is selected, focus moves to tsk_b
+    // tsk_b is focused but NOT in selectedTaskIds
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a']) })
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 }) // focus on tsk_b
+    useNotificationStore.setState({
+      notifications: [
+        { id: 'n1', title: 'Test', body: 'msg', taskId: 'tsk_a', read: false, createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'n2', title: 'Test2', body: 'msg', taskId: 'tsk_b', read: false, createdAt: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    await act(async () => fireKey('r'))
+    // Both tsk_a (selected) and tsk_b (focused) should be included
+    expect(mockApi.markNotificationsByTaskIds).toHaveBeenCalledWith(
+      expect.arrayContaining(['tsk_a', 'tsk_b'])
+    )
+  })
+
+  it('S chord includes focused task when moving all selected to new status', async () => {
+    // tsk_a selected, tsk_b focused but not selected
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a']) })
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 }) // focus on tsk_b
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('s'))
+    await act(async () => fireKey('4')) // move to 'done'
+
+    await vi.waitFor(() => {
+      // Both tsk_a and tsk_b should have been moved to 'done'
+      const state = useTaskStore.getState().projectState!
+      const taskA = state.tasks.find((t) => t.id === 'tsk_a')
+      const taskB = state.tasks.find((t) => t.id === 'tsk_b')
+      expect(taskA?.status).toBe('done')
+      expect(taskB?.status).toBe('done')
+    })
+  })
+
+  it('Delete includes focused task in multi-select batch', async () => {
+    // tsk_a selected, tsk_b focused but not selected
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a']) })
+    useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 }) // focus on tsk_b
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Delete'))
+    // Should say 2 (tsk_a + tsk_b)
+    expect(window.confirm).toHaveBeenCalledWith('Delete 2 selected tasks?')
+    await vi.waitFor(() => {
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_a')
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_b')
+    })
   })
 
   it('does not intercept keys when target is an input', () => {

@@ -489,6 +489,21 @@ export class DataService {
     }
   }
 
+  async markNotificationsByTaskIds(taskIds: string[]): Promise<void> {
+    const notifications = await this.readNotifications()
+    const idSet = new Set(taskIds)
+    let changed = false
+    for (const n of notifications) {
+      if (n.taskId && idSet.has(n.taskId) && !n.read) {
+        n.read = true
+        changed = true
+      }
+    }
+    if (changed) {
+      await this.writeNotifications(notifications)
+    }
+  }
+
   async markAllNotificationsRead(): Promise<void> {
     const notifications = await this.readNotifications()
     for (const n of notifications) {

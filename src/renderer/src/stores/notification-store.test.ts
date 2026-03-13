@@ -7,6 +7,7 @@ const mockApi = {
   listNotifications: vi.fn(),
   markNotificationRead: vi.fn(),
   markNotificationsByTaskRead: vi.fn(),
+  markNotificationsByTaskIds: vi.fn(),
   markAllNotificationsRead: vi.fn(),
   clearNotifications: vi.fn()
 }
@@ -112,6 +113,34 @@ describe('useNotificationStore', () => {
       mockApi.markNotificationsByTaskRead.mockResolvedValue(undefined)
 
       await useNotificationStore.getState().markReadByTaskId('tsk_nonexistent')
+
+      expect(useNotificationStore.getState().notifications[0].read).toBe(false)
+    })
+  })
+
+  describe('markReadByTaskIds', () => {
+    it('marks notifications for multiple taskIds as read in a single batch', async () => {
+      const n1 = makeNotification({ id: 'n1', taskId: 'tsk_a', read: false })
+      const n2 = makeNotification({ id: 'n2', taskId: 'tsk_b', read: false })
+      const n3 = makeNotification({ id: 'n3', taskId: 'tsk_c', read: false })
+      useNotificationStore.setState({ notifications: [n1, n2, n3] })
+      mockApi.markNotificationsByTaskIds.mockResolvedValue(undefined)
+
+      await useNotificationStore.getState().markReadByTaskIds(['tsk_a', 'tsk_b'])
+
+      expect(mockApi.markNotificationsByTaskIds).toHaveBeenCalledWith(['tsk_a', 'tsk_b'])
+      const notifications = useNotificationStore.getState().notifications
+      expect(notifications[0].read).toBe(true)
+      expect(notifications[1].read).toBe(true)
+      expect(notifications[2].read).toBe(false)
+    })
+
+    it('handles empty taskIds array', async () => {
+      const n1 = makeNotification({ id: 'n1', taskId: 'tsk_a', read: false })
+      useNotificationStore.setState({ notifications: [n1] })
+      mockApi.markNotificationsByTaskIds.mockResolvedValue(undefined)
+
+      await useNotificationStore.getState().markReadByTaskIds([])
 
       expect(useNotificationStore.getState().notifications[0].read).toBe(false)
     })

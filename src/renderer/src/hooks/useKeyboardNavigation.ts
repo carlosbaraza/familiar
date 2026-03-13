@@ -32,6 +32,7 @@ export function useKeyboardNavigation({
     useTaskStore()
   const { selectedTaskIds, clearSelection, toggleTaskSelection } = useBoardStore()
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
+  const markReadByTaskIds = useNotificationStore((s) => s.markReadByTaskIds)
 
   // Track 's' key prefix for status-change chord (s + 1-5)
   const statusPending = useRef(false)
@@ -73,9 +74,14 @@ export function useKeyboardNavigation({
         if (newStatus) {
           e.preventDefault()
           if (selectedTaskIds.size > 0) {
+            // Include the focused task in the batch if not already selected
+            const effectiveIds = new Set(selectedTaskIds)
+            const focused = getFocusedTask()
+            if (focused) effectiveIds.add(focused.id)
+
             // Sort by current sortOrder so cards keep their relative order
             const { projectState } = useTaskStore.getState()
-            const sortedIds = Array.from(selectedTaskIds).sort((a, b) => {
+            const sortedIds = Array.from(effectiveIds).sort((a, b) => {
               const taskA = projectState?.tasks.find((t) => t.id === a)
               const taskB = projectState?.tasks.find((t) => t.id === b)
               return (taskA?.sortOrder ?? 0) - (taskB?.sortOrder ?? 0)
@@ -260,7 +266,10 @@ export function useKeyboardNavigation({
           const newPriority = priorityMap[e.key]
           if (newPriority) {
             if (selectedTaskIds.size > 0) {
-              setTasksPriority(Array.from(selectedTaskIds), newPriority)
+              const effectiveIds = new Set(selectedTaskIds)
+              const focused = getFocusedTask()
+              if (focused) effectiveIds.add(focused.id)
+              setTasksPriority(Array.from(effectiveIds), newPriority)
               clearSelection()
             } else {
               const task = getFocusedTask()
@@ -276,9 +285,11 @@ export function useKeyboardNavigation({
           // Mark focused task (or selected tasks) notifications as read
           e.preventDefault()
           if (selectedTaskIds.size > 0) {
-            for (const id of selectedTaskIds) {
-              markReadByTaskId(id)
-            }
+            // Include the focused task and use a single batch write to avoid race conditions
+            const effectiveIds = new Set(selectedTaskIds)
+            const focused = getFocusedTask()
+            if (focused) effectiveIds.add(focused.id)
+            markReadByTaskIds(Array.from(effectiveIds))
           } else {
             const task = getFocusedTask()
             if (task) {
@@ -307,12 +318,16 @@ export function useKeyboardNavigation({
           // Delete selected tasks (multi-select) or focused task
           e.preventDefault()
           if (selectedTaskIds.size > 0) {
-            const count = selectedTaskIds.size
+            // Include the focused task in the batch
+            const effectiveIds = new Set(selectedTaskIds)
+            const focused = getFocusedTask()
+            if (focused) effectiveIds.add(focused.id)
+            const count = effectiveIds.size
             const confirmed = window.confirm(
               `Delete ${count} selected task${count > 1 ? 's' : ''}?`
             )
             if (confirmed) {
-              const idsToDelete = Array.from(selectedTaskIds)
+              const idsToDelete = Array.from(effectiveIds)
               clearSelection()
               deleteTasks(idsToDelete)
             }
@@ -359,6 +374,7 @@ export function useKeyboardNavigation({
     selectedTaskIds,
     clearSelection,
     toggleTaskSelection,
-    markReadByTaskId
+    markReadByTaskId,
+    markReadByTaskIds
   ])
 }
