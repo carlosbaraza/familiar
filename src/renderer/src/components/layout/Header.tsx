@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
+import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import type { Priority, AgentStatus } from '@shared/types'
 import styles from './Header.module.css'
 
@@ -21,16 +22,21 @@ const AGENT_STATUS_OPTIONS: { value: AgentStatus; label: string }[] = [
 
 export function Header(): React.JSX.Element {
   const { filters, setFilter, clearFilters } = useUIStore()
+  const projectLabels = useProjectLabels()
   const [searchInput, setSearchInput] = useState(filters.search)
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
   const [showAgentDropdown, setShowAgentDropdown] = useState(false)
+  const [showLabelDropdown, setShowLabelDropdown] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const priorityDropdownRef = useRef<HTMLDivElement>(null)
   const agentDropdownRef = useRef<HTMLDivElement>(null)
+  const labelDropdownRef = useRef<HTMLDivElement>(null)
   const priorityMenuRef = useRef<HTMLDivElement>(null)
   const agentMenuRef = useRef<HTMLDivElement>(null)
+  const labelMenuRef = useRef<HTMLDivElement>(null)
   useDropdownPosition(priorityMenuRef, showPriorityDropdown)
   useDropdownPosition(agentMenuRef, showAgentDropdown)
+  useDropdownPosition(labelMenuRef, showLabelDropdown)
 
   const hasActiveFilters =
     filters.search.length > 0 ||
@@ -83,6 +89,12 @@ export function Header(): React.JSX.Element {
       ) {
         setShowAgentDropdown(false)
       }
+      if (
+        labelDropdownRef.current &&
+        !labelDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowLabelDropdown(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -118,9 +130,38 @@ export function Header(): React.JSX.Element {
     [filters.agentStatus, setFilter]
   )
 
+  const toggleLabel = useCallback(
+    (label: string) => {
+      const current = filters.labels
+      if (current.includes(label)) {
+        setFilter(
+          'labels',
+          current.filter((l) => l !== label)
+        )
+      } else {
+        setFilter('labels', [...current, label])
+      }
+    },
+    [filters.labels, setFilter]
+  )
+
   return (
     <header className={styles.header}>
       <div className={styles.searchArea}>
+        <svg
+          className={styles.searchIcon}
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
         <input
           className={styles.searchInput}
           type="text"
@@ -137,8 +178,11 @@ export function Header(): React.JSX.Element {
           <button
             className={`${styles.filterButton} ${filters.priority.length > 0 ? styles.filterButtonActive : ''}`}
             onClick={() => {
-              setShowPriorityDropdown(!showPriorityDropdown)
+              const wasOpen = showPriorityDropdown
+              setShowPriorityDropdown(false)
               setShowAgentDropdown(false)
+              setShowLabelDropdown(false)
+              setShowPriorityDropdown(!wasOpen)
             }}
             data-testid="priority-filter-button"
           >
@@ -164,17 +208,62 @@ export function Header(): React.JSX.Element {
           )}
         </div>
 
+        {/* Label filter dropdown */}
+        <div className={styles.dropdownContainer} ref={labelDropdownRef}>
+          <button
+            className={`${styles.filterButton} ${filters.labels.length > 0 ? styles.filterButtonActive : ''}`}
+            onClick={() => {
+              const wasOpen = showLabelDropdown
+              setShowPriorityDropdown(false)
+              setShowAgentDropdown(false)
+              setShowLabelDropdown(false)
+              setShowLabelDropdown(!wasOpen)
+            }}
+            data-testid="label-filter-button"
+          >
+            Label
+            {filters.labels.length > 0 && (
+              <span className={styles.filterBadge}>{filters.labels.length}</span>
+            )}
+          </button>
+
+          {showLabelDropdown && (
+            <div ref={labelMenuRef} className={styles.dropdown} data-testid="label-dropdown">
+              {projectLabels.map((label) => (
+                <label key={label.name} className={styles.dropdownItem}>
+                  <input
+                    type="checkbox"
+                    checked={filters.labels.includes(label.name)}
+                    onChange={() => toggleLabel(label.name)}
+                  />
+                  <span
+                    className={styles.labelDot}
+                    style={{ backgroundColor: label.color }}
+                  />
+                  <span>{label.name}</span>
+                </label>
+              ))}
+              {projectLabels.length === 0 && (
+                <div className={styles.dropdownEmpty}>No labels configured</div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Agent status filter dropdown */}
         <div className={styles.dropdownContainer} ref={agentDropdownRef}>
           <button
             className={`${styles.filterButton} ${filters.agentStatus.length > 0 ? styles.filterButtonActive : ''}`}
             onClick={() => {
-              setShowAgentDropdown(!showAgentDropdown)
+              const wasOpen = showAgentDropdown
               setShowPriorityDropdown(false)
+              setShowAgentDropdown(false)
+              setShowLabelDropdown(false)
+              setShowAgentDropdown(!wasOpen)
             }}
             data-testid="agent-filter-button"
           >
-            Agent
+            Agent Status
             {filters.agentStatus.length > 0 && (
               <span className={styles.filterBadge}>{filters.agentStatus.length}</span>
             )}

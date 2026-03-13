@@ -5,19 +5,14 @@ import { useNotificationStore } from '@renderer/stores/notification-store'
 import { TaskDetail } from './TaskDetail'
 import type { Task } from '@shared/types'
 
-// Mock child components to isolate TaskDetail logic
-vi.mock('./TaskDetailHeader', () => ({
-  TaskDetailHeader: ({ task, onClose }: any) => (
-    <div data-testid="task-detail-header">
+// Mock child component to isolate TaskDetail logic
+vi.mock('./TaskDetailContent', () => ({
+  TaskDetailContent: ({ taskId, task, onClose }: any) => (
+    <div data-testid="task-detail-content">
       <span>{task.title}</span>
+      <span>{taskId}</span>
       <button onClick={onClose}>Close</button>
     </div>
-  )
-}))
-
-vi.mock('./TaskDetailContent', () => ({
-  TaskDetailContent: ({ taskId }: any) => (
-    <div data-testid="task-detail-content">{taskId}</div>
   )
 }))
 
@@ -57,10 +52,9 @@ describe('TaskDetail', () => {
     })
   })
 
-  it('renders task detail header and content when task exists', () => {
+  it('renders task detail content when task exists', () => {
     render(<TaskDetail taskId="tsk_test01" visible={true} onClose={onClose} />)
 
-    expect(screen.getByTestId('task-detail-header')).toBeInTheDocument()
     expect(screen.getByTestId('task-detail-content')).toBeInTheDocument()
     expect(screen.getByText('Test task')).toBeInTheDocument()
   })

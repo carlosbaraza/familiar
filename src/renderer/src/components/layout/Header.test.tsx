@@ -3,6 +3,14 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Header } from './Header'
 import { useUIStore } from '@renderer/stores/ui-store'
 
+vi.mock('@renderer/hooks/useProjectLabels', () => ({
+  useProjectLabels: () => [
+    { name: 'bug', color: '#ef4444' },
+    { name: 'feature', color: '#3b82f6' },
+    { name: 'chore', color: '#6b7280' }
+  ]
+}))
+
 describe('Header', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -26,9 +34,10 @@ describe('Header', () => {
     expect(screen.getByPlaceholderText('Search tasks...')).toBeTruthy()
   })
 
-  it('renders priority and agent filter buttons', () => {
+  it('renders priority, label, and agent status filter buttons', () => {
     render(<Header />)
     expect(screen.getByTestId('priority-filter-button')).toBeTruthy()
+    expect(screen.getByTestId('label-filter-button')).toBeTruthy()
     expect(screen.getByTestId('agent-filter-button')).toBeTruthy()
   })
 
@@ -134,6 +143,45 @@ describe('Header', () => {
     expect(btn.textContent).toContain('2')
   })
 
+  // --- Label filter dropdown ---
+
+  it('opens label dropdown on button click', () => {
+    render(<Header />)
+    expect(screen.queryByTestId('label-dropdown')).toBeNull()
+
+    fireEvent.click(screen.getByTestId('label-filter-button'))
+    expect(screen.getByTestId('label-dropdown')).toBeTruthy()
+  })
+
+  it('lists all project labels in dropdown', () => {
+    render(<Header />)
+    fireEvent.click(screen.getByTestId('label-filter-button'))
+
+    expect(screen.getByText('bug')).toBeTruthy()
+    expect(screen.getByText('feature')).toBeTruthy()
+    expect(screen.getByText('chore')).toBeTruthy()
+  })
+
+  it('toggles label filter', () => {
+    render(<Header />)
+    fireEvent.click(screen.getByTestId('label-filter-button'))
+
+    fireEvent.click(screen.getByText('bug'))
+    expect(useUIStore.getState().filters.labels).toEqual(['bug'])
+
+    fireEvent.click(screen.getByText('bug'))
+    expect(useUIStore.getState().filters.labels).toEqual([])
+  })
+
+  it('shows badge count for label filters', () => {
+    useUIStore.setState({
+      filters: { search: '', priority: [], labels: ['bug', 'feature'], agentStatus: [] }
+    })
+    render(<Header />)
+    const btn = screen.getByTestId('label-filter-button')
+    expect(btn.textContent).toContain('2')
+  })
+
   // --- Agent status filter dropdown ---
 
   it('opens agent status dropdown on button click', () => {
@@ -142,6 +190,11 @@ describe('Header', () => {
 
     fireEvent.click(screen.getByTestId('agent-filter-button'))
     expect(screen.getByTestId('agent-dropdown')).toBeTruthy()
+  })
+
+  it('shows Agent Status label on filter button', () => {
+    render(<Header />)
+    expect(screen.getByTestId('agent-filter-button').textContent).toContain('Agent Status')
   })
 
   it('lists all agent status options', () => {
@@ -196,6 +249,16 @@ describe('Header', () => {
     expect(screen.getByTestId('agent-dropdown')).toBeTruthy()
   })
 
+  it('closes label dropdown when opening priority dropdown', () => {
+    render(<Header />)
+    fireEvent.click(screen.getByTestId('label-filter-button'))
+    expect(screen.getByTestId('label-dropdown')).toBeTruthy()
+
+    fireEvent.click(screen.getByTestId('priority-filter-button'))
+    expect(screen.queryByTestId('label-dropdown')).toBeNull()
+    expect(screen.getByTestId('priority-dropdown')).toBeTruthy()
+  })
+
   // --- Clear filters ---
 
   it('does not show clear filters button when no filters active', () => {
@@ -214,6 +277,14 @@ describe('Header', () => {
   it('shows clear filters button when priority filter is active', () => {
     useUIStore.setState({
       filters: { search: '', priority: ['high'], labels: [], agentStatus: [] }
+    })
+    render(<Header />)
+    expect(screen.getByTestId('clear-filters-button')).toBeTruthy()
+  })
+
+  it('shows clear filters button when label filter is active', () => {
+    useUIStore.setState({
+      filters: { search: '', priority: [], labels: ['bug'], agentStatus: [] }
     })
     render(<Header />)
     expect(screen.getByTestId('clear-filters-button')).toBeTruthy()
@@ -270,5 +341,14 @@ describe('Header', () => {
 
     fireEvent.mouseDown(document.body)
     expect(screen.queryByTestId('agent-dropdown')).toBeNull()
+  })
+
+  it('closes label dropdown on outside click', () => {
+    render(<Header />)
+    fireEvent.click(screen.getByTestId('label-filter-button'))
+    expect(screen.getByTestId('label-dropdown')).toBeTruthy()
+
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByTestId('label-dropdown')).toBeNull()
   })
 })

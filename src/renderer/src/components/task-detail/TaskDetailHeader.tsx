@@ -243,37 +243,39 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
 
         <div className={styles.separator} />
 
-        <div className={styles.metaGroup}>
-          <span className={styles.metaLabel}>Priority</span>
-          <PrioritySelect value={task.priority} onChange={handlePriorityChange} />
-        </div>
+        <div className={styles.metaBlockGroup}>
+          <div className={styles.metaGroup}>
+            <span className={styles.metaLabel}>Priority</span>
+            <PrioritySelect value={task.priority} onChange={handlePriorityChange} />
+          </div>
 
-        <div className={styles.separator} />
+          <div className={styles.separator} />
 
-        <div className={styles.metaGroup}>
-          <span className={styles.metaLabel}>Labels</span>
-          <div className={styles.labelsSection}>
-            {task.labels.map((label) => (
-              <span
-                key={label}
-                className={styles.label}
-                style={{
-                  backgroundColor: `${getLabelColor(label)}20`,
-                  borderColor: `${getLabelColor(label)}40`,
-                  color: getLabelColor(label)
-                }}
-              >
-                {label}
-                <button
-                  className={styles.labelRemove}
-                  onClick={() => handleToggleLabel(label)}
-                  style={{ color: getLabelColor(label) }}
+          <div className={styles.metaGroup}>
+            <span className={styles.metaLabel}>Labels</span>
+            <div className={styles.labelsSection}>
+              {task.labels.map((label) => (
+                <span
+                  key={label}
+                  className={styles.label}
+                  style={{
+                    backgroundColor: `${getLabelColor(label)}20`,
+                    borderColor: `${getLabelColor(label)}40`,
+                    color: getLabelColor(label)
+                  }}
                 >
-                  &#x2715;
-                </button>
-              </span>
-            ))}
-            <LabelSelect taskLabels={task.labels} onToggle={handleToggleLabel} />
+                  {label}
+                  <button
+                    className={styles.labelRemove}
+                    onClick={() => handleToggleLabel(label)}
+                    style={{ color: getLabelColor(label) }}
+                  >
+                    &#x2715;
+                  </button>
+                </span>
+              ))}
+              <LabelSelect taskLabels={task.labels} onToggle={handleToggleLabel} />
+            </div>
           </div>
         </div>
       </div>

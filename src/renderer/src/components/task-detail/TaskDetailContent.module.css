@@ -12,20 +12,32 @@
   overflow: hidden;
 }
 
+/* Sticky header area — title, metadata, close button */
+.stickyHeader {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--bg-primary);
+}
+
+/* Scrollable content below the sticky header */
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .editorSection {
-  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  min-height: 60px;
-  max-height: 60%;
+  min-height: 120px;
 }
 
 .editorArea {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 120px;
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
 }
@@ -52,10 +64,7 @@
 }
 
 .activitySection {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   border-top: 1px solid var(--border);
-  min-height: 100px;
 }

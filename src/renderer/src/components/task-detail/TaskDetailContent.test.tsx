@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { TaskDetailContent } from './TaskDetailContent'
+import type { Task } from '@shared/types'
 
 // Mock heavy child components
 vi.mock('@renderer/components/editor', () => ({
@@ -30,6 +31,12 @@ vi.mock('./TaskFiles', () => ({
   )
 }))
 
+vi.mock('./TaskDetailHeader', () => ({
+  TaskDetailHeader: ({ task }: any) => (
+    <div data-testid="task-detail-header">{task.title}</div>
+  )
+}))
+
 vi.mock('./SplitPanel', () => ({
   SplitPanel: ({ left, right }: any) => (
     <div data-testid="split-panel">
@@ -43,6 +50,27 @@ const mockWatchUnsub = vi.fn()
 const mockApi = {
   readTaskDocument: vi.fn(),
   watchProjectDir: vi.fn().mockReturnValue(mockWatchUnsub)
+}
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 'tsk_abc',
+    title: 'Test task',
+    status: 'todo',
+    priority: 'none',
+    labels: [],
+    agentStatus: 'idle',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    sortOrder: 0,
+    ...overrides
+  }
+}
+
+const defaultProps = {
+  task: makeTask(),
+  onUpdate: vi.fn(),
+  onClose: vi.fn()
 }
 
 beforeEach(() => {
@@ -61,14 +89,14 @@ describe('TaskDetailContent', () => {
   it('shows loading state before document loads', () => {
     // Make readTaskDocument hang
     mockApi.readTaskDocument.mockReturnValue(new Promise(() => {}))
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('renders BlockEditor after document loads', async () => {
     mockApi.readTaskDocument.mockResolvedValue('# Hello')
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByTestId('block-editor')).toBeInTheDocument()
@@ -76,8 +104,15 @@ describe('TaskDetailContent', () => {
     expect(screen.getByText(/Editor for tsk_abc/)).toBeInTheDocument()
   })
 
+  it('renders TaskDetailHeader in the sidebar', async () => {
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
+
+    expect(screen.getByTestId('task-detail-header')).toBeInTheDocument()
+    expect(screen.getByText('Test task')).toBeInTheDocument()
+  })
+
   it('renders TerminalPanel', async () => {
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByTestId('terminal-panel')).toBeInTheDocument()
@@ -86,7 +121,7 @@ describe('TaskDetailContent', () => {
   })
 
   it('renders ActivityTimeline', async () => {
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByTestId('activity-timeline')).toBeInTheDocument()
@@ -96,7 +131,7 @@ describe('TaskDetailContent', () => {
 
   it('handles document load failure gracefully', async () => {
     mockApi.readTaskDocument.mockRejectedValue(new Error('Not found'))
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByTestId('block-editor')).toBeInTheDocument()
@@ -104,7 +139,7 @@ describe('TaskDetailContent', () => {
   })
 
   it('loads document for the given taskId', async () => {
-    render(<TaskDetailContent taskId="tsk_xyz" />)
+    render(<TaskDetailContent taskId="tsk_xyz" {...defaultProps} />)
 
     await waitFor(() => {
       expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_xyz')
@@ -112,12 +147,12 @@ describe('TaskDetailContent', () => {
   })
 
   it('renders inside a SplitPanel', () => {
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
     expect(screen.getByTestId('split-panel')).toBeInTheDocument()
   })
 
   it('subscribes to file watcher for external document changes', async () => {
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(mockApi.watchProjectDir).toHaveBeenCalled()
@@ -125,7 +160,7 @@ describe('TaskDetailContent', () => {
   })
 
   it('re-reads document when file watcher fires', async () => {
-    render(<TaskDetailContent taskId="tsk_abc" />)
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByTestId('block-editor')).toBeInTheDocument()
@@ -142,7 +177,7 @@ describe('TaskDetailContent', () => {
   })
 
   it('unsubscribes from file watcher on unmount', async () => {
-    const { unmount } = render(<TaskDetailContent taskId="tsk_abc" />)
+    const { unmount } = render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
       expect(mockApi.watchProjectDir).toHaveBeenCalled()
@@ -153,13 +188,13 @@ describe('TaskDetailContent', () => {
   })
 
   it('re-loads document when taskId changes', async () => {
-    const { rerender } = render(<TaskDetailContent taskId="tsk_first" />)
+    const { rerender } = render(<TaskDetailContent taskId="tsk_first" {...defaultProps} />)
 
     await waitFor(() => {
       expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_first')
     })
 
-    rerender(<TaskDetailContent taskId="tsk_second" />)
+    rerender(<TaskDetailContent taskId="tsk_second" {...defaultProps} />)
 
     await waitFor(() => {
       expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_second')

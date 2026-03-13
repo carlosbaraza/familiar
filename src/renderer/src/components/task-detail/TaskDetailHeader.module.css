@@ -1,10 +1,11 @@
-/* TaskDetailHeader */
+/* TaskDetailHeader — now inside the sidebar panel */
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .topBar {
@@ -43,13 +44,15 @@
 
 .titleInput {
   flex: 1;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
+  margin-left: -9px; /* negative margin to align text with metaRow (border 1px + padding 8px) */
+  margin-right: -9px;
   outline: none;
   transition: border-color var(--transition-fast);
   resize: none;
@@ -70,8 +73,14 @@
 .metaRow {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+.metaBlockGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .metaLabel {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { TaskPastedFile } from '@shared/types'
+import type { Task, TaskPastedFile } from '@shared/types'
 import { SplitPanel } from './SplitPanel'
 import { ActivityTimeline } from './ActivityTimeline'
+import { TaskDetailHeader } from './TaskDetailHeader'
 import { TerminalPanel } from '@renderer/components/terminal/TerminalPanel'
 import { BlockEditor } from '@renderer/components/editor'
 import { PastedFileCard, PreviewDialog } from '@renderer/components/common'
@@ -12,32 +13,35 @@ import styles from './TaskDetailContent.module.css'
 
 interface TaskDetailContentProps {
   taskId: string
+  task: Task
+  onUpdate: (updates: Partial<Task>) => void
+  onClose: () => void
   visible?: boolean
 }
 
-export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX.Element {
+export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetailContentProps): React.JSX.Element {
   const editorPanelWidth = useUIStore((s) => s.editorPanelWidth)
   const setEditorPanelWidth = useUIStore((s) => s.setEditorPanelWidth)
   const [documentContent, setDocumentContent] = useState<string | undefined>(undefined)
   const [documentLoaded, setDocumentLoaded] = useState(false)
   const [previewFile, setPreviewFile] = useState<TaskPastedFile | null>(null)
 
-  const task = useTaskStore((s) => s.getTaskById(taskId))
+  const currentTask = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
-  const pastedFiles = task?.pastedFiles ?? []
+  const pastedFiles = currentTask?.pastedFiles ?? []
 
   const handleRemovePastedFile = useCallback(
     async (filename: string) => {
-      if (!task) return
+      if (!currentTask) return
       try {
         await window.api.deletePastedFile(taskId, filename)
-        const updated = (task.pastedFiles ?? []).filter((f) => f.filename !== filename)
-        await updateTask({ ...task, pastedFiles: updated.length > 0 ? updated : undefined })
+        const updated = (currentTask.pastedFiles ?? []).filter((f) => f.filename !== filename)
+        await updateTask({ ...currentTask, pastedFiles: updated.length > 0 ? updated : undefined })
       } catch (err) {
         console.warn('Failed to delete pasted file:', err)
       }
     },
-    [task, taskId, updateTask]
+    [currentTask, taskId, updateTask]
   )
 
   // Load document content on mount / taskId change
@@ -86,35 +90,40 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX
       <SplitPanel
         left={
           <div className={styles.leftPanel}>
-            <div className={styles.editorSection}>
-              {documentLoaded ? (
-                <BlockEditor
-                  key={taskId}
-                  taskId={taskId}
-                  initialContent={documentContent}
-                />
-              ) : (
-                <div className={styles.editorArea}>Loading...</div>
-              )}
+            <div className={styles.stickyHeader}>
+              <TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />
             </div>
-            <TaskFiles taskId={taskId} />
-            {pastedFiles.length > 0 && (
-              <div className={styles.pastedFilesSection}>
-                <div className={styles.pastedFilesHeader}>Pasted Files</div>
-                <div className={styles.pastedFilesList}>
-                  {pastedFiles.map((pf) => (
-                    <PastedFileCard
-                      key={pf.filename}
-                      file={pf}
-                      onClick={() => setPreviewFile(pf)}
-                      onRemove={() => handleRemovePastedFile(pf.filename)}
-                    />
-                  ))}
-                </div>
+            <div className={styles.scrollArea}>
+              <div className={styles.editorSection}>
+                {documentLoaded ? (
+                  <BlockEditor
+                    key={taskId}
+                    taskId={taskId}
+                    initialContent={documentContent}
+                  />
+                ) : (
+                  <div className={styles.editorArea}>Loading...</div>
+                )}
               </div>
-            )}
-            <div className={styles.activitySection}>
-              <ActivityTimeline taskId={taskId} />
+              <TaskFiles taskId={taskId} />
+              {pastedFiles.length > 0 && (
+                <div className={styles.pastedFilesSection}>
+                  <div className={styles.pastedFilesHeader}>Pasted Files</div>
+                  <div className={styles.pastedFilesList}>
+                    {pastedFiles.map((pf) => (
+                      <PastedFileCard
+                        key={pf.filename}
+                        file={pf}
+                        onClick={() => setPreviewFile(pf)}
+                        onRemove={() => handleRemovePastedFile(pf.filename)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className={styles.activitySection}>
+                <ActivityTimeline taskId={taskId} />
+              </div>
             </div>
           </div>
         }
@@ -122,7 +131,7 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX
           <TerminalPanel taskId={taskId} />
         }
         defaultLeftWidth={editorPanelWidth}
-        minLeftWidth={200}
+        minLeftWidth={300}
         maxLeftWidth={800}
         onWidthChange={setEditorPanelWidth}
       />

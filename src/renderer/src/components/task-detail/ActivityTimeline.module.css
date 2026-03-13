@@ -1,9 +1,7 @@
-/* ActivityTimeline */
+/* ActivityTimeline — flows within the sidebar scroll area */
 .container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
 }
 
 .header {
@@ -15,8 +13,6 @@
 }
 
 .list {
-  flex: 1;
-  overflow-y: auto;
   padding: var(--space-2) var(--space-4);
 }
 

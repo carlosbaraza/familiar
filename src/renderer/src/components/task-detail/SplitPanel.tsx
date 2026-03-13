@@ -59,7 +59,7 @@ export function SplitPanel({
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="split-panel">
-      <div className={styles.left} style={{ width: `${leftWidth}px`, maxWidth: '50%' }} data-testid="split-left">
+      <div className={styles.left} style={{ width: `${leftWidth}px`, maxWidth: '45%' }} data-testid="split-left">
         {left}
       </div>
       <div

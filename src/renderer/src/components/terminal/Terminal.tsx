@@ -232,9 +232,7 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        padding: 8,
-        borderRadius: 'var(--radius-sm)',
-        transition: 'box-shadow 150ms ease'
+        padding: 6
       }}
       className="terminal-focus-container"
     >

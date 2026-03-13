@@ -377,8 +377,13 @@ pre {
    Terminal Focus Ring
    ========================================================================== */
 
+.terminal-focus-container {
+  border: 2px solid transparent;
+  transition: border-color 150ms ease;
+}
+
 .terminal-focus-container:focus-within {
-  box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.3);
+  border-color: rgba(94, 106, 210, 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {

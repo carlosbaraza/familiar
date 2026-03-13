@@ -4,7 +4,6 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   background-color: var(--bg-primary);
 }
 
@@ -30,20 +29,31 @@
   --bn-font-family: var(--font-sans);
 }
 
-/* Editor body */
+/* Editor body — horizontal padding aligns text with sidebar header (16px - 2px wrapper border = 14px) */
 .editorWrapper [class*='bn-editor'] {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) 14px;
   color: var(--text-primary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-relaxed);
 }
 
-/* Headings */
-.editorWrapper h1,
-.editorWrapper h2,
+/* Headings — scaled to match sidebar title (H1 = title size) */
+.editorWrapper h1 {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg) !important; /* 16px — matches title */
+}
+
+.editorWrapper h2 {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md) !important; /* 14px */
+}
+
 .editorWrapper h3 {
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base) !important; /* 13px */
 }
 
 /* Code blocks */
@@ -78,11 +88,14 @@
   color: var(--text-tertiary) !important;
 }
 
-/* Focus outline for the editor wrapper — shows when editor content is focused */
+/* Focus outline for the editor wrapper — inset border to avoid overflow clipping */
+.editorWrapper {
+  border: 2px solid transparent;
+  transition: border-color 150ms ease;
+}
+
 .editorWrapper:focus-within {
-  box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.3);
-  border-radius: var(--radius-sm);
-  transition: box-shadow 150ms ease;
+  border-color: rgba(94, 106, 210, 0.3);
 }
 
 /* Remove focus outline from BlockNote editable area */

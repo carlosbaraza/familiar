@@ -2,7 +2,6 @@ import { useEffect, useCallback } from 'react'
 import type { Task } from '@shared/types'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
-import { TaskDetailHeader } from './TaskDetailHeader'
 import { TaskDetailContent } from './TaskDetailContent'
 import styles from './TaskDetail.module.css'
 
@@ -59,8 +58,7 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
     >
       {task ? (
         <div className={styles.inner}>
-          <TaskDetailHeader task={task} onUpdate={handleUpdate} onClose={onClose} />
-          <TaskDetailContent taskId={taskId} visible={visible} />
+          <TaskDetailContent taskId={taskId} task={task} onUpdate={handleUpdate} onClose={onClose} />
         </div>
       ) : (
         <div className={styles.notFound}>

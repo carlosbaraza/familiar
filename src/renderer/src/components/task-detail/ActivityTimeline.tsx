@@ -34,10 +34,13 @@ export function ActivityTimeline({ taskId }: ActivityTimelineProps): React.JSX.E
     }
   }, [taskId])
 
-  // Auto-scroll to bottom when entries change
+  // Auto-scroll to bottom when entries change — scroll the parent scroll area
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight
+      const scrollParent = listRef.current.closest('[class*="scrollArea"]')
+      if (scrollParent) {
+        scrollParent.scrollTop = scrollParent.scrollHeight
+      }
     }
   }, [entries])
 
