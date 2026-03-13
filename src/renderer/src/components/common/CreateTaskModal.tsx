@@ -67,6 +67,11 @@ export function CreateTaskModal(): React.JSX.Element | null {
       setTitle('')
       setPendingPasted([])
       closeModal()
+
+      // Open the forked task in detail view
+      if (forkFrom) {
+        useUIStore.getState().openTaskDetail(task.id)
+      }
     }
   }, [title, pendingPasted, addTask, forkTask, forkFrom, closeModal])
 
