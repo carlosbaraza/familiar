@@ -83,6 +83,30 @@
   flex-shrink: 0;
 }
 
+/* Project icon wrapper — positions the badge relative to the icon */
+.projectIconWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Badge shown on the icon when sidebar is collapsed */
+.iconBadge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background-color: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
 /* Project info (name + count) — only visible when expanded */
 .projectInfo {
   display: flex;

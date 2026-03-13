@@ -138,6 +138,88 @@ describe('ProjectSidebar', () => {
     expect(screen.getByTestId('add-project-button')).toBeTruthy()
   })
 
+  it('shows task count badge on collapsed sidebar for non-active projects with taskCount', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
+        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: false
+    })
+    useTaskStore.setState({
+      projectState: mockProjectState
+    })
+
+    render(<ProjectSidebar />)
+    // Active project uses live projectState (1 task), non-active uses stored taskCount
+    expect(screen.getByTestId('badge-alpha')).toBeTruthy()
+    expect(screen.getByTestId('badge-alpha').textContent).toBe('1')
+    expect(screen.getByTestId('badge-beta')).toBeTruthy()
+    expect(screen.getByTestId('badge-beta').textContent).toBe('3')
+  })
+
+  it('does not show badge when collapsed and taskCount is zero', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha', taskCount: 0 },
+        { path: '/tmp/beta', name: 'beta' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: false
+    })
+    useTaskStore.setState({
+      projectState: { ...mockProjectState, tasks: [] }
+    })
+
+    render(<ProjectSidebar />)
+    expect(screen.queryByTestId('badge-alpha')).toBeNull()
+    expect(screen.queryByTestId('badge-beta')).toBeNull()
+  })
+
+  it('does not show badge when sidebar is expanded', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
+        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useTaskStore.setState({
+      projectState: mockProjectState
+    })
+
+    render(<ProjectSidebar />)
+    // Badges should not appear in expanded mode (text count is shown instead)
+    expect(screen.queryByTestId('badge-alpha')).toBeNull()
+    expect(screen.queryByTestId('badge-beta')).toBeNull()
+  })
+
+  it('shows task count text for non-active projects when expanded', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
+        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useTaskStore.setState({
+      projectState: mockProjectState
+    })
+
+    render(<ProjectSidebar />)
+    // Active project shows live count from projectState
+    expect(screen.getByText('1 tasks')).toBeTruthy()
+    // Non-active project shows stored taskCount
+    expect(screen.getByText('3 tasks')).toBeTruthy()
+  })
+
   it('renders toggle button', () => {
     useWorkspaceStore.setState({
       sidebarVisible: true,

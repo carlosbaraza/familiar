@@ -4,6 +4,7 @@ import type { Workspace } from '@shared/types'
 export interface ProjectInfo {
   path: string
   name: string
+  taskCount?: number // non-archived task count
 }
 
 interface WorkspaceState {
@@ -33,6 +34,8 @@ interface WorkspaceState {
   toggleSidebar: () => void
   setSidebarExpanded: (expanded: boolean) => void
   setShowWorkspacePicker: (show: boolean) => void
+
+  updateProjectTaskCount: (projectPath: string, count: number) => void
 
   createWorkspace: (name: string, paths: string[]) => Promise<Workspace>
   updateWorkspace: (id: string, updates: Partial<Workspace>) => Promise<Workspace>
@@ -135,6 +138,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setShowWorkspacePicker: (show: boolean): void => {
     set({ showWorkspacePicker: show })
+  },
+
+  updateProjectTaskCount: (projectPath: string, count: number): void => {
+    set((s) => ({
+      openProjects: s.openProjects.map((p) =>
+        p.path === projectPath ? { ...p, taskCount: count } : p
+      )
+    }))
   },
 
   createWorkspace: async (name: string, paths: string[]): Promise<Workspace> => {

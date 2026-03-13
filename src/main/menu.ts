@@ -38,10 +38,23 @@ export function buildAppMenu(mainWindow: BrowserWindow, updateService: UpdateSer
       label: 'File',
       submenu: [
         {
-          label: 'Open Workspace…',
+          label: 'Open Project…',
           accelerator: 'CmdOrCtrl+O',
           click: (): void => {
             mainWindow.webContents.send('menu:open-workspace')
+          }
+        },
+        {
+          label: 'Add Project to Window…',
+          accelerator: 'CmdOrCtrl+Shift+A',
+          click: (): void => {
+            mainWindow.webContents.send('menu:add-project')
+          }
+        },
+        {
+          label: 'Show Workspace Picker',
+          click: (): void => {
+            mainWindow.webContents.send('menu:show-workspace-picker')
           }
         },
         {

@@ -74,8 +74,10 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
 
-          // Count tasks for this project (only show for active project since we only have that state loaded)
-          const taskCount = isActive && projectState ? projectState.tasks.filter((t) => t.status !== 'archived').length : null
+          // Count tasks: use live projectState for active project, or stored taskCount for non-active
+          const taskCount = isActive && projectState
+            ? projectState.tasks.filter((t) => t.status !== 'archived').length
+            : project.taskCount ?? null
 
           return (
             <div
@@ -85,11 +87,18 @@ export function ProjectSidebar(): React.JSX.Element | null {
               title={project.path}
               data-testid={`project-item-${project.name}`}
             >
-              <div
-                className={styles.projectIcon}
-                style={{ backgroundColor: color }}
-              >
-                {initial}
+              <div className={styles.projectIconWrapper}>
+                <div
+                  className={styles.projectIcon}
+                  style={{ backgroundColor: color }}
+                >
+                  {initial}
+                </div>
+                {!sidebarExpanded && taskCount !== null && taskCount > 0 && (
+                  <span className={styles.iconBadge} data-testid={`badge-${project.name}`}>
+                    {taskCount > 99 ? '99+' : taskCount}
+                  </span>
+                )}
               </div>
               {sidebarExpanded && (
                 <div className={styles.projectInfo}>

@@ -30,7 +30,7 @@ export class FileWatcher {
       // Debounce: only emit after 500ms of no changes
       if (this.debounceTimer) clearTimeout(this.debounceTimer)
       this.debounceTimer = setTimeout(() => {
-        this.mainWindow.webContents.send('project:file-changed')
+        this.mainWindow.webContents.send('project:file-changed', this.projectRoot)
       }, 500)
     })
   }

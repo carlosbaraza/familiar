@@ -4,6 +4,7 @@ import { Navbar } from './Navbar'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 
 // Mock AgentSwapWidget to avoid its complex dependencies
 vi.mock('./AgentSwapWidget', () => ({
@@ -73,6 +74,12 @@ describe('Navbar', () => {
       notifications: [],
       loading: false
     })
+
+    useWorkspaceStore.setState({
+      activeProjectPath: null,
+      openProjects: [],
+      sidebarVisible: false
+    })
   })
 
   // --- Project name ---
@@ -92,6 +99,48 @@ describe('Navbar', () => {
     useTaskStore.setState({ projectState: null })
     render(<Navbar />)
     expect(screen.getByText('Familiar')).toBeTruthy()
+  })
+
+  // --- Workspace-aware project name ---
+
+  it('shows project name from workspace store activeProjectPath', async () => {
+    useWorkspaceStore.setState({ activeProjectPath: '/Users/test/workspace-project' })
+    render(<Navbar />)
+    await waitFor(() => {
+      expect(screen.getByText('workspace-project')).toBeTruthy()
+    })
+  })
+
+  it('updates project name when activeProjectPath changes', async () => {
+    useWorkspaceStore.setState({ activeProjectPath: '/Users/test/project-alpha' })
+    const { unmount } = render(<Navbar />)
+    await waitFor(() => {
+      expect(screen.getByText('project-alpha')).toBeTruthy()
+    })
+    unmount()
+
+    // Switch to a different project
+    useWorkspaceStore.setState({ activeProjectPath: '/Users/test/project-beta' })
+    render(<Navbar />)
+    await waitFor(() => {
+      expect(screen.getByText('project-beta')).toBeTruthy()
+    })
+  })
+
+  it('falls back to getProjectRoot when no activeProjectPath', async () => {
+    useWorkspaceStore.setState({ activeProjectPath: null })
+    await renderNavbarAndWait()
+    expect(mockGetProjectRoot).toHaveBeenCalled()
+    expect(screen.getByText('my-project')).toBeTruthy()
+  })
+
+  it('does not call getProjectRoot when activeProjectPath is set', async () => {
+    useWorkspaceStore.setState({ activeProjectPath: '/Users/test/ws-project' })
+    render(<Navbar />)
+    await waitFor(() => {
+      expect(screen.getByText('ws-project')).toBeTruthy()
+    })
+    expect(mockGetProjectRoot).not.toHaveBeenCalled()
   })
 
   // --- Dashboard button ---

@@ -15,6 +15,8 @@ interface TerminalStore {
   removePane: (taskId: string, paneId: string) => void
   setActivePane: (taskId: string, paneId: string) => void
 
+  clearSessionsForNonActiveTasks: (activeTaskIds: string[]) => void
+
   getPanesForTask: (taskId: string) => TerminalPane[]
   getActivePaneForTask: (taskId: string) => string | undefined
 }
@@ -85,6 +87,41 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       const next = new Map(state.activePaneByTask)
       next.set(taskId, paneId)
       return { activePaneByTask: next }
+    })
+  },
+
+  clearSessionsForNonActiveTasks: (activeTaskIds: string[]): void => {
+    const activeSet = new Set(activeTaskIds)
+    set((state) => {
+      // Remove sessions not belonging to active tasks
+      const nextSessions = new Map<string, TerminalSession>()
+      for (const [id, session] of state.sessions) {
+        if (activeSet.has(session.taskId)) {
+          nextSessions.set(id, session)
+        }
+      }
+
+      // Remove panes not belonging to active tasks
+      const nextPanes = new Map<string, TerminalPane[]>()
+      for (const [taskId, panes] of state.panesByTask) {
+        if (activeSet.has(taskId)) {
+          nextPanes.set(taskId, panes)
+        }
+      }
+
+      // Remove active pane entries not belonging to active tasks
+      const nextActive = new Map<string, string>()
+      for (const [taskId, paneId] of state.activePaneByTask) {
+        if (activeSet.has(taskId)) {
+          nextActive.set(taskId, paneId)
+        }
+      }
+
+      return {
+        sessions: nextSessions,
+        panesByTask: nextPanes,
+        activePaneByTask: nextActive
+      }
     })
   },
 

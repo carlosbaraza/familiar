@@ -1,0 +1,300 @@
+/* WorkspacePicker — full-screen overlay for selecting/creating workspaces */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background-color: var(--bg-deepest);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+}
+
+.container {
+  width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: calc(-1 * var(--space-4));
+}
+
+/* Workspace list */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+  max-height: 400px;
+  padding: var(--space-1) 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.item:hover {
+  background-color: var(--bg-surface);
+}
+
+.itemSelected {
+  background-color: var(--bg-surface);
+  border-color: var(--border);
+}
+
+.itemMostRecent {
+  border-color: var(--accent-subtle);
+}
+
+/* Colored avatar */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+  flex-shrink: 0;
+}
+
+.itemInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemName {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.itemFolders {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemDot {
+  flex-shrink: 0;
+}
+
+.itemTime {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+/* Buttons row */
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.btnPrimary {
+  flex: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--accent);
+  color: white;
+  transition: background-color var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.btnPrimary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btnSecondary {
+  flex: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+}
+
+.btnSecondary:hover {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-hover);
+}
+
+/* New workspace inline form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.formTitle {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.formInput {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.formInput:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.formFolders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.formFolderItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.formFolderRemove {
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.formFolderRemove:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-elevated);
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btnSmall {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: none;
+}
+
+.btnSmallPrimary {
+  composes: btnSmall;
+  background-color: var(--accent);
+  color: white;
+}
+
+.btnSmallPrimary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btnSmallPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSmallSecondary {
+  composes: btnSmall;
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btnSmallSecondary:hover {
+  background-color: var(--bg-surface);
+}
+
+.btnCancel {
+  composes: btnSmall;
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+
+.btnCancel:hover {
+  color: var(--text-primary);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: var(--space-8) 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-base);
+}
+
+/* Keyboard hint */
+.hint {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.hintKbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  margin: 0 2px;
+}

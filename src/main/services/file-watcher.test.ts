@@ -44,7 +44,7 @@ describe('FileWatcher', () => {
     // Wait for debounce (500ms) + detection time
     await vi.waitFor(
       () => {
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed')
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed', tmpDir)
       },
       { timeout: 3000 }
     )
@@ -60,7 +60,7 @@ describe('FileWatcher', () => {
 
     await vi.waitFor(
       () => {
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed')
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed', tmpDir)
       },
       { timeout: 3000 }
     )
@@ -106,7 +106,7 @@ describe('FileWatcher', () => {
 
     await vi.waitFor(
       () => {
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed')
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith('project:file-changed', tmpDir)
       },
       { timeout: 3000 }
     )

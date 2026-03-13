@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import type { ProjectSettings, CodingAgent } from '@shared/types'
 import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS, CODING_AGENT_LABELS } from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
 import { SnippetSettings } from './SnippetSettings'
 import { LabelSettings } from './LabelSettings'
+import { WorkspacesSettings } from './WorkspacesSettings'
 
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
@@ -190,6 +192,9 @@ export function SettingsPage(): React.JSX.Element {
               onChange={(snippets) => handleChange('snippets', snippets)}
             />
           </div>
+
+          {/* Workspaces section */}
+          <WorkspacesSettings />
         </div>
 
         <div style={styles.footer}>

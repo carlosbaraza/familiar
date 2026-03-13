@@ -81,9 +81,11 @@ declare global {
       onExternalTaskOpen(callback: (taskId: string) => void): () => void
       onMenuOpenWorkspace(callback: () => void): () => void
       onMenuRunOnboarding(callback: () => void): () => void
+      onMenuAddProject(callback: () => void): () => void
+      onMenuShowWorkspacePicker(callback: () => void): () => void
 
       // File watching
-      watchProjectDir(callback: () => void): () => void
+      watchProjectDir(callback: (projectPath?: string) => void): () => void
       unwatchProjectDir(): void
 
       // Settings

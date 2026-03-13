@@ -124,10 +124,23 @@ const api = {
       ipcRenderer.removeAllListeners('menu:run-onboarding')
     }
   },
+  onMenuAddProject: (callback: () => void): (() => void) => {
+    ipcRenderer.on('menu:add-project', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('menu:add-project')
+    }
+  },
+  onMenuShowWorkspacePicker: (callback: () => void): (() => void) => {
+    ipcRenderer.on('menu:show-workspace-picker', () => callback())
+    return () => {
+      ipcRenderer.removeAllListeners('menu:show-workspace-picker')
+    }
+  },
 
   // File watching
-  watchProjectDir: (callback: () => void): (() => void) => {
-    const handler = (): void => callback()
+  watchProjectDir: (callback: (projectPath?: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, projectPath?: string): void =>
+      callback(projectPath)
     ipcRenderer.on('project:file-changed', handler)
     return () => {
       ipcRenderer.removeListener('project:file-changed', handler)

@@ -4,6 +4,11 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import { SettingsPage } from './SettingsPage'
 import { DEFAULT_SETTINGS } from '@shared/types/settings'
 
+// Mock WorkspacesSettings to simplify tests
+vi.mock('./WorkspacesSettings', () => ({
+  WorkspacesSettings: () => <div data-testid="workspaces-settings">Workspaces</div>
+}))
+
 // Mock SnippetSettings to simplify tests
 vi.mock('./SnippetSettings', () => ({
   SnippetSettings: ({
@@ -69,6 +74,13 @@ describe('SettingsPage', () => {
     })
     expect(screen.getByText('Snippets')).toBeInTheDocument()
     expect(screen.getByTestId('snippet-settings')).toBeInTheDocument()
+  })
+
+  it('renders Workspaces section', async () => {
+    await act(async () => {
+      render(<SettingsPage />)
+    })
+    expect(screen.getByTestId('workspaces-settings')).toBeInTheDocument()
   })
 
   it('loads settings on mount and populates form', async () => {

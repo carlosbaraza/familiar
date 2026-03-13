@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
 import { AgentSwapWidget } from './AgentSwapWidget'
@@ -10,20 +11,31 @@ import styles from './Navbar.module.css'
 
 export function Navbar(): React.JSX.Element {
   const projectState = useTaskStore((s) => s.projectState)
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [folderName, setFolderName] = useState<string | null>(null)
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
 
-  // Fetch the actual project root folder name
+  // Derive project name from workspace store's activeProjectPath
+  const workspaceProjectName = activeProjectPath
+    ? activeProjectPath.split('/').pop() || activeProjectPath
+    : null
+
+  // Fall back to fetching project root when no activeProjectPath
   useEffect(() => {
+    if (activeProjectPath) {
+      // Use activeProjectPath directly — no need to fetch
+      setProjectRoot(activeProjectPath)
+      return
+    }
     if (!projectState) return
     window.api.getProjectRoot().then((root: string) => {
       const name = root.split('/').pop() || root
       setFolderName(name)
       setProjectRoot(root)
     })
-  }, [projectState])
+  }, [projectState, activeProjectPath])
 
-  const projectName = folderName ?? projectState?.projectName ?? APP_NAME
+  const projectName = workspaceProjectName ?? folderName ?? projectState?.projectName ?? APP_NAME
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)

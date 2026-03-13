@@ -197,6 +197,48 @@ describe('workspace-store', () => {
     })
   })
 
+  describe('updateProjectTaskCount', () => {
+    it('updates task count for a specific project', () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/a', name: 'a' },
+          { path: '/tmp/b', name: 'b' }
+        ]
+      })
+
+      useWorkspaceStore.getState().updateProjectTaskCount('/tmp/a', 5)
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].taskCount).toBe(5)
+      expect(state.openProjects[1].taskCount).toBeUndefined()
+    })
+
+    it('does not modify other projects', () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/a', name: 'a', taskCount: 3 },
+          { path: '/tmp/b', name: 'b', taskCount: 7 }
+        ]
+      })
+
+      useWorkspaceStore.getState().updateProjectTaskCount('/tmp/a', 10)
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].taskCount).toBe(10)
+      expect(state.openProjects[1].taskCount).toBe(7)
+    })
+
+    it('handles non-existent project path gracefully', () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/a', name: 'a', taskCount: 3 }
+        ]
+      })
+
+      useWorkspaceStore.getState().updateProjectTaskCount('/tmp/nonexistent', 5)
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].taskCount).toBe(3)
+    })
+  })
+
   describe('deleteWorkspace', () => {
     it('deletes workspace and reloads list', async () => {
       mockApi.workspaceDelete.mockResolvedValue(undefined)
