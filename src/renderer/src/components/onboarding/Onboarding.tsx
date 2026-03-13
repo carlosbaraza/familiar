@@ -177,7 +177,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
 
     const term = new Terminal({
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
-      fontSize: 13,
+      fontSize: 11,
       lineHeight: 1.3,
       cursorBlink: true,
       cursorStyle: 'bar',
@@ -507,7 +507,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   if (doctorRunning) {
     return (
       <div style={styles.container}>
-        <div style={{ ...styles.card, maxWidth: 720 }}>
+        <div style={{ ...styles.card, maxWidth: 840 }}>
           <StepIndicator current={3} total={4} />
 
           <h1 style={styles.title}>Environment Check</h1>
@@ -1090,7 +1090,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   terminalContainer: {
     width: '100%',
-    height: '340px',
+    height: '480px',
     backgroundColor: '#1a1a2e',
     borderRadius: '8px',
     border: '1px solid var(--border)',
