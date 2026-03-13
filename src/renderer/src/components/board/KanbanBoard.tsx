@@ -23,6 +23,7 @@ import { filterTasks } from '@shared/utils/task-utils'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useKeyboardNavigation } from '@renderer/hooks/useKeyboardNavigation'
 import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
@@ -59,6 +60,7 @@ export function KanbanBoard(): React.JSX.Element {
   // Onboarding: show when no project, or when explicitly reopened from help menu
   const onboardingOpen = useUIStore((s) => s.onboardingOpen)
   const closeOnboarding = useUIStore((s) => s.closeOnboarding)
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null) // null = not checked yet
 
   // Check if onboarding is needed when project state changes
@@ -535,7 +537,7 @@ export function KanbanBoard(): React.JSX.Element {
   if (needsOnboarding || onboardingOpen) {
     return (
       <Onboarding
-        hasProject={!!projectState}
+        hasProject={!!projectState || !!activeProjectPath}
         onComplete={() => {
           setNeedsOnboarding(false)
           closeOnboarding()
