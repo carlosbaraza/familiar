@@ -396,6 +396,12 @@ After running all checks, summarize:
 
 Then ask: "Would you like me to fix the issues found?" and if yes, fix them one by one, explaining each change.`
 
+export const DOCTOR_AUTO_FIX_SUFFIX = `
+
+## Auto-fix mode
+
+IMPORTANT: Do NOT ask the user for confirmation. Automatically fix ALL issues found without prompting. Install missing tools, create missing configs, and set up hooks — just do it. Report what you fixed when done.`
+
 export const BASE_AGENTS_MD = `# Familiar — AGENTS.md
 
 This document describes how AI agents should interact with the Familiar system.

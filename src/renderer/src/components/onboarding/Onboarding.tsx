@@ -251,8 +251,9 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     setTimeout(() => {
       if (sessionIdRef.current) {
         if (selectedAgent === 'claude-code') {
-          const flags = autoMode ? ' -p --dangerously-skip-permissions' : ''
-          window.api.ptyWrite(sessionIdRef.current, `familiar doctor | claude${flags}\n`)
+          const flags = autoMode ? ' --dangerously-skip-permissions' : ''
+          const doctorFlags = autoMode ? ' --auto-fix' : ''
+          window.api.ptyWrite(sessionIdRef.current, `familiar doctor${doctorFlags} | claude${flags}\n`)
         } else {
           window.api.ptyWrite(sessionIdRef.current, 'familiar doctor\n')
         }
