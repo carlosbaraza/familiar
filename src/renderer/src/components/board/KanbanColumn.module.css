@@ -11,6 +11,11 @@
   border-right: 1px solid var(--border);
 }
 
+.columnWide {
+  min-width: 340px;
+  flex: 1.4 1 340px;
+}
+
 .column:last-child {
   border-right: none;
 }
