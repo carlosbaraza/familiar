@@ -99,7 +99,7 @@
   flex-shrink: 0;
 }
 
-/* Badge shown on the icon when sidebar is collapsed */
+/* Badge shown on the icon when sidebar is collapsed — unread notifications */
 .iconBadge {
   position: absolute;
   top: -4px;
@@ -108,7 +108,7 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background-color: var(--accent);
+  background-color: #e89b3e;
   color: white;
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
@@ -137,6 +137,11 @@
 .projectTaskCount {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+}
+
+.projectUnread {
+  font-size: var(--font-size-xs);
+  color: #e89b3e;
 }
 
 /* Remove button (hover only) */

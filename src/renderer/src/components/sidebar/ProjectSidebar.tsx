@@ -1,5 +1,6 @@
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import styles from './ProjectSidebar.module.css'
 
 // Generate a consistent color from project name
@@ -26,6 +27,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
   const projectState = useTaskStore((s) => s.projectState)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   if (!sidebarVisible) return null
 
@@ -74,10 +76,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
 
-          // Count tasks: use live projectState for active project, or stored taskCount for non-active
-          const taskCount = isActive && projectState
-            ? projectState.tasks.filter((t) => t.status !== 'archived').length
-            : project.taskCount ?? null
+          // Show unread notification count for active project
+          const unread = isActive ? unreadCount() : 0
 
           return (
             <div
@@ -94,17 +94,17 @@ export function ProjectSidebar(): React.JSX.Element | null {
                 >
                   {initial}
                 </div>
-                {!sidebarExpanded && taskCount !== null && taskCount > 0 && (
+                {!sidebarExpanded && unread > 0 && (
                   <span className={styles.iconBadge} data-testid={`badge-${project.name}`}>
-                    {taskCount > 99 ? '99+' : taskCount}
+                    {unread > 99 ? '99+' : unread}
                   </span>
                 )}
               </div>
               {sidebarExpanded && (
                 <div className={styles.projectInfo}>
                   <span className={styles.projectName}>{project.name}</span>
-                  {taskCount !== null && (
-                    <span className={styles.projectTaskCount}>{taskCount} tasks</span>
+                  {unread > 0 && (
+                    <span className={styles.projectUnread}>{unread} unread</span>
                   )}
                 </div>
               )}

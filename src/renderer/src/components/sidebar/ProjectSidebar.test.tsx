@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { ProjectSidebar } from './ProjectSidebar'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
-import { useTaskStore } from '@renderer/stores/task-store'
-import type { ProjectState } from '@shared/types'
+import { useNotificationStore } from '@renderer/stores/notification-store'
+import type { AppNotification } from '@shared/types'
 
 // Mock window.api
 vi.stubGlobal('window', {
@@ -23,26 +23,18 @@ vi.stubGlobal('window', {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  useNotificationStore.setState({ notifications: [] })
 })
 
-const mockProjectState: ProjectState = {
-  version: 1,
-  projectName: 'Test',
-  tasks: [
-    {
-      id: 'tsk_1',
-      title: 'Task 1',
-      status: 'todo',
-      priority: 'none',
-      labels: [],
-      agentStatus: 'idle',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      sortOrder: 0
-    }
-  ],
-  columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
-  labels: []
+function makeNotification(overrides: Partial<AppNotification> = {}): AppNotification {
+  return {
+    id: `notif_${Math.random().toString(36).slice(2)}`,
+    title: 'Test',
+    body: 'body',
+    read: false,
+    createdAt: new Date().toISOString(),
+    ...overrides
+  }
 }
 
 describe('ProjectSidebar', () => {
@@ -105,7 +97,7 @@ describe('ProjectSidebar', () => {
     expect(activeItem.className).toContain('Active')
   })
 
-  it('shows task count for active project when expanded', () => {
+  it('shows unread notification badge on collapsed sidebar for active project', () => {
     useWorkspaceStore.setState({
       sidebarVisible: true,
       openProjects: [
@@ -113,14 +105,95 @@ describe('ProjectSidebar', () => {
         { path: '/tmp/beta', name: 'beta' }
       ],
       activeProjectPath: '/tmp/alpha',
-      sidebarExpanded: true
+      sidebarExpanded: false
     })
-    useTaskStore.setState({
-      projectState: mockProjectState
+    useNotificationStore.setState({
+      notifications: [
+        makeNotification({ read: false }),
+        makeNotification({ read: false }),
+        makeNotification({ read: true })
+      ]
     })
 
     render(<ProjectSidebar />)
-    expect(screen.getByText('1 tasks')).toBeTruthy()
+    expect(screen.getByTestId('badge-alpha')).toBeTruthy()
+    expect(screen.getByTestId('badge-alpha').textContent).toBe('2')
+    // Non-active project should not have a badge
+    expect(screen.queryByTestId('badge-beta')).toBeNull()
+  })
+
+  it('does not show badge when no unread notifications', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' },
+        { path: '/tmp/beta', name: 'beta' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: false
+    })
+    useNotificationStore.setState({
+      notifications: [makeNotification({ read: true })]
+    })
+
+    render(<ProjectSidebar />)
+    expect(screen.queryByTestId('badge-alpha')).toBeNull()
+    expect(screen.queryByTestId('badge-beta')).toBeNull()
+  })
+
+  it('does not show badge when sidebar is expanded', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      notifications: [makeNotification({ read: false })]
+    })
+
+    render(<ProjectSidebar />)
+    expect(screen.queryByTestId('badge-alpha')).toBeNull()
+  })
+
+  it('shows unread count text when expanded with unread notifications', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      notifications: [
+        makeNotification({ read: false }),
+        makeNotification({ read: false }),
+        makeNotification({ read: true })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    expect(screen.getByText('2 unread')).toBeTruthy()
+  })
+
+  it('does not show unread text when expanded with no unread', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      notifications: [makeNotification({ read: true })]
+    })
+
+    render(<ProjectSidebar />)
+    expect(screen.queryByText(/unread/)).toBeNull()
   })
 
   it('renders add project button', () => {
@@ -136,88 +209,6 @@ describe('ProjectSidebar', () => {
 
     render(<ProjectSidebar />)
     expect(screen.getByTestId('add-project-button')).toBeTruthy()
-  })
-
-  it('shows task count badge on collapsed sidebar for non-active projects with taskCount', () => {
-    useWorkspaceStore.setState({
-      sidebarVisible: true,
-      openProjects: [
-        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
-        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
-      ],
-      activeProjectPath: '/tmp/alpha',
-      sidebarExpanded: false
-    })
-    useTaskStore.setState({
-      projectState: mockProjectState
-    })
-
-    render(<ProjectSidebar />)
-    // Active project uses live projectState (1 task), non-active uses stored taskCount
-    expect(screen.getByTestId('badge-alpha')).toBeTruthy()
-    expect(screen.getByTestId('badge-alpha').textContent).toBe('1')
-    expect(screen.getByTestId('badge-beta')).toBeTruthy()
-    expect(screen.getByTestId('badge-beta').textContent).toBe('3')
-  })
-
-  it('does not show badge when collapsed and taskCount is zero', () => {
-    useWorkspaceStore.setState({
-      sidebarVisible: true,
-      openProjects: [
-        { path: '/tmp/alpha', name: 'alpha', taskCount: 0 },
-        { path: '/tmp/beta', name: 'beta' }
-      ],
-      activeProjectPath: '/tmp/alpha',
-      sidebarExpanded: false
-    })
-    useTaskStore.setState({
-      projectState: { ...mockProjectState, tasks: [] }
-    })
-
-    render(<ProjectSidebar />)
-    expect(screen.queryByTestId('badge-alpha')).toBeNull()
-    expect(screen.queryByTestId('badge-beta')).toBeNull()
-  })
-
-  it('does not show badge when sidebar is expanded', () => {
-    useWorkspaceStore.setState({
-      sidebarVisible: true,
-      openProjects: [
-        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
-        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
-      ],
-      activeProjectPath: '/tmp/alpha',
-      sidebarExpanded: true
-    })
-    useTaskStore.setState({
-      projectState: mockProjectState
-    })
-
-    render(<ProjectSidebar />)
-    // Badges should not appear in expanded mode (text count is shown instead)
-    expect(screen.queryByTestId('badge-alpha')).toBeNull()
-    expect(screen.queryByTestId('badge-beta')).toBeNull()
-  })
-
-  it('shows task count text for non-active projects when expanded', () => {
-    useWorkspaceStore.setState({
-      sidebarVisible: true,
-      openProjects: [
-        { path: '/tmp/alpha', name: 'alpha', taskCount: 5 },
-        { path: '/tmp/beta', name: 'beta', taskCount: 3 }
-      ],
-      activeProjectPath: '/tmp/alpha',
-      sidebarExpanded: true
-    })
-    useTaskStore.setState({
-      projectState: mockProjectState
-    })
-
-    render(<ProjectSidebar />)
-    // Active project shows live count from projectState
-    expect(screen.getByText('1 tasks')).toBeTruthy()
-    // Non-active project shows stored taskCount
-    expect(screen.getByText('3 tasks')).toBeTruthy()
   })
 
   it('renders toggle button', () => {
