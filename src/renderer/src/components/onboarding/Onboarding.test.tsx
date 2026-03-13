@@ -357,7 +357,7 @@ describe('Onboarding', () => {
     expect(screen.queryByText('Run Doctor Auto')).not.toBeInTheDocument()
   })
 
-  it('sends --dangerously-skip-permissions flag when Run Doctor Auto is clicked', async () => {
+  it('sends -p --dangerously-skip-permissions flags when Run Doctor Auto is clicked', async () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => screen.getByText('Continue'))
@@ -370,7 +370,7 @@ describe('Onboarding', () => {
     // Wait for the delayed ptyWrite call (500ms)
     await waitFor(() => {
       const writeCalls = mockApi.ptyWrite.mock.calls
-      const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('--dangerously-skip-permissions'))
+      const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('-p --dangerously-skip-permissions'))
       expect(doctorCall).toBeTruthy()
     }, { timeout: 2000 })
   })
