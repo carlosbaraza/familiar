@@ -10,6 +10,10 @@
 
 A macOS desktop app that gives AI coding agents their own kanban board, terminals, and editor — so you can manage agentic workflows the way you'd manage a team.
 
+<p align="center">
+  <img src="resources/demo-collage.png" alt="Familiar — Kanban board and task detail with terminal" width="800" />
+</p>
+
 ## Why "Familiar"?
 
 The name carries a double meaning:
