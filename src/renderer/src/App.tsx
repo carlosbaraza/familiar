@@ -48,16 +48,31 @@ function App(): React.JSX.Element {
       })
   }, [loadProjectState, loadNotifications, loadOpenProjects])
 
-  // Auto-show workspace picker on initial load when no project is initialized
+  // When switching to an uninitialized project, open onboarding.
+  // When switching to an initialized project, close onboarding.
+  // On first app launch with no project at all, show workspace picker.
+  const openOnboarding = useUIStore((s) => s.openOnboarding)
+  const onboardingOpen = useUIStore((s) => s.onboardingOpen)
+  const closeOnboarding = useUIStore((s) => s.closeOnboarding)
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   useEffect(() => {
     async function checkInitialized(): Promise<void> {
       const initialized = await window.api.isInitialized()
-      if (!initialized && !projectState) {
-        setShowWorkspacePicker(true)
+      if (!initialized) {
+        if (activeProjectPath) {
+          // Project added but not configured — run onboarding for it
+          openOnboarding()
+        } else if (!projectState) {
+          // No project at all on initial launch — show workspace picker
+          setShowWorkspacePicker(true)
+        }
+      } else if (onboardingOpen) {
+        // Switched to an initialized project — close onboarding
+        closeOnboarding()
       }
     }
     checkInitialized()
-  }, [projectState, setShowWorkspacePicker])
+  }, [projectState, activeProjectPath, setShowWorkspacePicker, openOnboarding, closeOnboarding, onboardingOpen])
 
   // Reload state when external changes are detected (e.g. CLI updates)
   useEffect(() => {
@@ -103,7 +118,6 @@ function App(): React.JSX.Element {
   }, [setShowWorkspacePicker])
 
   // Listen for "Run Onboarding" from the application menu
-  const openOnboarding = useUIStore((s) => s.openOnboarding)
   useEffect(() => {
     const unsubscribe = window.api.onMenuRunOnboarding(() => {
       openOnboarding()
