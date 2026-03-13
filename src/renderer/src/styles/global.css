@@ -319,6 +319,7 @@ pre {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 
 /* No-drag for interactive elements inside the titlebar */
