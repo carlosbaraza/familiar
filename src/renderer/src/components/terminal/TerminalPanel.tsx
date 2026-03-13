@@ -28,13 +28,13 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const createSession = useCallback(async () => {
     try {
       const cwd = await window.api.getProjectRoot()
-      const sid = await window.api.ptyCreate(taskId, 'main', cwd)
+      const sid = await window.api.ptyCreate(taskId, 'main', cwd, task?.forkedFrom)
       return sid
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       return null
     }
-  }, [taskId])
+  }, [taskId, task?.forkedFrom])
 
   useEffect(() => {
     // Don't create terminal sessions for archived tasks
@@ -69,6 +69,30 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
       }
     }
   }, [taskId, createSession, isArchived])
+
+  // Consume pendingDetailFocus to focus terminal when ready.
+  // Covers two cases:
+  //   1. Terminal already mounted (re-open) — effect fires immediately
+  //   2. First mount — sessionId transitions from null to a value, effect fires then
+  const activeTaskId = useUIStore((s) => s.activeTaskId)
+  const pendingDetailFocus = useUIStore((s) => s.pendingDetailFocus)
+  const clearPendingDetailFocus = useUIStore((s) => s.clearPendingDetailFocus)
+
+  useEffect(() => {
+    if (
+      pendingDetailFocus === 'terminal' &&
+      activeTaskId === taskId &&
+      sessionId
+    ) {
+      // Use rAF + setTimeout to ensure xterm is rendered and click events have settled
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
+          clearPendingDetailFocus()
+        }, 30)
+      })
+    }
+  }, [pendingDetailFocus, activeTaskId, taskId, sessionId, clearPendingDetailFocus])
 
   // Load snippets from settings and listen for updates
   useEffect(() => {

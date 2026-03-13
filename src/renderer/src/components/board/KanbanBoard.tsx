@@ -273,10 +273,8 @@ export function KanbanBoard(): React.JSX.Element {
         }
       }
       openTaskDetail(taskId)
-      // Focus the terminal after the task detail mounts
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
-      }, 50)
+      // Signal that the terminal should receive focus once ready
+      useUIStore.getState().setPendingDetailFocus('terminal')
     },
     [openTaskDetail, clearSelection, setDraggedTask, setDragOverColumn, columnOrder, tasksByStatus]
   )

@@ -4,6 +4,7 @@ import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { Tooltip } from '@renderer/components/common'
 import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { StatusSelect } from './StatusSelect'
 import { AgentStatusSelect } from './AgentStatusSelect'
 import { PrioritySelect } from './PrioritySelect'
@@ -74,6 +75,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
   const [_editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
   const titleRef = useRef<HTMLTextAreaElement>(null)
+  const openCreateTaskModalForFork = useUIStore((s) => s.openCreateTaskModalForFork)
 
   const projectLabels = useProjectLabels()
 
@@ -122,19 +124,33 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
     [handleTitleSubmit, task.title]
   )
 
-  // Listen for focus requests from keyboard navigation
+  // Listen for focus requests from keyboard navigation (Cmd+Enter dispatches event directly)
   useEffect(() => {
     const handleFocusRequest = (e: Event): void => {
       const target = (e as CustomEvent).detail
       if (target === 'title') {
         titleRef.current?.focus()
-        // Select all text for easy replacement
         titleRef.current?.select()
       }
     }
     window.addEventListener('task-detail-focus', handleFocusRequest)
     return () => window.removeEventListener('task-detail-focus', handleFocusRequest)
   }, [])
+
+  // Consume pendingDetailFocus for title focus (e.g. Space key from board)
+  const activeTaskId = useUIStore((s) => s.activeTaskId)
+  const pendingDetailFocus = useUIStore((s) => s.pendingDetailFocus)
+  const clearPendingDetailFocus = useUIStore((s) => s.clearPendingDetailFocus)
+
+  useEffect(() => {
+    if (pendingDetailFocus === 'title' && activeTaskId === task.id) {
+      requestAnimationFrame(() => {
+        titleRef.current?.focus()
+        titleRef.current?.select()
+        clearPendingDetailFocus()
+      })
+    }
+  }, [pendingDetailFocus, activeTaskId, task.id, clearPendingDetailFocus])
 
   const handleStatusChange = useCallback(
     (status: TaskStatus) => {
@@ -185,6 +201,20 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
         </div>
         <div className={styles.topBarActions}>
           <TaskIdBadge id={task.id} />
+          <Tooltip placement="bottom" content="Fork this task session">
+            <button
+              className={styles.closeButton}
+              onClick={() => openCreateTaskModalForFork(task.id)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="18" r="3" />
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="18" cy="6" r="3" />
+                <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+                <path d="M12 12v3" />
+              </svg>
+            </button>
+          </Tooltip>
           <Tooltip placement="bottom" content="Open task folder in Finder">
             <button
               className={styles.closeButton}

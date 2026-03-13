@@ -26,6 +26,7 @@ interface UIState {
 
   // Create task modal (used when creating from task detail view)
   createTaskModalOpen: boolean
+  createTaskForkFrom: string | null // parent task ID when forking
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: boolean
@@ -40,6 +41,9 @@ interface UIState {
   focusedColumnIndex: number
   focusedTaskIndex: number
 
+  // Pending focus target when opening task detail
+  pendingDetailFocus: 'terminal' | 'title' | null
+
   // Split panel
   editorPanelWidth: number // pixels
 
@@ -53,6 +57,7 @@ interface UIState {
   openSettings: () => void
   closeSettings: () => void
   openCreateTaskModal: () => void
+  openCreateTaskModalForFork: (taskId: string) => void
   closeCreateTaskModal: () => void
   openShortcutsModal: () => void
   closeShortcutsModal: () => void
@@ -63,6 +68,8 @@ interface UIState {
   setFocusedColumn: (index: number) => void
   setFocusedTask: (index: number) => void
   setEditorPanelWidth: (width: number) => void
+  setPendingDetailFocus: (target: 'terminal' | 'title' | null) => void
+  clearPendingDetailFocus: () => void
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 240
@@ -97,6 +104,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Create task modal
   createTaskModalOpen: false,
+  createTaskForkFrom: null,
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: false,
@@ -110,6 +118,9 @@ export const useUIStore = create<UIState>((set) => ({
   // Board keyboard navigation (-1 means no card is focused, e.g. when input has focus)
   focusedColumnIndex: -1,
   focusedTaskIndex: -1,
+
+  // Pending focus
+  pendingDetailFocus: null,
 
   // Split panel
   editorPanelWidth: DEFAULT_EDITOR_PANEL_WIDTH,
@@ -152,10 +163,13 @@ export const useUIStore = create<UIState>((set) => ({
     set({ settingsOpen: false }),
 
   openCreateTaskModal: () =>
-    set({ createTaskModalOpen: true }),
+    set({ createTaskModalOpen: true, createTaskForkFrom: null }),
+
+  openCreateTaskModalForFork: (taskId: string) =>
+    set({ createTaskModalOpen: true, createTaskForkFrom: taskId }),
 
   closeCreateTaskModal: () =>
-    set({ createTaskModalOpen: false }),
+    set({ createTaskModalOpen: false, createTaskForkFrom: null }),
 
   openShortcutsModal: () =>
     set({ shortcutsModalOpen: true }),
@@ -182,5 +196,11 @@ export const useUIStore = create<UIState>((set) => ({
     set({ focusedTaskIndex: index }),
 
   setEditorPanelWidth: (width: number) =>
-    set({ editorPanelWidth: Math.max(MIN_EDITOR_PANEL_WIDTH, Math.min(MAX_EDITOR_PANEL_WIDTH, width)) })
+    set({ editorPanelWidth: Math.max(MIN_EDITOR_PANEL_WIDTH, Math.min(MAX_EDITOR_PANEL_WIDTH, width)) }),
+
+  setPendingDetailFocus: (target) =>
+    set({ pendingDetailFocus: target }),
+
+  clearPendingDetailFocus: () =>
+    set({ pendingDetailFocus: null })
 }))

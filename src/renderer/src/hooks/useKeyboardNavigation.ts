@@ -207,10 +207,7 @@ export function useKeyboardNavigation({
           const spaceTask = getFocusedTask()
           if (spaceTask) {
             openTaskDetail(spaceTask.id)
-            // Signal that the title should receive focus
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'title' }))
-            }, 50)
+            useUIStore.getState().setPendingDetailFocus('title')
           }
           break
         }
@@ -221,9 +218,7 @@ export function useKeyboardNavigation({
           const task = getFocusedTask()
           if (task) {
             openTaskDetail(task.id)
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
-            }, 50)
+            useUIStore.getState().setPendingDetailFocus('terminal')
           }
           break
         }
