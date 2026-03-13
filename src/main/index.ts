@@ -125,9 +125,24 @@ app.whenReady().then(async () => {
   })
 
   // Handle familiar-attachment:// protocol requests by serving local files
+  // Supports two URL formats:
+  //   familiar-attachment://file/<absolute-path>           (legacy)
+  //   familiar-attachment://task/<taskId>/attachments/<filename>  (relative, portable)
   protocol.handle('familiar-attachment', (request) => {
-    // URL format: familiar-attachment://file/<absolute-path>
     const url = new URL(request.url)
+    const host = url.host // "file" or "task"
+
+    if (host === 'task') {
+      // Relative format: familiar-attachment://task/<taskId>/attachments/<filename>
+      const parts = url.pathname.split('/').filter(Boolean)
+      const taskId = parts[0]
+      const fileName = parts.slice(2).join('/') // skip "attachments"
+      const projectRoot = dataService.getProjectRoot()
+      const filePath = join(projectRoot, '.familiar', 'tasks', taskId, 'attachments', fileName)
+      return net.fetch(`file://${filePath}`)
+    }
+
+    // Legacy absolute path format: familiar-attachment://file/<absolute-path>
     const filePath = decodeURIComponent(url.pathname)
     return net.fetch(`file://${filePath}`)
   })

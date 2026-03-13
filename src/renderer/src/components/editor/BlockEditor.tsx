@@ -36,10 +36,11 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
       const timestamp = Date.now()
       const fileName = `${timestamp}-${file.name}`
       const arrayBuffer = await file.arrayBuffer()
-      const filePath = await window.api.saveAttachment(taskIdRef.current, fileName, arrayBuffer)
+      const savedName = await window.api.saveAttachment(taskIdRef.current, fileName, arrayBuffer)
       // Return a custom protocol URL so the editor can display the image inline
       // file:// URLs are blocked by Electron's security policy in the renderer
-      return `familiar-attachment://file${filePath}`
+      // Use task-relative URL format for portability across project renames
+      return `familiar-attachment://task/${taskIdRef.current}/attachments/${savedName}`
     },
     []
   )
@@ -136,7 +137,12 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     const handleFocusRequest = (e: Event): void => {
       const target = (e as CustomEvent).detail
       if (target === 'editor' && editor) {
+        // Focus and move cursor to the start of the document
         editor.focus()
+        const firstBlock = editor.document[0]
+        if (firstBlock) {
+          editor.setTextCursorPosition(firstBlock, 'start')
+        }
       }
     }
     window.addEventListener('task-detail-focus', handleFocusRequest)

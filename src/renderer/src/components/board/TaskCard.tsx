@@ -409,15 +409,21 @@ export function TaskCard({
         {/* Image attachments */}
         {task.attachments && task.attachments.length > 0 && (
           <div className={styles.attachmentThumbs}>
-            {task.attachments.slice(0, 4).map((absPath, i) => (
-              <img
-                key={i}
-                className={styles.attachmentThumb}
-                src={`familiar-attachment://file${absPath}`}
-                alt="attachment"
-                draggable={false}
-              />
-            ))}
+            {task.attachments.slice(0, 4).map((ref, i) => {
+              // Support both legacy absolute paths and new relative filenames
+              const src = ref.startsWith('/')
+                ? `familiar-attachment://file${ref}`
+                : `familiar-attachment://task/${task.id}/attachments/${ref}`
+              return (
+                <img
+                  key={i}
+                  className={styles.attachmentThumb}
+                  src={src}
+                  alt="attachment"
+                  draggable={false}
+                />
+              )
+            })}
             {task.attachments.length > 4 && (
               <span className={styles.attachmentMore}>+{task.attachments.length - 4}</span>
             )}

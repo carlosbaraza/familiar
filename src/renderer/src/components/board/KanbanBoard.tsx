@@ -292,18 +292,18 @@ export function KanbanBoard(): React.JSX.Element {
       }
       // Copy pending images from temp to task attachments
       if (pendingImages && pendingImages.length > 0) {
-        const attachmentPaths: string[] = []
+        const attachmentNames: string[] = []
         for (const img of pendingImages) {
           try {
-            const absPath = await window.api.copyTempToAttachment(task.id, img.tempPath, img.fileName)
-            attachmentPaths.push(absPath)
+            const fileName = await window.api.copyTempToAttachment(task.id, img.tempPath, img.fileName)
+            attachmentNames.push(fileName)
           } catch {
             console.warn('Failed to copy image to task attachments:', img.fileName)
           }
         }
-        if (attachmentPaths.length > 0) {
+        if (attachmentNames.length > 0) {
           const { updateTask } = useTaskStore.getState()
-          await updateTask({ ...task, attachments: attachmentPaths })
+          await updateTask({ ...task, attachments: attachmentNames })
         }
       }
       // Save pasted files to task folder

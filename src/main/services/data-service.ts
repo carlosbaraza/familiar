@@ -16,6 +16,7 @@ import {
   DEFAULT_LABEL_COLOR
 } from '../../shared/constants'
 import path from 'path'
+import fs from 'fs'
 import { AGENTS_MD } from '../../shared/agent-instructions'
 
 export class DataService {
@@ -31,7 +32,59 @@ export class DataService {
     this.projectRoot = newRoot
   }
 
+  /**
+   * Returns the project root, auto-healing if the stored path no longer exists.
+   * This handles the case where the project folder was renamed while the app was running.
+   * On macOS, process.cwd() resolves to the new path even after a rename (inode-based).
+   */
   getProjectRoot(): string {
+    if (fs.existsSync(this.projectRoot)) {
+      return this.projectRoot
+    }
+
+    // Stored root is stale — try to auto-detect the new location.
+    // On macOS, process.cwd() follows the inode, so it returns the new name
+    // even if the directory was renamed while the process was running.
+    try {
+      const cwd = process.cwd()
+      const candidateFamiliar = path.join(cwd, DATA_DIR)
+      if (fs.existsSync(candidateFamiliar)) {
+        console.log(
+          `Project root auto-healed: "${this.projectRoot}" → "${cwd}" (folder was renamed)`
+        )
+        this.projectRoot = cwd
+        return this.projectRoot
+      }
+    } catch {
+      // process.cwd() can throw if the directory was deleted entirely
+    }
+
+    // Last resort: check if the parent directory still exists and scan for .familiar/
+    try {
+      const parentDir = path.dirname(this.projectRoot)
+      if (fs.existsSync(parentDir)) {
+        const siblings = fs.readdirSync(parentDir)
+        for (const sibling of siblings) {
+          const candidate = path.join(parentDir, sibling)
+          const candidateFamiliar = path.join(candidate, DATA_DIR)
+          if (fs.existsSync(candidateFamiliar)) {
+            // Verify it's the same project by checking state.json exists
+            const stateFile = path.join(candidateFamiliar, STATE_FILE)
+            if (fs.existsSync(stateFile)) {
+              console.log(
+                `Project root auto-healed: "${this.projectRoot}" → "${candidate}" (found .familiar/ in sibling)`
+              )
+              this.projectRoot = candidate
+              return this.projectRoot
+            }
+          }
+        }
+      }
+    } catch {
+      // Parent dir scan failed — give up
+    }
+
+    // Return the stale root as-is (downstream code handles missing dirs)
     return this.projectRoot
   }
 
@@ -46,8 +99,9 @@ export class DataService {
     const raw = await this.fs.readFile(filePath)
     const state = JSON.parse(raw) as ProjectState
 
-    // Migrate: rename "cancelled" → "archived"
     let migrated = false
+
+    // Migrate: rename "cancelled" → "archived"
     const colIdx = state.columnOrder.indexOf('cancelled' as any)
     if (colIdx !== -1) {
       state.columnOrder[colIdx] = 'archived'
@@ -90,6 +144,16 @@ export class DataService {
 
       if (JSON.stringify(deduped) !== JSON.stringify(state.labels)) {
         state.labels = deduped
+        migrated = true
+      }
+    }
+
+    // Migrate: convert absolute attachment paths to relative filenames
+    for (const task of state.tasks) {
+      if (task.attachments && task.attachments.some((a) => path.isAbsolute(a))) {
+        task.attachments = task.attachments.map((a) =>
+          path.isAbsolute(a) ? path.basename(a) : a
+        )
         migrated = true
       }
     }
@@ -153,7 +217,17 @@ export class DataService {
   async readTask(taskId: string): Promise<Task> {
     const filePath = this.getDataPath(TASKS_DIR, taskId, TASK_FILE)
     const raw = await this.fs.readFile(filePath)
-    return JSON.parse(raw) as Task
+    const task = JSON.parse(raw) as Task
+
+    // Migrate absolute attachment paths to relative filenames
+    if (task.attachments && task.attachments.some((a) => path.isAbsolute(a))) {
+      task.attachments = task.attachments.map((a) =>
+        path.isAbsolute(a) ? path.basename(a) : a
+      )
+      await this.updateTask(task)
+    }
+
+    return task
   }
 
   async updateTask(task: Task): Promise<void> {
@@ -209,7 +283,8 @@ export class DataService {
     const filePath = path.join(attachDir, fileName)
     const { writeFile } = await import('fs/promises')
     await writeFile(filePath, Buffer.from(data))
-    return filePath
+    // Return just the filename — stored paths should be relative for portability
+    return fileName
   }
 
   async copyTempToAttachment(
@@ -222,7 +297,20 @@ export class DataService {
     const destPath = path.join(attachDir, fileName)
     const { copyFile } = await import('fs/promises')
     await copyFile(tempPath, destPath)
-    return destPath
+    // Return just the filename — stored paths should be relative for portability
+    return fileName
+  }
+
+  /**
+   * Resolve an attachment reference (filename or legacy absolute path) to an absolute path.
+   */
+  resolveAttachmentPath(taskId: string, attachment: string): string {
+    // If it's already an absolute path (legacy), return as-is
+    if (path.isAbsolute(attachment)) {
+      return attachment
+    }
+    // Otherwise resolve relative to the task's attachments folder
+    return this.getDataPath(TASKS_DIR, taskId, ATTACHMENTS_DIR, attachment)
   }
 
   async listTaskFiles(taskId: string): Promise<{ name: string; size: number; isDir: boolean; path: string }[]> {

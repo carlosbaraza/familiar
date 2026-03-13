@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
@@ -306,6 +306,133 @@ describe('DataService', () => {
       await service.initProject('Test')
       const files = await service.listTaskFiles('nonexistent')
       expect(files).toEqual([])
+    })
+  })
+
+  describe('getProjectRoot auto-heal', () => {
+    it('returns stored root when it still exists', () => {
+      expect(service.getProjectRoot()).toBe(tmpDir)
+    })
+
+    it('auto-heals via process.cwd() when stored root is stale', async () => {
+      await service.initProject('Test')
+
+      // Simulate: stored root no longer exists, but cwd points to a dir with .familiar/
+      const staleRoot = path.join(os.tmpdir(), 'stale-root-' + Date.now())
+      const staleService = new DataService(staleRoot)
+      // Mock process.cwd to return the tmpDir (which has .familiar/)
+      const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(tmpDir)
+
+      const root = staleService.getProjectRoot()
+      expect(root).toBe(tmpDir)
+
+      cwdSpy.mockRestore()
+    })
+
+    it('auto-heals via sibling scan when cwd has no .familiar/', async () => {
+      // Create an isolated parent directory so the sibling scan only finds our project
+      const isolatedParent = await fs.mkdtemp(path.join(os.tmpdir(), 'heal-test-parent-'))
+      const originalDir = path.join(isolatedParent, 'original-project')
+      await fs.mkdir(originalDir)
+
+      const isolatedService = new DataService(originalDir)
+      await isolatedService.initProject('Test')
+
+      // Simulate rename: move .familiar/ to a sibling
+      const renamedDir = path.join(isolatedParent, 'renamed-project')
+      await fs.rename(originalDir, renamedDir)
+
+      // Mock process.cwd to return a dir without .familiar/
+      const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(os.tmpdir())
+
+      const root = isolatedService.getProjectRoot()
+      expect(root).toBe(renamedDir)
+
+      cwdSpy.mockRestore()
+      await fs.rm(isolatedParent, { recursive: true, force: true })
+    })
+
+    it('returns stale root when no .familiar/ found nearby', () => {
+      // Use a path whose parent has no .familiar/ children
+      const fakeRoot = path.join(os.tmpdir(), 'nonexistent-parent-' + Date.now(), 'project')
+      const fakeService = new DataService(fakeRoot)
+      // Mock cwd to avoid accidentally finding a real .familiar/
+      const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(os.tmpdir())
+
+      expect(fakeService.getProjectRoot()).toBe(fakeRoot)
+
+      cwdSpy.mockRestore()
+    })
+  })
+
+  describe('attachment path migration', () => {
+    it('migrates absolute attachment paths to filenames in readTask', async () => {
+      await service.initProject('Test')
+      const task = makeTask({
+        attachments: ['/old/path/.familiar/tasks/tsk_ds_test/attachments/image.png']
+      })
+      await service.createTask(task)
+
+      // Write task with absolute path directly to bypass migration
+      const taskFile = path.join(tmpDir, '.familiar', 'tasks', task.id, 'task.json')
+      const raw = JSON.parse(await fs.readFile(taskFile, 'utf-8'))
+      raw.attachments = ['/old/path/.familiar/tasks/tsk_ds_test/attachments/image.png']
+      await fs.writeFile(taskFile, JSON.stringify(raw))
+
+      const readBack = await service.readTask(task.id)
+      expect(readBack.attachments).toEqual(['image.png'])
+    })
+
+    it('migrates absolute attachment paths in state.json', async () => {
+      await service.initProject('Test')
+      const state = await service.readProjectState()
+      state.tasks.push(makeTask({
+        attachments: ['/old/path/image.png', 'already-relative.png']
+      }))
+      await service.writeProjectState(state)
+
+      const readBack = await service.readProjectState()
+      expect(readBack.tasks[0].attachments).toEqual(['image.png', 'already-relative.png'])
+    })
+
+    it('saveAttachment returns filename not absolute path', async () => {
+      await service.initProject('Test')
+      const task = makeTask()
+      await service.createTask(task)
+
+      const result = await service.saveAttachment(task.id, 'test.png', new ArrayBuffer(8))
+      expect(result).toBe('test.png')
+      expect(path.isAbsolute(result)).toBe(false)
+    })
+
+    it('copyTempToAttachment returns filename not absolute path', async () => {
+      await service.initProject('Test')
+      const task = makeTask()
+      await service.createTask(task)
+
+      // Create a temp file to copy
+      const tempFile = path.join(os.tmpdir(), 'temp-attach-' + Date.now() + '.png')
+      await fs.writeFile(tempFile, 'fake image data')
+
+      const result = await service.copyTempToAttachment(task.id, tempFile, 'copied.png')
+      expect(result).toBe('copied.png')
+      expect(path.isAbsolute(result)).toBe(false)
+
+      await fs.unlink(tempFile).catch(() => {})
+    })
+
+    it('resolveAttachmentPath resolves relative filename to absolute path', async () => {
+      await service.initProject('Test')
+      const resolved = service.resolveAttachmentPath('tsk_test', 'image.png')
+      expect(resolved).toBe(
+        path.join(tmpDir, '.familiar', 'tasks', 'tsk_test', 'attachments', 'image.png')
+      )
+    })
+
+    it('resolveAttachmentPath passes through absolute paths (legacy)', () => {
+      const absPath = '/old/path/image.png'
+      const resolved = service.resolveAttachmentPath('tsk_test', absPath)
+      expect(resolved).toBe(absPath)
     })
   })
 })
