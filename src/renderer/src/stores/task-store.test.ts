@@ -183,6 +183,59 @@ describe('useTaskStore', () => {
       const task = makeTask()
       await expect(useTaskStore.getState().updateTask(task)).rejects.toThrow('Project not initialized')
     })
+
+    it('moves task to top of new column on status change', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'in-progress', sortOrder: 0 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'in-progress', sortOrder: 1 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move t1 from todo to in-progress via updateTask
+      await useTaskStore.getState().updateTask({ ...t1, status: 'in-progress' })
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      // t1 should be at top of in-progress (sortOrder 0)
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_a')!.status).toBe('in-progress')
+      // existing in-progress tasks should be shifted down
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(2)
+    })
+
+    it('re-indexes old column when status changes', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 2 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move t1 (sortOrder 0) out of todo
+      await useTaskStore.getState().updateTask({ ...t1, status: 'in-progress' })
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      // Remaining todo tasks should be re-indexed 0, 1
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(1)
+    })
+
+    it('does not change sortOrder when status is unchanged', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 2 })
+      const state = makeProjectState([t1])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Update title only, no status change
+      await useTaskStore.getState().updateTask({ ...t1, title: 'New title' })
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(2)
+    })
   })
 
   describe('deleteTask', () => {
@@ -794,6 +847,27 @@ describe('useTaskStore', () => {
       await expect(
         useTaskStore.getState().archiveAllDone()
       ).rejects.toThrow('Project not initialized')
+    })
+
+    it('places archived tasks at top of archived column', async () => {
+      const t1 = makeTask({ id: 'tsk_d1', status: 'done', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_d2', status: 'done', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_a1', status: 'archived', sortOrder: 0 })
+      const t4 = makeTask({ id: 'tsk_a2', status: 'archived', sortOrder: 1 })
+      const state = makeProjectState([t1, t2, t3, t4])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().archiveAllDone()
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      // Newly archived tasks should be at the top (sortOrder 0, 1)
+      expect(tasks.find((t) => t.id === 'tsk_d1')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_d2')!.sortOrder).toBe(1)
+      // Previously archived tasks should be shifted down
+      expect(tasks.find((t) => t.id === 'tsk_a1')!.sortOrder).toBe(2)
+      expect(tasks.find((t) => t.id === 'tsk_a2')!.sortOrder).toBe(3)
     })
 
     it('kills tmux sessions for all done tasks', async () => {

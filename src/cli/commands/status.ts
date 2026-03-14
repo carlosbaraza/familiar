@@ -46,6 +46,26 @@ export function statusCommand(): Command {
       const newStatus = status as TaskStatus
       const now = new Date().toISOString()
 
+      // Move task to top of new column: shift existing tasks down, set sortOrder 0
+      if (oldStatus !== newStatus) {
+        for (const t of state.tasks) {
+          if (t.status === newStatus) {
+            t.sortOrder = (t.sortOrder ?? 0) + 1
+            t.updatedAt = now
+          }
+        }
+        state.tasks[taskIndex].sortOrder = 0
+
+        // Re-index old column to close the gap
+        const oldColumnTasks = state.tasks
+          .filter((t) => t.id !== id && t.status === oldStatus)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        for (let i = 0; i < oldColumnTasks.length; i++) {
+          oldColumnTasks[i].sortOrder = i
+          oldColumnTasks[i].updatedAt = now
+        }
+      }
+
       // Update task in state
       state.tasks[taskIndex].status = newStatus
       state.tasks[taskIndex].updatedAt = now
@@ -60,6 +80,7 @@ export function statusCommand(): Command {
       // Update task file
       const task = await readTask(root, id)
       task.status = newStatus
+      task.sortOrder = state.tasks[taskIndex].sortOrder
       task.updatedAt = now
       if (newStatus === 'archived') {
         task.agentStatus = 'idle'

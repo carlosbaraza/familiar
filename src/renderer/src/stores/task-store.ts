@@ -230,7 +230,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
 
-    const updatedTask = { ...task, updatedAt: new Date().toISOString() }
+    const now = new Date().toISOString()
+    const updatedTask = { ...task, updatedAt: now }
 
     // Kill tmux sessions and reset agent status when archiving
     if (updatedTask.status === 'archived') {
@@ -245,11 +246,41 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       }
     }
 
+    // Detect status change — move task to top of new column
+    const oldTask = projectState.tasks.find((t: Task) => t.id === updatedTask.id)
+    const statusChanged = oldTask && oldTask.status !== updatedTask.status
+
+    let newTasks: Task[]
+    if (statusChanged) {
+      // Place task at top of new column (sortOrder 0), shift others down
+      updatedTask.sortOrder = 0
+      newTasks = projectState.tasks.map((t: Task) => {
+        if (t.id === updatedTask.id) return updatedTask
+        // Shift existing tasks in the new column down
+        if (t.status === updatedTask.status) {
+          return { ...t, sortOrder: t.sortOrder + 1, updatedAt: now }
+        }
+        return t
+      })
+
+      // Re-index the old column to close the gap
+      const oldColumnTasks = newTasks
+        .filter((t: Task) => t.status === oldTask.status && t.id !== updatedTask.id)
+        .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+      for (let i = 0; i < oldColumnTasks.length; i++) {
+        const t = newTasks.find((nt: Task) => nt.id === oldColumnTasks[i].id)!
+        if (t.sortOrder !== i) {
+          Object.assign(t, { sortOrder: i, updatedAt: now })
+        }
+      }
+    } else {
+      newTasks = projectState.tasks.map((t: Task) => (t.id === updatedTask.id ? updatedTask : t))
+    }
+
     // Persist task file
     await window.api.updateTask(updatedTask)
 
     // Update project state
-    const newTasks = projectState.tasks.map((t: Task) => (t.id === updatedTask.id ? updatedTask : t))
     const newState: ProjectState = { ...projectState, tasks: newTasks }
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
@@ -549,19 +580,41 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       useNotificationStore.getState().markReadByTaskId(task.id)
     }
 
+    const doneIds = new Set(doneTasks.map((t) => t.id))
     const now = new Date().toISOString()
+
+    // Shift existing archived tasks down to make room at the top
     const updatedTasks = projectState.tasks.map((t: Task) => {
-      if (t.status === 'done') {
+      if (doneIds.has(t.id)) {
         return { ...t, status: 'archived' as TaskStatus, agentStatus: 'idle' as const, updatedAt: now }
+      }
+      if (t.status === 'archived') {
+        return { ...t, sortOrder: t.sortOrder + doneTasks.length, updatedAt: now }
       }
       return t
     })
+
+    // Assign sortOrder 0..n to the newly archived tasks (preserve their relative order)
+    const newlyArchived = updatedTasks
+      .filter((t: Task) => doneIds.has(t.id))
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+    for (let i = 0; i < newlyArchived.length; i++) {
+      newlyArchived[i].sortOrder = i
+    }
+
+    // Re-index the done column (should be empty, but just in case)
+    const remainingDone = updatedTasks
+      .filter((t: Task) => t.status === 'done' && !doneIds.has(t.id))
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+    for (let i = 0; i < remainingDone.length; i++) {
+      remainingDone[i].sortOrder = i
+    }
 
     const newState: ProjectState = { ...projectState, tasks: updatedTasks }
 
     // Persist each moved task
     for (const task of updatedTasks) {
-      if (task.status === 'archived' && doneTasks.some((d) => d.id === task.id)) {
+      if (task.status === 'archived' && doneIds.has(task.id)) {
         await window.api.updateTask(task)
       }
     }
