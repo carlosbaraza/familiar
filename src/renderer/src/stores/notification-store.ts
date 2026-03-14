@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AppNotification } from '@shared/types'
+import { generateNotificationId } from '@shared/utils/id-generator'
 
 interface NotificationState {
   notifications: AppNotification[]
@@ -12,6 +13,7 @@ interface NotificationState {
   markAllRead: () => Promise<void>
   clearAll: () => Promise<void>
   unreadCount: () => number
+  markUnread: (taskId: string, taskTitle: string) => Promise<void>
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -69,5 +71,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   unreadCount: () => {
     return get().notifications.filter((n) => !n.read).length
+  },
+
+  markUnread: async (taskId: string, taskTitle: string) => {
+    const notification: AppNotification = {
+      id: generateNotificationId(),
+      title: taskTitle,
+      body: 'Marked as unread',
+      taskId,
+      read: false,
+      createdAt: new Date().toISOString()
+    }
+    await window.api.appendNotification(notification)
+    set((state) => ({
+      notifications: [...state.notifications, notification]
+    }))
   }
 }))

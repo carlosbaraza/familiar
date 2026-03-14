@@ -9,7 +9,8 @@ const mockApi = {
   markNotificationsByTaskRead: vi.fn(),
   markNotificationsByTaskIds: vi.fn(),
   markAllNotificationsRead: vi.fn(),
-  clearNotifications: vi.fn()
+  clearNotifications: vi.fn(),
+  appendNotification: vi.fn()
 }
 
 Object.defineProperty(globalThis, 'window', {
@@ -212,6 +213,41 @@ describe('useNotificationStore', () => {
 
     it('returns 0 when no notifications exist', () => {
       expect(useNotificationStore.getState().unreadCount()).toBe(0)
+    })
+  })
+
+  describe('markUnread', () => {
+    it('creates an unread notification for the task and adds it to the store', async () => {
+      mockApi.appendNotification.mockResolvedValue(undefined)
+
+      await useNotificationStore.getState().markUnread('tsk_abc', 'My Task')
+
+      expect(mockApi.appendNotification).toHaveBeenCalledTimes(1)
+      const calledWith = mockApi.appendNotification.mock.calls[0][0]
+      expect(calledWith.taskId).toBe('tsk_abc')
+      expect(calledWith.title).toBe('My Task')
+      expect(calledWith.body).toBe('Marked as unread')
+      expect(calledWith.read).toBe(false)
+      expect(calledWith.id).toMatch(/^ntf_/)
+
+      const notifications = useNotificationStore.getState().notifications
+      expect(notifications).toHaveLength(1)
+      expect(notifications[0].taskId).toBe('tsk_abc')
+      expect(notifications[0].read).toBe(false)
+    })
+
+    it('appends to existing notifications without affecting them', async () => {
+      const existing = makeNotification({ id: 'n1', read: true })
+      useNotificationStore.setState({ notifications: [existing] })
+      mockApi.appendNotification.mockResolvedValue(undefined)
+
+      await useNotificationStore.getState().markUnread('tsk_xyz', 'Another Task')
+
+      const notifications = useNotificationStore.getState().notifications
+      expect(notifications).toHaveLength(2)
+      expect(notifications[0]).toEqual(existing)
+      expect(notifications[1].taskId).toBe('tsk_xyz')
+      expect(notifications[1].read).toBe(false)
     })
   })
 })

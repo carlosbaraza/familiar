@@ -266,6 +266,20 @@ export function TaskCard({
     }
   }, [isMultiSelected, selectedTaskIds, markReadByTaskId, task.id])
 
+  const markUnread = useNotificationStore((s) => s.markUnread)
+
+  const handleMarkAsUnread = useCallback(async () => {
+    if (isMultiSelected && selectedTaskIds.size > 1) {
+      const { projectState } = useTaskStore.getState()
+      for (const id of selectedTaskIds) {
+        const t = projectState?.tasks.find((tk) => tk.id === id)
+        if (t) await markUnread(id, t.title)
+      }
+    } else {
+      await markUnread(task.id, task.title)
+    }
+  }, [isMultiSelected, selectedTaskIds, markUnread, task.id, task.title])
+
   // Check if any of the selected tasks (or this task) have unread notifications
   const hasUnreadInSelection =
     isMultiSelected && selectedTaskIds.size > 1
@@ -286,7 +300,16 @@ export function TaskCard({
           },
           { label: '', onClick: () => {}, divider: true } as ContextMenuItem
         ]
-      : []),
+      : [
+          {
+            label: isMulti
+              ? `Mark ${selectedTaskIds.size} as Unread`
+              : 'Mark as Unread',
+            onClick: handleMarkAsUnread,
+            shortcut: 'U'
+          },
+          { label: '', onClick: () => {}, divider: true } as ContextMenuItem
+        ]),
     {
       label: isMulti ? `Move ${selectedTaskIds.size} to Todo` : 'Move to Todo',
       onClick: () => handleStatusChange('todo'),

@@ -5,6 +5,7 @@ import { formatRelativeTime } from '@renderer/lib/format-time'
 import { Tooltip } from '@renderer/components/common'
 import { useProjectLabels } from '@renderer/hooks/useProjectLabels'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import { StatusSelect } from './StatusSelect'
 import { AgentStatusSelect } from './AgentStatusSelect'
 import { PrioritySelect } from './PrioritySelect'
@@ -76,6 +77,12 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
   const [titleValue, setTitleValue] = useState(task.title)
   const titleRef = useRef<HTMLTextAreaElement>(null)
   const openCreateTaskModalForFork = useUIStore((s) => s.openCreateTaskModalForFork)
+  const markUnread = useNotificationStore((s) => s.markUnread)
+
+  const handleMarkUnread = useCallback(() => {
+    markUnread(task.id, task.title)
+    onClose()
+  }, [task.id, task.title, markUnread, onClose])
 
   const projectLabels = useProjectLabels()
 
@@ -240,6 +247,15 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
                   strokeWidth="1.5"
                   strokeLinejoin="round"
                 />
+              </svg>
+            </button>
+          </Tooltip>
+          <Tooltip placement="bottom" content="Mark as unread and close">
+            <button className={styles.closeButton} onClick={handleMarkUnread}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="6" r="3" fill="currentColor" />
+                <path d="M22 8.608v8.142a2.25 2.25 0 0 1-2.25 2.25H4.25A2.25 2.25 0 0 1 2 16.75V7.25A2.25 2.25 0 0 1 4.25 5h9.5" />
+                <polyline points="22 7.25 12 13 2 7.25" />
               </svg>
             </button>
           </Tooltip>
