@@ -391,7 +391,6 @@ Before completion, update document.md with a summary and any learnings. Keep the
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
-familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 \\\`\\\`\\\`
 \`\`\`
 
@@ -557,17 +556,14 @@ Example:
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
-familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 
 # On success — no review needed (e.g. chores, trivial fixes)
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — no review needed"
-familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 
 # On failure
 familiar update $FAMILIAR_TASK_ID --agent-status error
 familiar log $FAMILIAR_TASK_ID "ERROR: description of what went wrong"
-familiar notify "Task Failed" "$FAMILIAR_TASK_ID failed"
 \`\`\`
 
 ## CLI Reference

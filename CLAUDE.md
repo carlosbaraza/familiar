@@ -162,9 +162,9 @@ Task status and agent status are independent. Here is every trigger that changes
 |---------|-------------|-------------|-------------|
 | **User sends message** (hook: `on-prompt-submit.sh`) | → `in-progress` | → `running` | — |
 | **Claude stops responding** (hook: `on-stop.sh`) | *(unchanged)* | → `idle` | "Agent Stopped" |
-| **Agent completes — needs review** (CLI) | → `in-review` | → `done` | "Task Done" |
-| **Agent completes — no review** (CLI) | *(unchanged)* | → `done` | "Task Done" |
-| **Agent fails** (CLI) | *(unchanged)* | → `error` | "Task Failed" |
+| **Agent completes — needs review** (CLI) | → `in-review` | → `done` | — |
+| **Agent completes — no review** (CLI) | *(unchanged)* | → `done` | — |
+| **Agent fails** (CLI) | *(unchanged)* | → `error` | — |
 | **CLI `familiar status` → `in-review`/`done`** | as specified | `running` → `done` (auto) | — |
 | **CLI `familiar status` → `archived`** | as specified | → `idle` (auto, kills tmux) | — |
 | **Stop Agent button** (UI) | *(unchanged)* | → `idle` (if `running`) | — |

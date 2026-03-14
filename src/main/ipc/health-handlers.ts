@@ -265,12 +265,10 @@ Use conventional commit prefixes (\`feat:\`, \`fix:\`, \`refactor:\`, \`docs:\`,
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
-familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
 
 # Failure
 familiar update $FAMILIAR_TASK_ID --agent-status error
 familiar log $FAMILIAR_TASK_ID "ERROR: <description>"
-familiar notify "Task Failed" "$FAMILIAR_TASK_ID failed"
 \`\`\`
 
 ## CLI Reference
