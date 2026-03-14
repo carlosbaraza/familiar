@@ -378,6 +378,7 @@ export function TaskCard({
         tabIndex={0}
       >
         <div className={styles.topRow}>
+          {task.priority !== 'none' && (
           <button
             ref={priorityRef}
             className={styles.priorityBtn}
@@ -404,6 +405,7 @@ export function TaskCard({
               </div>
             )}
           </button>
+          )}
           {isEditingTitle ? (
             <textarea
               ref={titleInputRef}
@@ -571,7 +573,7 @@ export function TaskCardOverlay({
       )}
       <div className={`${styles.card} ${styles.cardDragging}`} style={{ position: 'relative' }}>
         <div className={styles.topRow}>
-          <PriorityIcon priority={task.priority} size={14} />
+          {task.priority !== 'none' && <PriorityIcon priority={task.priority} size={14} />}
           <span className={styles.title}>{task.title}</span>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}

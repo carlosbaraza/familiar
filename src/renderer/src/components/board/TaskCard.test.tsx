@@ -107,6 +107,26 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   ...overrides
 })
 
+describe('TaskCard — priority icon visibility', () => {
+  beforeEach(() => {
+    mockNotifications.length = 0
+  })
+
+  it('hides priority icon when priority is none', () => {
+    const { container } = render(
+      <TaskCard task={makeTask({ priority: 'none' })} onClick={vi.fn()} />
+    )
+    expect(container.querySelector('.priorityBtn')).toBeNull()
+  })
+
+  it('shows priority icon when priority is set', () => {
+    const { container } = render(
+      <TaskCard task={makeTask({ priority: 'high' })} onClick={vi.fn()} />
+    )
+    expect(container.querySelector('.priorityBtn')).not.toBeNull()
+  })
+})
+
 describe('TaskCard — outline class precedence', () => {
   beforeEach(() => {
     mockNotifications.length = 0
