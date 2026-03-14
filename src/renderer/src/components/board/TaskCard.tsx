@@ -493,11 +493,6 @@ export function TaskCard({
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
-          {columnDuration && (
-            <span className={styles.columnDuration} title="Time in current column">
-              {columnDuration}
-            </span>
-          )}
           {task.forkedFrom && (
             <span className={styles.forkIcon} aria-label="Forked task" title={`Forked from ${task.forkedFrom}`}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -564,7 +559,7 @@ export function TaskCard({
           </div>
         )}
 
-        {(dashboardSnippets.length > 0 || task.labels.length > 0) && (
+        {(dashboardSnippets.length > 0 || task.labels.length > 0 || columnDuration) && (
           <div className={styles.footer}>
             {dashboardSnippets.slice(0, 4).map((snippet, i) => {
               const iconOnly = snippet.icon && snippet.showIconInDashboard
@@ -591,8 +586,13 @@ export function TaskCard({
                 </button>
               )
             })}
-            {dashboardSnippets.length > 0 && task.labels.length > 0 && (
+            {dashboardSnippets.length > 0 && (task.labels.length > 0 || columnDuration) && (
               <div className={styles.footerSpacer} />
+            )}
+            {columnDuration && (
+              <span className={styles.columnDuration} title="Time in current column">
+                {columnDuration}
+              </span>
             )}
             {task.labels.map((label) => {
               const color = getLabelColor(label, projectLabels)
