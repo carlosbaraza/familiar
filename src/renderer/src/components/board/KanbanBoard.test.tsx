@@ -16,6 +16,7 @@ const mockApi = {
   deleteTask: vi.fn().mockResolvedValue(undefined),
   writeProjectState: vi.fn().mockResolvedValue(undefined),
   readTaskDocument: vi.fn().mockResolvedValue(''),
+  readTaskActivity: vi.fn().mockResolvedValue([]),
   cliCheckAvailable: vi.fn().mockResolvedValue(true),
   cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' }),
   readSettings: vi.fn().mockResolvedValue({ codingAgent: 'claude-code' }),

@@ -502,12 +502,20 @@ If the Active Settings section below says \`simplifyTaskTitles\` is ON, **always
 familiar update $FAMILIAR_TASK_ID --title "Short descriptive title"
 \`\`\`
 
-### 4. Do the work — log progress at milestones
+### 4. Do the work — log frequent short updates
 
 **Planning:** If you need to create a plan or spec before implementation, write it into \`document.md\` under a \`## Plan\` heading (below the original prompt). Never create plan files elsewhere.
 
+**Send very brief (2–6 word) activity updates frequently** so the user can see what you're doing at a glance on the board card. Log an update every time you start a new phase:
+
 \`\`\`bash
-familiar log $FAMILIAR_TASK_ID "Implemented feature X — moving to tests"
+familiar log $FAMILIAR_TASK_ID "Reading codebase"
+# ... explore ...
+familiar log $FAMILIAR_TASK_ID "Implementing feature X"
+# ... code ...
+familiar log $FAMILIAR_TASK_ID "Writing tests"
+# ... test ...
+familiar log $FAMILIAR_TASK_ID "All tests passing"
 \`\`\`
 
 ### 5. Commit your work

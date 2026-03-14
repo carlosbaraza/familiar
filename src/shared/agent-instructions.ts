@@ -139,10 +139,28 @@ familiar update $FAMILIAR_TASK_ID --labels "bug,backend"
 
 Do this **right after** setting your status to \`in-progress\`, before you start the actual work.
 
+## Frequent Progress Updates
+
+**Send short activity updates frequently** so the user can see what you're doing at a glance on the board. These should be very brief (2–6 words), like a bird's-eye status blurb. Log them with \`familiar log\` as you work:
+
+\`\`\`bash
+familiar log $FAMILIAR_TASK_ID "Reading codebase"
+familiar log $FAMILIAR_TASK_ID "Implementing auth module"
+familiar log $FAMILIAR_TASK_ID "Writing tests"
+familiar log $FAMILIAR_TASK_ID "Fixing lint errors"
+familiar log $FAMILIAR_TASK_ID "All tests passing"
+\`\`\`
+
+**Rules for progress updates:**
+- Log an update every time you start a new phase of work (exploring, implementing, testing, fixing)
+- Keep messages extremely short — the user sees them on the task card
+- Do NOT log status changes (use \`familiar status\` for that)
+- Do NOT log verbose descriptions — just a quick recap of what you're doing right now
+
 ## Best Practices
 
 1. **Set your status to \`in-progress\`** and agent-status to \`running\` as the **first thing** when you start working
-2. **Log progress** at meaningful milestones so the human can follow along
+2. **Log frequent short progress updates** so the user can follow along on the board
 3. **Read your task document** — it may contain specs, acceptance criteria, or context
 4. **Send notifications** for important events (build failures, completion, blockers)
 5. **Set agent-status to \`done\`** when finished — only move task status to \`in-review\` if you want the user to review your work
@@ -159,10 +177,14 @@ familiar log $FAMILIAR_TASK_ID "Starting work"
 cat .familiar/tasks/$FAMILIAR_TASK_ID/document.md
 familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 
-# 4. Do your work, logging progress (NOT status changes)
-familiar log $FAMILIAR_TASK_ID "Implemented the auth module"
-# ... more work ...
-familiar log $FAMILIAR_TASK_ID "Running tests — 12/12 passing"
+# 4. Do your work, logging frequent short progress updates
+familiar log $FAMILIAR_TASK_ID "Reading codebase"
+# ... explore ...
+familiar log $FAMILIAR_TASK_ID "Implementing auth module"
+# ... code ...
+familiar log $FAMILIAR_TASK_ID "Writing tests"
+# ... test ...
+familiar log $FAMILIAR_TASK_ID "All 12 tests passing"
 
 # 5. On success — ready for human review
 familiar status $FAMILIAR_TASK_ID in-review

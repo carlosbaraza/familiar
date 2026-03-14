@@ -64,10 +64,16 @@ After reading the task, infer the type from the title and description and add th
 familiar update $FAMILIAR_TASK_ID --labels "feature"  # or bug, improvement, chore
 ```
 
-## Step 3: Log progress at milestones
+## Step 3: Log frequent short progress updates
+
+Send very brief (2–6 word) activity updates frequently so the user can see what you're doing on the board card. Log an update every time you start a new phase of work:
 
 ```bash
-familiar log $FAMILIAR_TASK_ID "Implemented X — moving to tests"
+familiar log $FAMILIAR_TASK_ID "Reading codebase"
+familiar log $FAMILIAR_TASK_ID "Implementing feature X"
+familiar log $FAMILIAR_TASK_ID "Writing tests"
+familiar log $FAMILIAR_TASK_ID "Fixing lint errors"
+familiar log $FAMILIAR_TASK_ID "All tests passing"
 ```
 
 ## Step 4: Commit your work
