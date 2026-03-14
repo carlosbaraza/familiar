@@ -27,6 +27,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const removeProject = useWorkspaceStore((s) => s.removeProject)
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
+  const loadNotifications = useNotificationStore((s) => s.loadNotifications)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
@@ -45,6 +46,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
     // Do NOT call setProjectRoot here — it triggers openSingleProject which
     // destroys multi-project state by calling closeAll().
     await loadProjectState()
+    // Reload notifications for the newly active project
+    await loadNotifications()
     // Restore task detail state for the target project
     restoreProjectTaskState(path)
   }

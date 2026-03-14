@@ -9,6 +9,20 @@ export function registerWorkspaceHandlers(
   dataService: DataService,
   ptyManager: ElectronPtyManager
 ): void {
+  /**
+   * Sync the shared (legacy) dataService and ptyManager references to match
+   * the workspace manager's current active project.  Without this, IPC
+   * handlers registered with the captured `dataService` would continue to
+   * read/write against the previous project's `.familiar/` directory.
+   */
+  function syncLegacyRefs(): void {
+    const activePath = workspaceManager.getActiveProjectPath()
+    if (!activePath) return
+    const ds = workspaceManager.getDataService(activePath)
+    dataService.setProjectRoot(ds.getProjectRoot())
+    ptyManager.setDataService(ds)
+  }
+
   ipcMain.handle('workspace:list', async (): Promise<Workspace[]> => {
     return workspaceManager.listWorkspaces()
   })
@@ -33,10 +47,12 @@ export function registerWorkspaceHandlers(
 
   ipcMain.handle('workspace:open', async (_, workspaceId: string): Promise<void> => {
     workspaceManager.openWorkspace(workspaceId)
+    syncLegacyRefs()
   })
 
   ipcMain.handle('workspace:open-single', async (_, projectPath: string): Promise<void> => {
     workspaceManager.openSingleProject(projectPath)
+    syncLegacyRefs()
   })
 
   ipcMain.handle('workspace:add-project', async (_, projectPath: string): Promise<void> => {
@@ -45,6 +61,9 @@ export function registerWorkspaceHandlers(
 
   ipcMain.handle('workspace:remove-project', async (_, projectPath: string): Promise<void> => {
     workspaceManager.removeProjectFromWorkspace(projectPath)
+    // If the removed project was active, the workspace manager selects
+    // another — sync the shared refs to match.
+    syncLegacyRefs()
   })
 
   ipcMain.handle('workspace:get-config', async () => {
@@ -61,11 +80,7 @@ export function registerWorkspaceHandlers(
 
   ipcMain.handle('workspace:set-active-project', async (_, projectPath: string): Promise<void> => {
     workspaceManager.setActiveProjectPath(projectPath)
-    // Update legacy references so handlers that use the captured dataService
-    // and ptyManager continue to work with the correct project
-    const ds = workspaceManager.getDataService(projectPath)
-    dataService.setProjectRoot(ds.getProjectRoot())
-    ptyManager.setDataService(ds)
+    syncLegacyRefs()
   })
 
   ipcMain.handle('workspace:set-active-workspace-id', async (_, workspaceId: string): Promise<void> => {

@@ -108,16 +108,24 @@ describe('workspace-handlers', () => {
     expect(mockManager.deleteWorkspace).toHaveBeenCalledWith('ws_1')
   })
 
-  it('workspace:open passes workspaceId', async () => {
+  it('workspace:open passes workspaceId and syncs legacy refs', async () => {
+    (mockManager.getActiveProjectPath as ReturnType<typeof vi.fn>).mockReturnValue('/tmp/a')
     const handler = handlers.get('workspace:open')!
     await handler({}, 'ws_1')
     expect(mockManager.openWorkspace).toHaveBeenCalledWith('ws_1')
+    // Should sync shared dataService to match the active project
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
-  it('workspace:open-single passes path', async () => {
+  it('workspace:open-single passes path and syncs legacy refs', async () => {
+    (mockManager.getActiveProjectPath as ReturnType<typeof vi.fn>).mockReturnValue('/tmp/project')
     const handler = handlers.get('workspace:open-single')!
     await handler({}, '/tmp/project')
     expect(mockManager.openSingleProject).toHaveBeenCalledWith('/tmp/project')
+    // Should sync shared dataService to match the active project
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
   it('workspace:add-project passes path', async () => {
@@ -126,17 +134,21 @@ describe('workspace-handlers', () => {
     expect(mockManager.addProjectToWorkspace).toHaveBeenCalledWith('/tmp/new-project')
   })
 
-  it('workspace:remove-project passes path', async () => {
+  it('workspace:remove-project passes path and syncs legacy refs', async () => {
+    (mockManager.getActiveProjectPath as ReturnType<typeof vi.fn>).mockReturnValue('/tmp/a')
     const handler = handlers.get('workspace:remove-project')!
     await handler({}, '/tmp/old-project')
     expect(mockManager.removeProjectFromWorkspace).toHaveBeenCalledWith('/tmp/old-project')
+    // Active project may have changed — sync refs
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
 
   it('workspace:set-active-project passes path and updates legacy refs', async () => {
+    (mockManager.getActiveProjectPath as ReturnType<typeof vi.fn>).mockReturnValue('/tmp/target')
     const handler = handlers.get('workspace:set-active-project')!
     await handler({}, '/tmp/target')
     expect(mockManager.setActiveProjectPath).toHaveBeenCalledWith('/tmp/target')
-    expect(mockManager.getDataService).toHaveBeenCalledWith('/tmp/target')
     expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
     expect(mockPtyManager.setDataService).toHaveBeenCalled()
   })
