@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTaskStore } from '@renderer/stores/task-store'
-import { useNotificationStore } from '@renderer/stores/notification-store'
+import { useNotificationStore, type WorkspaceNotification } from '@renderer/stores/notification-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
-import type { Task, ActivityEntry, AppNotification } from '@shared/types'
+import type { Task, ActivityEntry } from '@shared/types'
 import styles from './AgentSwapWidget.module.css'
 
 interface PreviewState {
@@ -13,38 +14,55 @@ interface PreviewState {
 
 export function AgentSwapWidget(): React.JSX.Element | null {
   const projectState = useTaskStore((s) => s.projectState)
-  const notifications = useNotificationStore((s) => s.notifications)
+  const workspaceNotifications = useNotificationStore((s) => s.workspaceNotifications)
+  const openProjects = useWorkspaceStore((s) => s.openProjects)
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
   const markRead = useNotificationStore((s) => s.markRead)
 
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [lastActivity, setLastActivity] = useState<string | null>(null)
+  const [allTasks, setAllTasks] = useState<(Task & { projectPath: string })[]>([])
   const previewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Load tasks from ALL open projects for cross-project agent status
+  useEffect(() => {
+    if (openProjects.length <= 1) {
+      // Single project — use the existing projectState for performance
+      setAllTasks([])
+      return
+    }
+    window.api.workspaceListAllTasks().then(setAllTasks).catch(() => setAllTasks([]))
+  }, [openProjects.length, projectState]) // re-fetch when project state changes
+
   // Get active agents (running or error status only — hide idle/done)
+  // Uses cross-project data when multiple projects are open
   const activeAgents = useMemo(() => {
-    if (!projectState) return []
-    return projectState.tasks
+    const tasks: Task[] =
+      allTasks.length > 0
+        ? allTasks
+        : projectState?.tasks ?? []
+    return tasks
       .filter(
         (t: Task) =>
           t.status !== 'archived' &&
           (t.agentStatus === 'running' || t.agentStatus === 'error')
       )
       .sort((a: Task, b: Task) => {
-        // Running first, then error
         if (a.agentStatus === 'running' && b.agentStatus !== 'running') return -1
         if (b.agentStatus === 'running' && a.agentStatus !== 'running') return 1
         return a.updatedAt < b.updatedAt ? 1 : -1
       })
-  }, [projectState])
+  }, [projectState, allTasks])
 
-  // Get unread notifications (grouped by task — one dot per task, plus non-task notifications)
+  // Get unread notifications from ALL projects (grouped by task — one dot per task)
   const unreadNotifications = useMemo(() => {
+    const notifications = workspaceNotifications.length > 0
+      ? workspaceNotifications
+      : useNotificationStore.getState().notifications
     const unread = notifications.filter((n) => !n.read)
-    // Deduplicate by taskId — show latest per task
-    const byTask = new Map<string, AppNotification>()
-    const noTask: AppNotification[] = []
+    const byTask = new Map<string, WorkspaceNotification>()
+    const noTask: WorkspaceNotification[] = []
     for (const n of unread) {
       if (n.taskId) {
         const existing = byTask.get(n.taskId)
@@ -56,7 +74,7 @@ export function AgentSwapWidget(): React.JSX.Element | null {
       }
     }
     return [...byTask.values(), ...noTask]
-  }, [notifications])
+  }, [workspaceNotifications])
 
   // Load last activity for agent preview
   const loadLastActivity = useCallback(async (taskId: string) => {

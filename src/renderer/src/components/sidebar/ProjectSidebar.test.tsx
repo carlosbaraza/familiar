@@ -17,16 +17,18 @@ vi.stubGlobal('window', {
     workspaceSetActiveProject: vi.fn().mockResolvedValue(undefined),
     workspaceGetOpenProjects: vi.fn().mockResolvedValue([]),
     workspaceGetActiveProject: vi.fn().mockResolvedValue(null),
-    workspaceGetConfig: vi.fn().mockResolvedValue({ workspaces: [], lastWorkspaceId: null })
+    workspaceGetConfig: vi.fn().mockResolvedValue({ workspaces: [], lastWorkspaceId: null }),
+    listNotifications: vi.fn().mockResolvedValue([]),
+    listAllNotifications: vi.fn().mockResolvedValue([])
   }
 })
 
 beforeEach(() => {
   vi.clearAllMocks()
-  useNotificationStore.setState({ notifications: [] })
+  useNotificationStore.setState({ notifications: [], workspaceNotifications: [] })
 })
 
-function makeNotification(overrides: Partial<AppNotification> = {}): AppNotification {
+function makeNotification(overrides: Partial<AppNotification & { projectPath?: string }> = {}): AppNotification & { projectPath?: string } {
   return {
     id: `notif_${Math.random().toString(36).slice(2)}`,
     title: 'Test',
@@ -97,7 +99,7 @@ describe('ProjectSidebar', () => {
     expect(activeItem.className).toContain('Active')
   })
 
-  it('shows unread notification badge on collapsed sidebar for active project', () => {
+  it('shows unread notification badge on collapsed sidebar for each project', () => {
     useWorkspaceStore.setState({
       sidebarVisible: true,
       openProjects: [
@@ -108,18 +110,20 @@ describe('ProjectSidebar', () => {
       sidebarExpanded: false
     })
     useNotificationStore.setState({
-      notifications: [
-        makeNotification({ read: false }),
-        makeNotification({ read: false }),
-        makeNotification({ read: true })
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: true, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: false, projectPath: '/tmp/beta' })
       ]
     })
 
     render(<ProjectSidebar />)
     expect(screen.getByTestId('badge-alpha')).toBeTruthy()
     expect(screen.getByTestId('badge-alpha').textContent).toBe('2')
-    // Non-active project should not have a badge
-    expect(screen.queryByTestId('badge-beta')).toBeNull()
+    // Non-active project should also show its unread count
+    expect(screen.getByTestId('badge-beta')).toBeTruthy()
+    expect(screen.getByTestId('badge-beta').textContent).toBe('1')
   })
 
   it('does not show badge when no unread notifications', () => {
@@ -133,7 +137,7 @@ describe('ProjectSidebar', () => {
       sidebarExpanded: false
     })
     useNotificationStore.setState({
-      notifications: [makeNotification({ read: true })]
+      workspaceNotifications: [makeNotification({ read: true, projectPath: '/tmp/alpha' })]
     })
 
     render(<ProjectSidebar />)
@@ -151,7 +155,7 @@ describe('ProjectSidebar', () => {
       sidebarExpanded: true
     })
     useNotificationStore.setState({
-      notifications: [makeNotification({ read: false })]
+      workspaceNotifications: [makeNotification({ read: false, projectPath: '/tmp/alpha' })]
     })
 
     render(<ProjectSidebar />)
@@ -168,10 +172,10 @@ describe('ProjectSidebar', () => {
       sidebarExpanded: true
     })
     useNotificationStore.setState({
-      notifications: [
-        makeNotification({ read: false }),
-        makeNotification({ read: false }),
-        makeNotification({ read: true })
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: true, projectPath: '/tmp/alpha' })
       ]
     })
 
@@ -189,7 +193,7 @@ describe('ProjectSidebar', () => {
       sidebarExpanded: true
     })
     useNotificationStore.setState({
-      notifications: [makeNotification({ read: true })]
+      workspaceNotifications: [makeNotification({ read: true, projectPath: '/tmp/alpha' })]
     })
 
     render(<ProjectSidebar />)

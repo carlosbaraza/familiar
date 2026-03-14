@@ -90,6 +90,8 @@ const api = {
     ipcRenderer.invoke('notification:send', title, body),
   listNotifications: (): Promise<AppNotification[]> =>
     ipcRenderer.invoke('notification:list'),
+  listAllNotifications: (): Promise<(AppNotification & { projectPath: string })[]> =>
+    ipcRenderer.invoke('notification:list-all'),
   markNotificationRead: (id: string): Promise<void> =>
     ipcRenderer.invoke('notification:mark-read', id),
   markNotificationsByTaskRead: (taskId: string): Promise<void> =>
@@ -191,6 +193,8 @@ const api = {
     ipcRenderer.invoke('workspace:set-active-project', path),
   workspaceSetActiveWorkspaceId: (workspaceId: string): Promise<void> =>
     ipcRenderer.invoke('workspace:set-active-workspace-id', workspaceId),
+  workspaceListAllTasks: (): Promise<(Task & { projectPath: string })[]> =>
+    ipcRenderer.invoke('workspace:list-all-tasks'),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

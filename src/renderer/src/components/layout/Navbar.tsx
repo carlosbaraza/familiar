@@ -49,10 +49,11 @@ export function Navbar(): React.JSX.Element {
   const themeMode = useUIStore((s) => s.themeMode)
   const cycleThemeMode = useUIStore((s) => s.cycleThemeMode)
 
-  const notifications = useNotificationStore((s) => s.notifications)
+  const notifications = useNotificationStore((s) => s.workspaceNotifications.length > 0 ? s.workspaceNotifications : s.notifications)
   const markRead = useNotificationStore((s) => s.markRead)
   const markAllRead = useNotificationStore((s) => s.markAllRead)
   const clearAll = useNotificationStore((s) => s.clearAll)
+  const workspaceUnreadCount = useNotificationStore((s) => s.workspaceUnreadCount)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   const [showDropdown, setShowDropdown] = useState(false)
@@ -119,7 +120,8 @@ export function Navbar(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showHelpMenu])
 
-  const count = unreadCount()
+  const wsCount = workspaceUnreadCount()
+  const count = wsCount > 0 ? wsCount : unreadCount()
 
   const handleNotificationClick = (notification: (typeof notifications)[0]): void => {
     if (!notification.read) {

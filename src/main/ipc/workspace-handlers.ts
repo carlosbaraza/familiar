@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { WorkspaceManager } from '../services/workspace-manager'
 import { DataService } from '../services/data-service'
 import { ElectronPtyManager } from '../platform/electron-pty'
-import type { Workspace } from '../../shared/types'
+import type { Workspace, Task } from '../../shared/types'
 
 export function registerWorkspaceHandlers(
   workspaceManager: WorkspaceManager,
@@ -85,5 +85,25 @@ export function registerWorkspaceHandlers(
 
   ipcMain.handle('workspace:set-active-workspace-id', async (_, workspaceId: string): Promise<void> => {
     workspaceManager.setActiveWorkspaceId(workspaceId)
+  })
+
+  // Return active agent tasks from ALL open projects so the AgentSwapWidget
+  // can show cross-project agent activity.
+  ipcMain.handle('workspace:list-all-tasks', async (): Promise<(Task & { projectPath: string })[]> => {
+    const allServices = workspaceManager.getActiveDataServices()
+    const result: (Task & { projectPath: string })[] = []
+    for (const [projectPath, ds] of allServices) {
+      try {
+        const initialized = await ds.isInitialized()
+        if (!initialized) continue
+        const state = await ds.readProjectState()
+        for (const task of state.tasks) {
+          result.push({ ...task, projectPath })
+        }
+      } catch {
+        // Project may not be initialized — skip
+      }
+    }
+    return result
   })
 }

@@ -28,7 +28,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
-  const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const loadWorkspaceNotifications = useNotificationStore((s) => s.loadWorkspaceNotifications)
+  const workspaceUnreadCountForProject = useNotificationStore((s) => s.workspaceUnreadCountForProject)
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
 
@@ -46,8 +47,9 @@ export function ProjectSidebar(): React.JSX.Element | null {
     // Do NOT call setProjectRoot here — it triggers openSingleProject which
     // destroys multi-project state by calling closeAll().
     await loadProjectState()
-    // Reload notifications for the newly active project
+    // Reload notifications for the newly active project and workspace-wide
     await loadNotifications()
+    await loadWorkspaceNotifications()
     // Restore task detail state for the target project
     restoreProjectTaskState(path)
   }
@@ -89,8 +91,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
 
-          // Show unread notification count for active project
-          const unread = isActive ? unreadCount() : 0
+          // Show unread notification count for ALL projects in the workspace
+          const unread = workspaceUnreadCountForProject(project.path)
 
           return (
             <div

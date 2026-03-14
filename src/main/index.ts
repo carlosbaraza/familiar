@@ -124,7 +124,7 @@ function createWindow(): void {
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager, dataService)
   registerFileHandlers(dataService, () => workspaceManager.getFileWatcher())
-  registerNotificationHandlers(dataService)
+  registerNotificationHandlers(dataService, workspaceManager)
   registerWindowHandlers(
     mainWindow,
     dataService,

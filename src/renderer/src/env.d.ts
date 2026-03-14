@@ -68,6 +68,7 @@ declare global {
       // Notifications
       sendNotification(title: string, body: string): Promise<void>
       listNotifications(): Promise<AppNotification[]>
+      listAllNotifications(): Promise<(AppNotification & { projectPath: string })[]>
       markNotificationRead(id: string): Promise<void>
       markNotificationsByTaskRead(taskId: string): Promise<void>
       markNotificationsByTaskIds(taskIds: string[]): Promise<void>
@@ -115,6 +116,7 @@ declare global {
       workspaceGetActiveProject(): Promise<string | null>
       workspaceSetActiveProject(path: string): Promise<void>
       workspaceSetActiveWorkspaceId(workspaceId: string): Promise<void>
+      workspaceListAllTasks(): Promise<(Task & { projectPath: string })[]>
 
       // App info
       getVersion(): Promise<string>
