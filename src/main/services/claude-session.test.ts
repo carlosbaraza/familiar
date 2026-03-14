@@ -50,7 +50,7 @@ describe('resolveClaudeSessionCommand', () => {
   })
 
   it('returns command unchanged if no --resume $VAR pattern', () => {
-    const cmd = 'claude --dangerously-skip-permissions'
+    const cmd = 'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
     expect(resolveClaudeSessionCommand(cmd, 'tsk_abc', '/project')).toBe(cmd)
   })
 
@@ -63,26 +63,26 @@ describe('resolveClaudeSessionCommand', () => {
     mockExistsSync.mockReturnValue(false)
 
     const result = resolveClaudeSessionCommand(
-      'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
+      'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
       'tsk_abc',
       '/project'
     )
 
     const uuid = taskIdToUuid('tsk_abc')
-    expect(result).toBe(`claude --dangerously-skip-permissions --session-id "${uuid}"`)
+    expect(result).toBe(`claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --session-id "${uuid}"`)
   })
 
   it('replaces --resume $VAR with --resume <uuid> when session exists', () => {
     mockExistsSync.mockReturnValue(true)
 
     const result = resolveClaudeSessionCommand(
-      'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
+      'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
       'tsk_abc',
       '/project'
     )
 
     const uuid = taskIdToUuid('tsk_abc')
-    expect(result).toBe(`claude --dangerously-skip-permissions --resume "${uuid}"`)
+    expect(result).toBe(`claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume "${uuid}"`)
   })
 
   it('checks the correct session file path', () => {

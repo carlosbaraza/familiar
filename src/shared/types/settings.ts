@@ -49,7 +49,7 @@ export const DEFAULT_SNIPPETS: Snippet[] = [
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
   defaultCommand:
-    'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
+    'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
   snippets: DEFAULT_SNIPPETS,
   labels: undefined, // Populated from DEFAULT_LABELS on first load
   themeMode: 'system',

@@ -90,7 +90,7 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       const input = screen.getByPlaceholderText(
-        'e.g. claude --dangerously-skip-permissions'
+        'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
       ) as HTMLInputElement
       expect(input.value).toBe('claude --resume')
     })
@@ -107,7 +107,7 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       const input = screen.getByPlaceholderText(
-        'e.g. claude --dangerously-skip-permissions'
+        'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
       ) as HTMLInputElement
       // Should have the default from DEFAULT_SETTINGS
       expect(input.value).toBe(DEFAULT_SETTINGS.defaultCommand)
@@ -132,13 +132,13 @@ describe('SettingsPage', () => {
       expect(
         (
           screen.getByPlaceholderText(
-            'e.g. claude --dangerously-skip-permissions'
+            'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
           ) as HTMLInputElement
         ).value
       ).toBe('claude --resume')
     })
 
-    const input = screen.getByPlaceholderText('e.g. claude --dangerously-skip-permissions')
+    const input = screen.getByPlaceholderText('e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions')
     fireEvent.change(input, { target: { value: 'new-command' } })
 
     expect(screen.getByText('Save')).not.toBeDisabled()
@@ -153,13 +153,13 @@ describe('SettingsPage', () => {
       expect(
         (
           screen.getByPlaceholderText(
-            'e.g. claude --dangerously-skip-permissions'
+            'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
           ) as HTMLInputElement
         ).value
       ).toBe('claude --resume')
     })
 
-    const input = screen.getByPlaceholderText('e.g. claude --dangerously-skip-permissions')
+    const input = screen.getByPlaceholderText('e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions')
     fireEvent.change(input, { target: { value: 'updated-command' } })
 
     await act(async () => {
@@ -237,14 +237,14 @@ describe('SettingsPage', () => {
       expect(
         (
           screen.getByPlaceholderText(
-            'e.g. claude --dangerously-skip-permissions'
+            'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
           ) as HTMLInputElement
         ).value
       ).toBe('test')
     })
 
     // Make dirty and save
-    const input = screen.getByPlaceholderText('e.g. claude --dangerously-skip-permissions')
+    const input = screen.getByPlaceholderText('e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions')
     fireEvent.change(input, { target: { value: 'test2' } })
 
     await act(async () => {
@@ -273,13 +273,13 @@ describe('SettingsPage', () => {
       expect(
         (
           screen.getByPlaceholderText(
-            'e.g. claude --dangerously-skip-permissions'
+            'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
           ) as HTMLInputElement
         ).value
       ).toBe('claude --resume')
     })
 
-    const input = screen.getByPlaceholderText('e.g. claude --dangerously-skip-permissions')
+    const input = screen.getByPlaceholderText('e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions')
     fireEvent.change(input, { target: { value: 'changed' } })
 
     await act(async () => {
@@ -302,13 +302,13 @@ describe('SettingsPage', () => {
       expect(
         (
           screen.getByPlaceholderText(
-            'e.g. claude --dangerously-skip-permissions'
+            'e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions'
           ) as HTMLInputElement
         ).value
       ).toBe('claude --resume')
     })
 
-    const input = screen.getByPlaceholderText('e.g. claude --dangerously-skip-permissions')
+    const input = screen.getByPlaceholderText('e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions')
     fireEvent.change(input, { target: { value: '' } })
 
     await act(async () => {

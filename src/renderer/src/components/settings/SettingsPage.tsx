@@ -101,7 +101,7 @@ export function SettingsPage(): React.JSX.Element {
                 type="text"
                 value={settings.defaultCommand ?? ''}
                 onChange={(e) => handleChange('defaultCommand', e.target.value || undefined)}
-                placeholder="e.g. claude --dangerously-skip-permissions"
+                placeholder="e.g. claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions"
               />
             </div>
           </div>
