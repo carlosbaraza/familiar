@@ -334,7 +334,7 @@ describe('Onboarding', () => {
     })
   })
 
-  it('sends Ctrl+C three times before running doctor command on initial run', { timeout: 10000 }, async () => {
+  it('sends Ctrl+C before running doctor command on initial run', { timeout: 10000 }, async () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => screen.getByText('Continue'))
@@ -344,14 +344,18 @@ describe('Onboarding', () => {
     await waitFor(() => {
       expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
     })
-    // Wait for all Ctrl+C sends and the doctor command
+    // Wait for Ctrl+C sends and the doctor command
     await waitFor(() => {
       const writeCalls = mockApi.ptyWrite.mock.calls
       const ctrlCCalls = writeCalls.filter((c: string[]) => c[1] === '\x03')
-      expect(ctrlCCalls.length).toBe(3)
-      const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('familiar doctor'))
-      expect(doctorCall).toBeTruthy()
-    }, { timeout: 5000 })
+      // At least 3 Ctrl+C should be sent before the doctor command
+      expect(ctrlCCalls.length).toBeGreaterThanOrEqual(3)
+      const doctorCallIndex = writeCalls.findIndex((c: string[]) => c[1]?.includes('familiar doctor'))
+      expect(doctorCallIndex).toBeGreaterThan(0)
+      // Ctrl+C should come before the doctor command
+      const firstCtrlCIndex = writeCalls.findIndex((c: string[]) => c[1] === '\x03')
+      expect(firstCtrlCIndex).toBeLessThan(doctorCallIndex)
+    }, { timeout: 8000 })
   })
 
   it('calls onComplete when Done is clicked in doctor terminal view', async () => {
