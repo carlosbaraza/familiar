@@ -193,6 +193,57 @@ describe('useUIStore', () => {
     })
   })
 
+  describe('saveProjectTaskState / restoreProjectTaskState', () => {
+    it('saves and restores task detail state per project', () => {
+      // Open a task in project A
+      useUIStore.getState().openTaskDetail('tsk_1')
+      expect(useUIStore.getState().activeTaskId).toBe('tsk_1')
+      expect(useUIStore.getState().taskDetailOpen).toBe(true)
+
+      // Save project A state
+      useUIStore.getState().saveProjectTaskState('/project-a')
+
+      // Switch to project B (no saved state — should clear)
+      useUIStore.getState().restoreProjectTaskState('/project-b')
+      expect(useUIStore.getState().activeTaskId).toBeNull()
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      expect(useUIStore.getState().mountedTaskIds.size).toBe(0)
+
+      // Open a task in project B
+      useUIStore.getState().openTaskDetail('tsk_2')
+
+      // Save project B state
+      useUIStore.getState().saveProjectTaskState('/project-b')
+
+      // Switch back to project A — should restore tsk_1
+      useUIStore.getState().restoreProjectTaskState('/project-a')
+      expect(useUIStore.getState().activeTaskId).toBe('tsk_1')
+      expect(useUIStore.getState().taskDetailOpen).toBe(true)
+      expect(useUIStore.getState().mountedTaskIds.has('tsk_1')).toBe(true)
+    })
+
+    it('restores closed state for projects with no saved state', () => {
+      useUIStore.getState().openTaskDetail('tsk_1')
+      useUIStore.getState().restoreProjectTaskState('/unknown-project')
+      expect(useUIStore.getState().activeTaskId).toBeNull()
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+    })
+
+    it('preserves mounted task ids across project switches', () => {
+      // Open multiple tasks in project A
+      useUIStore.getState().openTaskDetail('tsk_1')
+      useUIStore.getState().openTaskDetail('tsk_2')
+      useUIStore.getState().saveProjectTaskState('/project-a')
+
+      // Switch away and back
+      useUIStore.getState().restoreProjectTaskState('/project-b')
+      useUIStore.getState().restoreProjectTaskState('/project-a')
+
+      expect(useUIStore.getState().mountedTaskIds.has('tsk_1')).toBe(true)
+      expect(useUIStore.getState().mountedTaskIds.has('tsk_2')).toBe(true)
+    })
+  })
+
   describe('createTaskModal', () => {
     it('opens and closes the create task modal', () => {
       expect(useUIStore.getState().createTaskModalOpen).toBe(false)

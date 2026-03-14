@@ -8,6 +8,12 @@ interface TaskFilters {
   agentStatus: AgentStatus[]
 }
 
+interface PerProjectTaskState {
+  activeTaskId: string | null
+  taskDetailOpen: boolean
+  mountedTaskIds: Set<string>
+}
+
 interface UIState {
   // Sidebar
   sidebarOpen: boolean
@@ -17,6 +23,9 @@ interface UIState {
   activeTaskId: string | null
   taskDetailOpen: boolean
   mountedTaskIds: Set<string> // Tasks kept mounted (hidden) for instant reopen
+
+  // Per-project task detail state (preserved across project switches)
+  projectTaskStates: Map<string, PerProjectTaskState>
 
   // Command palette
   commandPaletteOpen: boolean
@@ -79,6 +88,10 @@ interface UIState {
   setEditorPanelWidth: (width: number) => void
   setPendingDetailFocus: (target: 'terminal' | 'title' | null) => void
   clearPendingDetailFocus: () => void
+
+  // Per-project task state
+  saveProjectTaskState: (projectPath: string) => void
+  restoreProjectTaskState: (projectPath: string) => void
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 240
@@ -104,6 +117,9 @@ export const useUIStore = create<UIState>((set) => ({
   activeTaskId: null,
   taskDetailOpen: false,
   mountedTaskIds: new Set<string>(),
+
+  // Per-project task detail state
+  projectTaskStates: new Map<string, PerProjectTaskState>(),
 
   // Command palette
   commandPaletteOpen: false,
@@ -226,5 +242,30 @@ export const useUIStore = create<UIState>((set) => ({
     set({ pendingDetailFocus: target }),
 
   clearPendingDetailFocus: () =>
-    set({ pendingDetailFocus: null })
+    set({ pendingDetailFocus: null }),
+
+  saveProjectTaskState: (projectPath: string) =>
+    set((state) => {
+      const projectTaskStates = new Map(state.projectTaskStates)
+      projectTaskStates.set(projectPath, {
+        activeTaskId: state.activeTaskId,
+        taskDetailOpen: state.taskDetailOpen,
+        mountedTaskIds: new Set(state.mountedTaskIds)
+      })
+      return { projectTaskStates }
+    }),
+
+  restoreProjectTaskState: (projectPath: string) =>
+    set((state) => {
+      const saved = state.projectTaskStates.get(projectPath)
+      if (saved) {
+        return {
+          activeTaskId: saved.activeTaskId,
+          taskDetailOpen: saved.taskDetailOpen,
+          mountedTaskIds: new Set(saved.mountedTaskIds)
+        }
+      }
+      // No saved state — close task detail and clear mounted tasks
+      return { activeTaskId: null, taskDetailOpen: false, mountedTaskIds: new Set<string>() }
+    })
 }))

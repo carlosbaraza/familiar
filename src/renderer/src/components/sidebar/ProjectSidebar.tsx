@@ -1,5 +1,6 @@
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import styles from './ProjectSidebar.module.css'
 
@@ -31,13 +32,22 @@ export function ProjectSidebar(): React.JSX.Element | null {
 
   if (!sidebarVisible) return null
 
+  const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
+  const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
+
   const handleSwitchProject = async (path: string): Promise<void> => {
     if (path === activeProjectPath) return
+    // Save current project's task detail state before switching
+    if (activeProjectPath) {
+      saveProjectTaskState(activeProjectPath)
+    }
     await switchProject(path)
     // Reload project state for the newly active project
     // The main process has already switched the active project
     await window.api.setProjectRoot(path)
     await loadProjectState()
+    // Restore task detail state for the target project
+    restoreProjectTaskState(path)
   }
 
   const handleAddProject = async (): Promise<void> => {
