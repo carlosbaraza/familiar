@@ -84,10 +84,6 @@ export function TaskCard({
     return false
   })
 
-  // Inline title editing
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [editTitleValue, setEditTitleValue] = useState(task.title)
-  const titleInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Column duration — derive from statusChangedAt, or fall back to activity log
   const [columnEnteredAt, setColumnEnteredAt] = useState<string | null>(task.statusChangedAt ?? null)
@@ -166,47 +162,6 @@ export function TaskCard({
     })
   }, [task.id, task.status])
 
-  // Auto-resize textarea to fit content
-  const resizeTitleTextarea = useCallback(() => {
-    const el = titleInputRef.current
-    if (el) {
-      el.style.height = 'auto'
-      el.style.height = `${el.scrollHeight}px`
-    }
-  }, [])
-
-  // Focus title input when editing starts
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus()
-      titleInputRef.current.select()
-      resizeTitleTextarea()
-    }
-  }, [isEditingTitle, resizeTitleTextarea])
-
-  const handleTitleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setEditTitleValue(task.title)
-    setIsEditingTitle(true)
-  }, [task.title])
-
-  const handleTitleSave = useCallback(() => {
-    const trimmed = editTitleValue.trim()
-    if (trimmed && trimmed !== task.title) {
-      updateTask({ ...task, title: trimmed })
-    }
-    setIsEditingTitle(false)
-  }, [editTitleValue, task, updateTask])
-
-  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    e.stopPropagation()
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleTitleSave()
-    } else if (e.key === 'Escape') {
-      setIsEditingTitle(false)
-    }
-  }, [handleTitleSave])
 
   useEffect(() => {
     if (!priorityOpen) return
@@ -493,23 +448,7 @@ export function TaskCard({
             )}
           </button>
           )}
-          {isEditingTitle ? (
-            <textarea
-              ref={titleInputRef}
-              className={styles.titleInput}
-              value={editTitleValue}
-              onChange={(e) => {
-                setEditTitleValue(e.target.value)
-                resizeTitleTextarea()
-              }}
-              onBlur={handleTitleSave}
-              onKeyDown={handleTitleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              rows={1}
-            />
-          ) : (
-            <span className={styles.title} onClick={handleTitleClick}>{task.title}</span>
-          )}
+          <span className={styles.title}>{task.title}</span>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
