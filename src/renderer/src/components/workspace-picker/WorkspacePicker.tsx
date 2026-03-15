@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type MouseEvent } from 'react'
 import type { Workspace } from '@shared/types'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -31,6 +31,7 @@ export function WorkspacePicker(): React.JSX.Element {
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace)
   const openSingleProject = useWorkspaceStore((s) => s.openSingleProject)
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace)
+  const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
 
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -97,6 +98,19 @@ export function WorkspacePicker(): React.JSX.Element {
     await loadProjectState()
   }, [newName, newPaths, createWorkspace, openWorkspace, loadProjectState])
 
+  const handleDeleteWorkspace = useCallback(
+    async (e: MouseEvent, ws: Workspace) => {
+      e.stopPropagation()
+      const confirmed = window.confirm(
+        `Delete workspace "${ws.name || 'Unnamed'}"?\nThis will not delete any project files.`
+      )
+      if (confirmed) {
+        await deleteWorkspace(ws.id)
+      }
+    },
+    [deleteWorkspace]
+  )
+
   const handleCancelNew = useCallback(() => {
     setShowNewForm(false)
     setNewName('')
@@ -124,6 +138,15 @@ export function WorkspacePicker(): React.JSX.Element {
       } else if (e.key === 'Enter' && sorted.length > 0) {
         e.preventDefault()
         handleOpenWorkspace(sorted[selectedIndex])
+      } else if ((e.key === 'Backspace' || e.key === 'Delete') && sorted.length > 0) {
+        e.preventDefault()
+        const ws = sorted[selectedIndex]
+        const confirmed = window.confirm(
+          `Delete workspace "${ws.name || 'Unnamed'}"?\nThis will not delete any project files.`
+        )
+        if (confirmed) {
+          deleteWorkspace(ws.id)
+        }
       }
     }
 
@@ -183,6 +206,17 @@ export function WorkspacePicker(): React.JSX.Element {
                       </span>
                     </div>
                   </div>
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={(e) => handleDeleteWorkspace(e, ws)}
+                    aria-label={`Delete workspace ${ws.name || 'Unnamed'}`}
+                    title="Delete workspace"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                      <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                    </svg>
+                  </button>
                 </div>
               )
             })}
@@ -267,6 +301,7 @@ export function WorkspacePicker(): React.JSX.Element {
             <kbd className={styles.hintKbd}>&uarr;</kbd>
             <kbd className={styles.hintKbd}>&darr;</kbd> navigate{' '}
             <kbd className={styles.hintKbd}>Enter</kbd> open{' '}
+            <kbd className={styles.hintKbd}>&#9003;</kbd> delete{' '}
             <kbd className={styles.hintKbd}>&#8984;N</kbd> new workspace
           </div>
         )}

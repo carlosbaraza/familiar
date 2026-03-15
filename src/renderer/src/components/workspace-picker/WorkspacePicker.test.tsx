@@ -35,6 +35,7 @@ const mockApi = {
   workspaceOpen: vi.fn().mockResolvedValue(undefined),
   workspaceOpenSingle: vi.fn().mockResolvedValue(undefined),
   workspaceCreate: vi.fn().mockResolvedValue({ id: 'ws_new', name: 'New', projectPaths: [], lastOpenedAt: '', createdAt: '' }),
+  workspaceDelete: vi.fn().mockResolvedValue(undefined),
   workspaceGetConfig: vi.fn().mockResolvedValue({ workspaces: [], lastWorkspaceId: null }),
   workspaceGetOpenProjects: vi.fn().mockResolvedValue([]),
   workspaceGetActiveProject: vi.fn().mockResolvedValue(null),
@@ -419,5 +420,133 @@ describe('WorkspacePicker', () => {
     })
 
     expect(mockApi.workspaceCreate).toHaveBeenCalledWith('My Workspace', ['/Users/dev/new-project'])
+  })
+
+  it('shows delete button for each workspace item', async () => {
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    const deleteButtons = screen.getAllByTitle('Delete workspace')
+    expect(deleteButtons).toHaveLength(3)
+  })
+
+  it('delete button has correct aria-label', async () => {
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    expect(screen.getByLabelText('Delete workspace Alpha Project')).toBeDefined()
+    expect(screen.getByLabelText('Delete workspace Beta Suite')).toBeDefined()
+    expect(screen.getByLabelText('Delete workspace Gamma')).toBeDefined()
+  })
+
+  it('clicking delete button calls deleteWorkspace after confirm', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockApi.workspaceList.mockResolvedValue(mockWorkspaces)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    const deleteButtons = screen.getAllByTitle('Delete workspace')
+
+    await act(async () => {
+      fireEvent.click(deleteButtons[1]) // Delete Beta Suite (index 1 in sorted order)
+    })
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Delete workspace "Beta Suite"?\nThis will not delete any project files.'
+    )
+    expect(mockApi.workspaceDelete).toHaveBeenCalledWith('ws_2')
+  })
+
+  it('clicking delete button does not delete when confirm is cancelled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    const deleteButtons = screen.getAllByTitle('Delete workspace')
+
+    await act(async () => {
+      fireEvent.click(deleteButtons[0])
+    })
+
+    expect(window.confirm).toHaveBeenCalled()
+    expect(mockApi.workspaceDelete).not.toHaveBeenCalled()
+  })
+
+  it('clicking delete button does not open the workspace', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockApi.workspaceList.mockResolvedValue(mockWorkspaces)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    const deleteButtons = screen.getAllByTitle('Delete workspace')
+
+    await act(async () => {
+      fireEvent.click(deleteButtons[0])
+    })
+
+    // Should NOT have opened the workspace
+    expect(mockApi.workspaceOpen).not.toHaveBeenCalled()
+  })
+
+  it('Backspace key deletes the selected workspace after confirm', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockApi.workspaceList.mockResolvedValue(mockWorkspaces)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    // Move selection to Beta Suite (index 1)
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+    })
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Backspace' })
+    })
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Delete workspace "Beta Suite"?\nThis will not delete any project files.'
+    )
+    expect(mockApi.workspaceDelete).toHaveBeenCalledWith('ws_2')
+  })
+
+  it('Delete key deletes the selected workspace after confirm', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockApi.workspaceList.mockResolvedValue(mockWorkspaces)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Delete' })
+    })
+
+    expect(window.confirm).toHaveBeenCalled()
+    expect(mockApi.workspaceDelete).toHaveBeenCalledWith('ws_1')
+  })
+
+  it('Backspace does not delete when confirm is cancelled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await act(async () => {
+      renderWithWorkspaces()
+    })
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Backspace' })
+    })
+
+    expect(window.confirm).toHaveBeenCalled()
+    expect(mockApi.workspaceDelete).not.toHaveBeenCalled()
   })
 })

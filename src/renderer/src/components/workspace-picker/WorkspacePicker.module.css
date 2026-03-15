@@ -119,6 +119,33 @@
   color: var(--text-tertiary);
 }
 
+/* Delete button on workspace item */
+.deleteBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.item:hover .deleteBtn,
+.itemSelected .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: var(--danger, #ef4444);
+  background-color: var(--bg-elevated);
+}
+
 /* Buttons row */
 .actions {
   display: flex;
