@@ -543,11 +543,11 @@ export function ProjectSidebar(): React.JSX.Element | null {
                 {/* Built-in vars (non-removable) */}
                 {[
                   ['MAIN_WORKTREE_DIR', 'main project path'],
-                  ['NEW_WORKTREE_DIR', 'target worktree path'],
-                  ['WORKTREE_NAME', 'worktree slug name'],
-                  ['WORKTREE_BRANCH', 'worktree git branch'],
-                  ['ORIGINAL_BRANCH', 'main worktree branch'],
-                  ['ORIGINAL_PROJECT_NAME', 'main project name']
+                  ['MAIN_WORKTREE_BRANCH', 'main worktree branch'],
+                  ['MAIN_WORKTREE_PROJECT', 'main project name'],
+                  ['NEW_WORKTREE_DIR', 'new worktree path'],
+                  ['NEW_WORKTREE_NAME', 'new worktree slug name'],
+                  ['NEW_WORKTREE_BRANCH', 'new worktree git branch']
                 ].map(([name, desc]) => (
                   <div key={name} style={createDialogStyles.envRow}>
                     <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value={name} disabled />

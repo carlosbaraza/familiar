@@ -292,10 +292,10 @@ export class WorktreeService {
     return {
       MAIN_WORKTREE_DIR: gitRoot,
       NEW_WORKTREE_DIR: worktreePath,
-      WORKTREE_NAME: targetWt?.slug || path.basename(worktreePath),
-      WORKTREE_BRANCH: targetWt?.branch || '',
-      ORIGINAL_BRANCH: mainWt?.branch || '',
-      ORIGINAL_PROJECT_NAME: mainProjectName
+      NEW_WORKTREE_NAME: targetWt?.slug || path.basename(worktreePath),
+      NEW_WORKTREE_BRANCH: targetWt?.branch || '',
+      MAIN_WORKTREE_BRANCH: mainWt?.branch || '',
+      MAIN_WORKTREE_PROJECT: mainProjectName
     }
   }
 
