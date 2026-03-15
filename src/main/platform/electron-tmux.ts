@@ -95,15 +95,23 @@ export class ElectronTmuxManager implements ITmuxManager {
       // Non-fatal — tmux will use its compiled-in default
     }
 
-    // -u forces UTF-8 mode so Unicode characters render correctly even when
-    // Electron is launched from Finder with a minimal locale environment.
-    await this._exec(['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd])
+    // Build the new-session command. Use -e flags to inject env vars into the
+    // initial window's environment so they're available when .zshrc/.bashrc loads.
+    // This is critical because set-environment only affects NEW windows/panes,
+    // not the shell already running in the first window.
+    const args = ['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd]
+    if (env) {
+      for (const [key, value] of Object.entries(env)) {
+        args.push('-e', `${key}=${value}`)
+      }
+    }
+    await this._exec(args)
 
     // Enable extended keys so Shift+Enter, Ctrl+Enter etc. are forwarded to inner apps.
     // "always" sends unconditionally without the inner app needing to request them.
     await this._execTmux(['set-option', '-t', sessionName, '-s', 'extended-keys', 'always'])
 
-    // Register env vars at the tmux session level (available to new windows/panes)
+    // Also register env vars at the tmux session level for future windows/panes.
     if (env) {
       for (const [key, value] of Object.entries(env)) {
         await this._execTmux(['set-environment', '-t', sessionName, key, value])
@@ -112,22 +120,30 @@ export class ElectronTmuxManager implements ITmuxManager {
   }
 
   /**
-   * Dismiss any interactive prompts (e.g. oh-my-zsh update) with Ctrl-C,
+   * Wait for the shell to finish initializing (e.g. oh-my-zsh, .zshrc),
    * then export env vars into the running shell and run a command.
    * Designed to be called fire-and-forget after the PTY is already attached.
+   *
+   * IMPORTANT: We do NOT send Ctrl-C to dismiss prompts — doing so interrupts
+   * .zshrc/.bashrc sourcing (especially oh-my-zsh), leaving the shell in an
+   * uninitialized state with no PATH, no prompt theme, etc.
    */
   async warmupSession(
     sessionName: string,
     env?: Record<string, string>,
     command?: string
   ): Promise<void> {
-    // Send Ctrl-C 3 times with 1s intervals to dismiss interactive prompts
-    for (let i = 0; i < 3; i++) {
-      await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
-      await this._delay(1000)
-    }
+    // Wait for the shell to finish initializing (.zshrc, oh-my-zsh, etc.)
+    // before sending Ctrl-C. Shell frameworks can take 2-4 seconds to load;
+    // sending Ctrl-C too early interrupts .zshrc sourcing and leaves the
+    // shell without PATH, prompt theme, aliases, etc.
+    await this._delay(5000)
 
-    // Export env vars into the running shell
+    // Dismiss any lingering interactive prompts (e.g. oh-my-zsh update)
+    await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
+
+    // Export env vars into the running shell (env vars were already set via
+    // tmux new-session -e, but re-export ensures they're in the shell process)
     if (env) {
       for (const [key, value] of Object.entries(env)) {
         await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
