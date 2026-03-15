@@ -3,12 +3,14 @@ import { exec } from 'child_process'
 import {
   existsSync,
   readFileSync,
+  realpathSync,
   mkdirSync,
   writeFileSync,
   chmodSync,
   statSync
 } from 'fs'
 import { join } from 'path'
+import { homedir } from 'os'
 import type { DataService } from '../services/data-service'
 import type { WorkspaceManager } from '../services/workspace-manager'
 
@@ -39,9 +41,20 @@ export interface HealthCheckResult {
 }
 
 async function checkCliAvailable(): Promise<boolean> {
+  // First check the known symlink directly — most reliable
+  const symlink = join(homedir(), '.familiar', 'bin', 'familiar')
+  try {
+    // realpathSync follows the symlink and throws if the target doesn't exist
+    realpathSync(symlink)
+    return true
+  } catch {
+    // Symlink missing or broken — fall through to shell check
+  }
+
+  // Fallback: check via interactive shell (zsh -ic sources .zshrc)
   try {
     const shell = process.env.SHELL || '/bin/zsh'
-    await execAsync(`${shell} -lc 'which familiar'`)
+    await execAsync(`${shell} -ic 'which familiar'`)
     return true
   } catch {
     return false
@@ -51,7 +64,7 @@ async function checkCliAvailable(): Promise<boolean> {
 async function checkClaudeAvailable(): Promise<boolean> {
   try {
     const shell = process.env.SHELL || '/bin/zsh'
-    await execAsync(`${shell} -lc 'which claude'`)
+    await execAsync(`${shell} -ic 'which claude'`)
     return true
   } catch {
     return false

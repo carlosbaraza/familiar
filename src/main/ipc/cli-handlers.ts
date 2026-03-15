@@ -1,7 +1,7 @@
 import { ipcMain, app } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { existsSync, lstatSync, mkdirSync, symlinkSync, unlinkSync, readFileSync, appendFileSync } from 'fs'
+import { existsSync, lstatSync, realpathSync, mkdirSync, symlinkSync, unlinkSync, readFileSync, appendFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 
@@ -23,10 +23,18 @@ const CLAUDE_SEARCH_PATHS = [
 
 export function registerCliHandlers(): void {
   ipcMain.handle('cli:check-available', async (): Promise<boolean> => {
+    // First check the known symlink directly — most reliable
     try {
-      // Use login shell to get the full PATH (including user rc files)
+      realpathSync(CLI_SYMLINK)
+      return true
+    } catch {
+      // Symlink missing or broken — fall through to shell check
+    }
+
+    // Fallback: check via interactive shell (zsh -ic sources .zshrc)
+    try {
       const shell = process.env.SHELL || '/bin/zsh'
-      await execFileAsync(shell, ['-lc', 'which familiar'], {
+      await execFileAsync(shell, ['-ic', 'which familiar'], {
         timeout: 5000
       })
       return true
@@ -42,7 +50,7 @@ export function registerCliHandlers(): void {
 
       // 1. Check if 'claude' is in PATH via login shell
       try {
-        const { stdout: whichOut } = await execFileAsync(shell, ['-lc', 'which claude'], {
+        const { stdout: whichOut } = await execFileAsync(shell, ['-ic', 'which claude'], {
           timeout: 5000
         })
         const claudePath = whichOut.trim()
@@ -51,7 +59,7 @@ export function registerCliHandlers(): void {
           try {
             const { stdout: versionOut } = await execFileAsync(
               shell,
-              ['-lc', 'claude --version'],
+              ['-ic', 'claude --version'],
               { timeout: 10000 }
             )
             return { available: true, path: claudePath, version: versionOut.trim() }
