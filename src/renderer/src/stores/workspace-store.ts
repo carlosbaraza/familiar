@@ -97,6 +97,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       // Auto-show sidebar when multiple projects are open, but never auto-hide
       sidebarVisible: s.sidebarVisible || openProjects.length >= 2
     }))
+    // Re-apply worktree filtering so worktrees don't appear as top-level projects
+    await get().loadWorktrees()
   },
 
   openWorkspace: async (workspaceId: string): Promise<void> => {
@@ -207,16 +209,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
 
       const nonMainWorktrees = worktrees.filter((w) => !w.isMain)
+      // Paths of all non-main worktrees — used to hide them from the main project list
+      const worktreePaths = new Set(nonMainWorktrees.map((w) => w.path))
 
-      // Find which open project corresponds to the git root (main worktree)
       set((s) => ({
-        openProjects: s.openProjects.map((p) => {
-          // Attach worktrees to the project whose path matches the git root
-          if (p.path === gitRoot) {
-            return { ...p, worktrees: nonMainWorktrees }
-          }
-          return p
-        }),
+        // Filter out projects that are worktrees (they appear as indented items instead)
+        // and attach worktrees only to the main project (gitRoot)
+        openProjects: s.openProjects
+          .filter((p) => !worktreePaths.has(p.path))
+          .map((p) => {
+            if (p.path === gitRoot) {
+              return { ...p, worktrees: nonMainWorktrees }
+            }
+            return { ...p, worktrees: undefined }
+          }),
         // Auto-show sidebar when worktrees exist
         sidebarVisible: s.sidebarVisible || nonMainWorktrees.length > 0
       }))

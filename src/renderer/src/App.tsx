@@ -20,7 +20,6 @@ function App(): React.JSX.Element {
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
   const loadWorkspaceNotifications = useNotificationStore((s) => s.loadWorkspaceNotifications)
   const loadOpenProjects = useWorkspaceStore((s) => s.loadOpenProjects)
-  const loadWorktrees = useWorkspaceStore((s) => s.loadWorktrees)
   const showWorkspacePicker = useWorkspaceStore((s) => s.showWorkspacePicker)
   const setShowWorkspacePicker = useWorkspaceStore((s) => s.setShowWorkspacePicker)
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
@@ -36,7 +35,7 @@ function App(): React.JSX.Element {
     loadProjectState()
     loadNotifications()
     loadWorkspaceNotifications()
-    loadOpenProjects().then(() => loadWorktrees())
+    loadOpenProjects()
 
     // Load theme preferences from settings
     window.api
@@ -50,7 +49,7 @@ function App(): React.JSX.Element {
       .catch(() => {
         /* use defaults */
       })
-  }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects, loadWorktrees])
+  }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
   // When switching to an uninitialized project, open onboarding.
   // When switching to an initialized project, close onboarding.

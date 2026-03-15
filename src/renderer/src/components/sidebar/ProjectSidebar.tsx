@@ -54,11 +54,6 @@ export function ProjectSidebar(): React.JSX.Element | null {
     items: ContextMenuItem[]
   } | null>(null)
 
-  // Load worktrees on mount and when projects change
-  useEffect(() => {
-    loadWorktrees()
-  }, [activeProjectPath])
-
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return
@@ -91,9 +86,12 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const handleCreateWorktree = async (): Promise<void> => {
     try {
       const worktree = await createWorktree()
+      // Register the worktree as a project (for DataService/FileWatcher)
       await window.api.workspaceAddProject(worktree.path)
       const { loadOpenProjects } = useWorkspaceStore.getState()
       await loadOpenProjects()
+      // loadWorktrees will filter the worktree out of the main project list
+      await loadWorktrees()
       await handleSwitchProject(worktree.path)
     } catch (err) {
       console.error('Failed to create worktree:', err)
@@ -101,10 +99,14 @@ export function ProjectSidebar(): React.JSX.Element | null {
   }
 
   const handleOpenWorktree = async (worktreePath: string): Promise<void> => {
-    if (!openProjects.some((p) => p.path === worktreePath)) {
+    // Ensure worktree is registered as a project (for DataService/FileWatcher)
+    const isOpen = openProjects.some((p) => p.path === worktreePath)
+    if (!isOpen) {
       await window.api.workspaceAddProject(worktreePath)
       const { loadOpenProjects } = useWorkspaceStore.getState()
       await loadOpenProjects()
+      // loadWorktrees will filter the worktree out of the main project list
+      await loadWorktrees()
     }
     await handleSwitchProject(worktreePath)
   }
