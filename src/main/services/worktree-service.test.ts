@@ -365,7 +365,7 @@ describe('WorktreeService', () => {
       fs.mkdirSync(hooksDir, { recursive: true })
       fs.writeFileSync(
         path.join(hooksDir, 'pre-worktree-delete.sh'),
-        '#!/bin/bash\necho "cleaning up $NEW_WORKTREE_NAME"'
+        '#!/bin/bash\necho "cleaning up $DELETE_WORKTREE_NAME"'
       )
 
       const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)
@@ -380,7 +380,7 @@ describe('WorktreeService', () => {
       fs.mkdirSync(hooksDir, { recursive: true })
       fs.writeFileSync(
         path.join(hooksDir, 'pre-worktree-delete.sh'),
-        '#!/bin/bash\necho "main=$MAIN_WORKTREE_DIR wt=$NEW_WORKTREE_DIR name=$NEW_WORKTREE_NAME"'
+        '#!/bin/bash\necho "main=$MAIN_WORKTREE_DIR wt=$DELETE_WORKTREE_DIR name=$DELETE_WORKTREE_NAME"'
       )
 
       const result = await WorktreeService.runPreDeleteHook(gitRoot, wt.path)

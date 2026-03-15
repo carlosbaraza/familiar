@@ -273,7 +273,8 @@ export class WorktreeService {
    */
   private static getHookBuiltinEnv(
     gitRoot: string,
-    worktreePath: string
+    worktreePath: string,
+    targetPrefix: 'NEW' | 'DELETE' = 'NEW'
   ): Record<string, string> {
     const worktrees = this.listWorktrees(gitRoot)
     const mainWt = worktrees.find((w) => w.isMain)
@@ -291,11 +292,11 @@ export class WorktreeService {
 
     return {
       MAIN_WORKTREE_DIR: gitRoot,
-      NEW_WORKTREE_DIR: worktreePath,
-      NEW_WORKTREE_NAME: targetWt?.slug || path.basename(worktreePath),
-      NEW_WORKTREE_BRANCH: targetWt?.branch || '',
       MAIN_WORKTREE_BRANCH: mainWt?.branch || '',
-      MAIN_WORKTREE_PROJECT: mainProjectName
+      MAIN_WORKTREE_PROJECT: mainProjectName,
+      [`${targetPrefix}_WORKTREE_DIR`]: worktreePath,
+      [`${targetPrefix}_WORKTREE_NAME`]: targetWt?.slug || path.basename(worktreePath),
+      [`${targetPrefix}_WORKTREE_BRANCH`]: targetWt?.branch || ''
     }
   }
 
@@ -377,7 +378,7 @@ export class WorktreeService {
     if (!gitRoot) return { ran: false, exitCode: null, output: '' }
 
     const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'pre-worktree-delete.sh')
-    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath)
+    const builtinEnv = this.getHookBuiltinEnv(gitRoot, worktreePath, 'DELETE')
 
     return this.runHook(hookPath, worktreePath, { ...builtinEnv, ...envVars })
   }
