@@ -244,12 +244,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   renameWorktree: async (worktreePath: string, newSlug: string): Promise<WorktreeInfo> => {
     const result = await window.api.worktreeRename(worktreePath, newSlug)
-    // If the renamed worktree was open as a project, update the workspace
-    const { openProjects, loadWorktrees } = get()
-    if (openProjects.some((p) => p.path === worktreePath)) {
-      // Remove old path, add new path
+    const { openProjects, activeProjectPath } = get()
+    const wasActive = activeProjectPath === worktreePath
+    const wasOpen = openProjects.some((p) => p.path === worktreePath)
+
+    if (wasOpen) {
+      // Remove old path, add new path in the workspace manager
       await window.api.workspaceRemoveProject(worktreePath)
       await window.api.workspaceAddProject(result.path)
+      // If this was the active project, switch to the new path
+      if (wasActive) {
+        await window.api.workspaceSetActiveProject(result.path)
+      }
     }
     const { loadOpenProjects } = get()
     await loadOpenProjects()
