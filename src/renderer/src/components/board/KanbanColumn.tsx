@@ -204,7 +204,7 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`${styles.column} ${alwaysShowInput ? styles.columnWide : ''} ${isCrossColumnDrag ? styles.columnDragOver : ''} ${status === 'in-progress' ? styles.columnInProgress : ''}`}
+      className={`${styles.column} ${alwaysShowInput ? styles.columnWide : ''} ${isCrossColumnDrag ? styles.columnDragOver : ''}`}
       onContextMenu={contextMenu.open}
     >
       <div className={styles.header}>
