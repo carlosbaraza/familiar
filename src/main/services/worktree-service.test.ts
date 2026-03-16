@@ -83,6 +83,35 @@ describe('WorktreeService', () => {
         fs.rmSync(nonGitDir, { recursive: true, force: true })
       }
     })
+
+    it('excludes worktrees outside .familiar/worktrees/', () => {
+      // Create a worktree outside .familiar/worktrees/ using git directly
+      const externalPath = path.join(os.tmpdir(), 'external-wt-' + Date.now())
+      try {
+        execSync(`git worktree add -b external-branch "${externalPath}"`, {
+          cwd: gitRoot,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        })
+
+        // Also create a familiar-managed worktree
+        WorktreeService.createWorktree(gitRoot, 'familiar-wt')
+
+        const worktrees = WorktreeService.listWorktrees(gitRoot)
+        // Should have main + familiar-wt, but NOT external-wt
+        const paths = worktrees.map((w) => w.path)
+        expect(paths).toContain(gitRoot) // main
+        expect(paths).toContain(path.join(gitRoot, '.familiar', 'worktrees', 'familiar-wt'))
+        expect(paths).not.toContain(externalPath)
+        expect(worktrees.length).toBe(2)
+      } finally {
+        // Cleanup
+        try {
+          execSync(`git worktree remove "${externalPath}" --force`, { cwd: gitRoot, stdio: ['pipe', 'pipe', 'pipe'] })
+          execSync('git branch -D external-branch', { cwd: gitRoot, stdio: ['pipe', 'pipe', 'pipe'] })
+        } catch { /* best effort */ }
+      }
+    })
   })
 
   describe('createWorktree', () => {

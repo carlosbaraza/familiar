@@ -200,10 +200,26 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   loadWorktrees: async (): Promise<void> => {
     try {
-      const worktrees = await window.api.worktreeList()
-      const gitRoot = await window.api.worktreeGetGitRoot()
-      if (!gitRoot || worktrees.length <= 1) {
-        // No git repo or only main worktree — clear worktree info
+      const { openProjects } = get()
+
+      // Collect worktree info for each open project
+      // Map: gitRoot -> { worktrees, nonMainWorktrees }
+      const gitRootMap = new Map<string, WorktreeInfo[]>()
+      const allWorktreePaths = new Set<string>()
+
+      for (const project of openProjects) {
+        const gitRoot = await window.api.worktreeGetGitRoot(project.path)
+        if (!gitRoot || gitRootMap.has(gitRoot)) continue
+
+        const worktrees = await window.api.worktreeList(project.path)
+        const nonMain = worktrees.filter((w) => !w.isMain)
+        gitRootMap.set(gitRoot, nonMain)
+        for (const w of nonMain) {
+          allWorktreePaths.add(w.path)
+        }
+      }
+
+      if (gitRootMap.size === 0) {
         set((s) => ({
           openProjects: s.openProjects.map((p) => ({
             ...p, worktrees: undefined, isWorktree: false
@@ -212,23 +228,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return
       }
 
-      const nonMainWorktrees = worktrees.filter((w) => !w.isMain)
-      const worktreePaths = new Set(nonMainWorktrees.map((w) => w.path))
+      let hasAnyWorktrees = false
 
       set((s) => ({
         openProjects: s.openProjects.map((p) => {
-          if (p.path === gitRoot) {
-            // Main project — attach worktrees to it
+          // Check if this project is a git root with worktrees
+          const nonMainWorktrees = gitRootMap.get(p.path)
+          if (nonMainWorktrees && nonMainWorktrees.length > 0) {
+            hasAnyWorktrees = true
             return { ...p, worktrees: nonMainWorktrees, isWorktree: false }
           }
-          if (worktreePaths.has(p.path)) {
+          if (allWorktreePaths.has(p.path)) {
             // This project IS a worktree — mark it so the UI can hide it
             return { ...p, worktrees: undefined, isWorktree: true }
           }
           return { ...p, worktrees: undefined, isWorktree: false }
         }),
         // Auto-show sidebar when worktrees exist
-        sidebarVisible: s.sidebarVisible || nonMainWorktrees.length > 0
+        sidebarVisible: s.sidebarVisible || hasAnyWorktrees
       }))
     } catch {
       // Not a git repo or git not available — ignore

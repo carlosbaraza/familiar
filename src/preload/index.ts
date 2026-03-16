@@ -233,16 +233,16 @@ const api = {
     ipcRenderer.invoke('task:move-to-worktree', taskIds, targetProjectPath, mode),
 
   // Worktree
-  worktreeList: (): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]> =>
-    ipcRenderer.invoke('worktree:list'),
+  worktreeList: (projectPath?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]> =>
+    ipcRenderer.invoke('worktree:list', projectPath),
   worktreeCreate: (customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }> =>
     ipcRenderer.invoke('worktree:create', customSlug),
   worktreeRename: (worktreePath: string, newSlug: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }> =>
     ipcRenderer.invoke('worktree:rename', worktreePath, newSlug),
   worktreeRemove: (worktreePath: string): Promise<void> =>
     ipcRenderer.invoke('worktree:remove', worktreePath),
-  worktreeGetGitRoot: (): Promise<string | null> =>
-    ipcRenderer.invoke('worktree:get-git-root'),
+  worktreeGetGitRoot: (projectPath?: string): Promise<string | null> =>
+    ipcRenderer.invoke('worktree:get-git-root', projectPath),
   worktreeRunPostCreateHook: (
     worktreePath: string,
     envVars: Record<string, string>

@@ -4,8 +4,8 @@ import type { WorktreeInfo } from '../services/worktree-service'
 import { DataService } from '../services/data-service'
 
 export function registerWorktreeHandlers(dataService: DataService): void {
-  ipcMain.handle('worktree:list', async (): Promise<WorktreeInfo[]> => {
-    const projectRoot = dataService.getProjectRoot()
+  ipcMain.handle('worktree:list', async (_, projectPath?: string): Promise<WorktreeInfo[]> => {
+    const projectRoot = projectPath || dataService.getProjectRoot()
     return WorktreeService.listWorktrees(projectRoot)
   })
 
@@ -24,8 +24,8 @@ export function registerWorktreeHandlers(dataService: DataService): void {
     WorktreeService.removeWorktree(projectRoot, worktreePath)
   })
 
-  ipcMain.handle('worktree:get-git-root', async (): Promise<string | null> => {
-    const projectRoot = dataService.getProjectRoot()
+  ipcMain.handle('worktree:get-git-root', async (_, projectPath?: string): Promise<string | null> => {
+    const projectRoot = projectPath || dataService.getProjectRoot()
     return WorktreeService.getGitRoot(projectRoot)
   })
 

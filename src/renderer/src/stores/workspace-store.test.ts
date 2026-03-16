@@ -17,7 +17,12 @@ const mockApi = {
   workspaceGetActiveProject: vi.fn(),
   workspaceSetActiveProject: vi.fn(),
   workspaceSetActiveWorkspaceId: vi.fn(),
-  openDirectory: vi.fn()
+  openDirectory: vi.fn(),
+  worktreeList: vi.fn(),
+  worktreeGetGitRoot: vi.fn(),
+  worktreeCreate: vi.fn(),
+  worktreeRename: vi.fn(),
+  worktreeRemove: vi.fn()
 }
 
 vi.stubGlobal('window', {
@@ -322,6 +327,129 @@ describe('workspace-store', () => {
       await useWorkspaceStore.getState().deleteWorkspace('ws_1')
       expect(mockApi.workspaceDelete).toHaveBeenCalledWith('ws_1')
       expect(useWorkspaceStore.getState().workspaces).toEqual([])
+    })
+  })
+
+  describe('loadWorktrees', () => {
+    it('loads worktrees for each open project individually', async () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/project-a', name: 'project-a' },
+          { path: '/tmp/project-b', name: 'project-b' }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockImplementation((projectPath?: string) => {
+        if (projectPath === '/tmp/project-a') return Promise.resolve('/tmp/project-a')
+        if (projectPath === '/tmp/project-b') return Promise.resolve('/tmp/project-b')
+        return Promise.resolve(null)
+      })
+
+      mockApi.worktreeList.mockImplementation((projectPath?: string) => {
+        if (projectPath === '/tmp/project-a') {
+          return Promise.resolve([
+            { path: '/tmp/project-a', branch: 'main', slug: 'project-a', isMain: true },
+            { path: '/tmp/project-a/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false }
+          ])
+        }
+        if (projectPath === '/tmp/project-b') {
+          return Promise.resolve([
+            { path: '/tmp/project-b', branch: 'main', slug: 'project-b', isMain: true }
+          ])
+        }
+        return Promise.resolve([])
+      })
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      const state = useWorkspaceStore.getState()
+      // Project A should have worktrees attached
+      expect(state.openProjects[0].worktrees).toHaveLength(1)
+      expect(state.openProjects[0].worktrees![0].slug).toBe('feat-x')
+      // Project B should have no worktrees
+      expect(state.openProjects[1].worktrees).toBeUndefined()
+    })
+
+    it('clears worktree info when no projects have git repos', async () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/no-git', name: 'no-git', worktrees: [{ path: '/tmp/stale', branch: 'x', slug: 'stale', isMain: false }] }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockResolvedValue(null)
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].worktrees).toBeUndefined()
+      expect(state.openProjects[0].isWorktree).toBe(false)
+    })
+
+    it('marks open worktree projects as isWorktree=true', async () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/project-a', name: 'project-a' },
+          { path: '/tmp/project-a/.familiar/worktrees/feat-x', name: 'feat-x' }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockImplementation((projectPath?: string) => {
+        // Both resolve to the same git root
+        return Promise.resolve('/tmp/project-a')
+      })
+
+      mockApi.worktreeList.mockImplementation((projectPath?: string) => {
+        return Promise.resolve([
+          { path: '/tmp/project-a', branch: 'main', slug: 'project-a', isMain: true },
+          { path: '/tmp/project-a/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false }
+        ])
+      })
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      const state = useWorkspaceStore.getState()
+      expect(state.openProjects[0].isWorktree).toBe(false)
+      expect(state.openProjects[0].worktrees).toHaveLength(1)
+      expect(state.openProjects[1].isWorktree).toBe(true)
+      expect(state.openProjects[1].worktrees).toBeUndefined()
+    })
+
+    it('shows sidebar when worktrees exist', async () => {
+      useWorkspaceStore.setState({
+        openProjects: [{ path: '/tmp/project-a', name: 'project-a' }],
+        sidebarVisible: false
+      })
+
+      mockApi.worktreeGetGitRoot.mockResolvedValue('/tmp/project-a')
+      mockApi.worktreeList.mockResolvedValue([
+        { path: '/tmp/project-a', branch: 'main', slug: 'project-a', isMain: true },
+        { path: '/tmp/project-a/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false }
+      ])
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      expect(useWorkspaceStore.getState().sidebarVisible).toBe(true)
+    })
+
+    it('does not query same git root twice', async () => {
+      useWorkspaceStore.setState({
+        openProjects: [
+          { path: '/tmp/project-a', name: 'project-a' },
+          { path: '/tmp/project-a/.familiar/worktrees/feat-x', name: 'feat-x' }
+        ]
+      })
+
+      mockApi.worktreeGetGitRoot.mockResolvedValue('/tmp/project-a')
+      mockApi.worktreeList.mockResolvedValue([
+        { path: '/tmp/project-a', branch: 'main', slug: 'project-a', isMain: true },
+        { path: '/tmp/project-a/.familiar/worktrees/feat-x', branch: 'familiar-worktree/feat-x', slug: 'feat-x', isMain: false }
+      ])
+
+      await useWorkspaceStore.getState().loadWorktrees()
+
+      // worktreeList should only be called once since both projects share the same git root
+      expect(mockApi.worktreeList).toHaveBeenCalledTimes(1)
     })
   })
 })

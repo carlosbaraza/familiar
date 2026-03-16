@@ -85,11 +85,14 @@ export class WorktreeService {
 
         if (!wtPath || isBare) continue
 
-        // Determine if this is a familiar-managed worktree
-        const familiarWorktreesDir = path.join(gitRoot, '.familiar', 'worktrees')
-        const isInFamiliarDir = wtPath.startsWith(familiarWorktreesDir)
-        const slug = isInFamiliarDir ? path.basename(wtPath) : path.basename(wtPath)
         const isMain = wtPath === gitRoot
+
+        // Only include main worktree and worktrees inside .familiar/worktrees/
+        const familiarWorktreesDir = path.join(gitRoot, '.familiar', 'worktrees')
+        const isInFamiliarDir = wtPath.startsWith(familiarWorktreesDir + path.sep) || wtPath === familiarWorktreesDir
+        if (!isMain && !isInFamiliarDir) continue
+
+        const slug = path.basename(wtPath)
 
         worktrees.push({ path: wtPath, branch, slug, isMain })
       }

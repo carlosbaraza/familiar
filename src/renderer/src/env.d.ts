@@ -143,11 +143,11 @@ declare global {
       ): Promise<{ movedCount: number }>
 
       // Worktree
-      worktreeList(): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
+      worktreeList(projectPath?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
       worktreeCreate(customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
       worktreeRename(worktreePath: string, newSlug: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
       worktreeRemove(worktreePath: string): Promise<void>
-      worktreeGetGitRoot(): Promise<string | null>
+      worktreeGetGitRoot(projectPath?: string): Promise<string | null>
       worktreeRunPostCreateHook(
         worktreePath: string,
         envVars: Record<string, string>
