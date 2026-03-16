@@ -102,6 +102,12 @@ export class ElectronTmuxManager implements ITmuxManager {
     // no tmux server is running yet (set-option -g default-shell fails if
     // there's no server to connect to).
     const args = ['-u', 'new-session', '-d', '-s', sessionName, '-c', cwd]
+
+    // Suppress oh-my-zsh update prompt — it blocks shell init and breaks
+    // the warmup sequence. The env var is set via -e so it's available
+    // before .zshrc is sourced.
+    args.push('-e', 'DISABLE_AUTO_UPDATE=true')
+
     if (env) {
       for (const [key, value] of Object.entries(env)) {
         args.push('-e', `${key}=${value}`)

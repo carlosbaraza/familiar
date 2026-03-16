@@ -333,13 +333,16 @@ export function KanbanBoard(): React.JSX.Element {
           await updateTask({ ...task, pastedFiles })
         }
       }
-      // Auto-run enabled snippets 5 seconds after creation
+      // Auto-run enabled snippets after warmup completes.
+      // warmupTmuxSession now awaits the full init sequence (shell init +
+      // Ctrl-C + env exports + clear + default command), so snippets are
+      // sent only after the session is fully ready.
       if (enabledSnippets && enabledSnippets.length > 0) {
         const taskId = task.id
-        // Warmup tmux session immediately so it's ready
-        window.api.warmupTmuxSession(taskId).catch(() => {})
-        setTimeout(async () => {
-          const sessionName = `familiar-${taskId}`
+        const sessionName = `familiar-${taskId}`
+        window.api.warmupTmuxSession(taskId).then(async () => {
+          // Small delay to let the default command (e.g. claude) start up
+          await new Promise((r) => setTimeout(r, 3000))
           for (const snippet of enabledSnippets) {
             try {
               await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
@@ -347,7 +350,7 @@ export function KanbanBoard(): React.JSX.Element {
               // Session may not be ready — skip
             }
           }
-        }, 5000)
+        }).catch(() => {})
       }
     },
     [addTask]

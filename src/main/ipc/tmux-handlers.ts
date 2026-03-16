@@ -4,8 +4,9 @@ import type { DataService } from '../services/data-service'
 import { resolveClaudeSessionCommand, ensureForkSessionCopied } from '../services/claude-session'
 
 export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataService: DataService): void {
-  // Track in-progress warmups to prevent duplicate concurrent calls
-  const warmupInProgress = new Set<string>()
+  // Track in-progress warmups to prevent duplicate concurrent calls.
+  // Maps taskId → promise so concurrent callers can await the same warmup.
+  const warmupInProgress = new Map<string, Promise<void>>()
   ipcMain.handle('tmux:list', async () => {
     return tmuxManager.listSessions()
   })
@@ -37,17 +38,17 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
     }
   )
 
-  ipcMain.handle('tmux:warmup', async (_event, taskId: string, forkedFrom?: string) => {
-    const sessionName = `familiar-${taskId}`
+  ipcMain.handle('tmux:warmup', (_event, taskId: string, forkedFrom?: string) => {
+    // If a warmup is already in progress for this task, return its promise
+    // so all callers await the same completion.
+    const existing = warmupInProgress.get(taskId)
+    if (existing) return existing
 
-    // Prevent duplicate concurrent warmups (addTask and KanbanBoard both call this)
-    if (warmupInProgress.has(taskId)) return
-    const exists = await tmuxManager.hasSession(sessionName)
-    if (exists) return
+    const promise = (async () => {
+      const sessionName = `familiar-${taskId}`
+      const exists = await tmuxManager.hasSession(sessionName)
+      if (exists) return
 
-    warmupInProgress.add(taskId)
-
-    try {
       const projectRoot = dataService.getProjectRoot()
       const env = {
         FAMILIAR_TASK_ID: taskId,
@@ -62,7 +63,8 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
 
       await tmuxManager.createSession(sessionName, projectRoot, env)
 
-      // Resolve default command, then warm up (Ctrl-C + export + command)
+      // Resolve default command, then warm up (wait + Ctrl-C + export + command).
+      // Await warmup so the IPC caller knows when the session is fully ready.
       let command: string | undefined
       try {
         const settings = await dataService.readSettings()
@@ -73,12 +75,12 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
         // Settings not available — skip default command
       }
 
-      // Fire-and-forget: warmup runs in the background
-      tmuxManager.warmupSession(sessionName, env, command).catch((err) => {
-        console.warn('Failed to warm up tmux session:', err)
-      })
-    } finally {
-      warmupInProgress.delete(taskId)
-    }
+      await tmuxManager.warmupSession(sessionName, env, command)
+    })()
+
+    warmupInProgress.set(taskId, promise)
+    promise.finally(() => warmupInProgress.delete(taskId))
+
+    return promise
   })
 }
