@@ -20,6 +20,10 @@
   border-right: none;
 }
 
+.columnInProgress {
+  background-color: color-mix(in srgb, var(--status-in-progress) 8%, transparent);
+}
+
 .columnDragOver {
   background-color: var(--accent-subtle);
 }
