@@ -93,6 +93,33 @@ describe('Onboarding', () => {
     expect(screen.getByText('Other')).toBeInTheDocument()
   })
 
+  it('auto-initializes project when hasProject is true but .familiar/ does not exist', async () => {
+    mockApi.isInitialized.mockResolvedValue(false)
+    mockApi.initProject.mockResolvedValue({ name: 'project', tasks: [], columnOrder: [], labels: [] })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    await waitFor(() => {
+      expect(mockApi.isInitialized).toHaveBeenCalled()
+      expect(mockApi.initProject).toHaveBeenCalledWith('project')
+    })
+  })
+
+  it('does not auto-initialize project when .familiar/ already exists', async () => {
+    mockApi.isInitialized.mockResolvedValue(true)
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    await waitFor(() => {
+      expect(mockApi.isInitialized).toHaveBeenCalled()
+    })
+    expect(mockApi.initProject).not.toHaveBeenCalled()
+  })
+
+  it('does not auto-initialize when hasProject is false', async () => {
+    mockApi.isInitialized.mockResolvedValue(false)
+    render(<Onboarding hasProject={false} onComplete={vi.fn()} />)
+    // Give it time to potentially call initProject
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mockApi.initProject).not.toHaveBeenCalled()
+  })
+
   it('shows "Not fully tested" for Other agent option', () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     expect(screen.getByText('Not fully tested')).toBeInTheDocument()

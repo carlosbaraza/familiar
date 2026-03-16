@@ -20,6 +20,22 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent | null>(null)
   const [copied, setCopied] = useState(false)
   const openWorkspace = useTaskStore((s) => s.openWorkspace)
+  const initProject = useTaskStore((s) => s.initProject)
+
+  // When a project folder is already selected (e.g. added via sidebar) but .familiar/
+  // doesn't exist yet, initialize it so settings writes during onboarding don't fail silently.
+  useEffect(() => {
+    if (!hasProject) return
+    window.api.isInitialized().then(async (initialized) => {
+      if (!initialized) {
+        const projectRoot = await window.api.getProjectRoot()
+        const folderName = projectRoot.split('/').pop() || 'Untitled'
+        await initProject(folderName)
+      }
+    }).catch(() => {
+      // ignore — will be handled during the open-folder step
+    })
+  }, [hasProject, initProject])
 
   // CLI install state
   const [cliAvailable, setCliAvailable] = useState<boolean | null>(null)
