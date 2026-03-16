@@ -143,25 +143,32 @@ export function registerCliHandlers(): void {
 
         symlinkSync(cliBin, CLI_SYMLINK)
 
-        // 3. Detect shell and update rc file
+        // 3. Detect shell and update env file
         const userShell = process.env.SHELL || '/bin/zsh'
         const isZsh = userShell.includes('zsh')
-        const rcFile = isZsh
-          ? join(homedir(), '.zshrc')
-          : join(homedir(), '.bashrc')
         const shellName = isZsh ? 'zsh' : 'bash'
 
-        // Check if PATH export already exists
-        let rcContents = ''
-        try {
-          rcContents = readFileSync(rcFile, 'utf-8')
-        } catch {
-          // File doesn't exist, that's fine
-        }
+        // Use .zshenv (sourced by ALL zsh invocations) or .bashrc
+        const envFile = isZsh
+          ? join(homedir(), '.zshenv')
+          : join(homedir(), '.bashrc')
 
-        if (!rcContents.includes('.familiar/bin')) {
+        // Check if PATH export already exists in any relevant file
+        const filesToCheck = isZsh
+          ? [join(homedir(), '.zshenv'), join(homedir(), '.zshrc'), join(homedir(), '.zprofile')]
+          : [join(homedir(), '.bashrc'), join(homedir(), '.bash_profile')]
+
+        const alreadyConfigured = filesToCheck.some((f) => {
+          try {
+            return readFileSync(f, 'utf-8').includes('.familiar/bin')
+          } catch {
+            return false
+          }
+        })
+
+        if (!alreadyConfigured) {
           const addition = `\n${PATH_EXPORT_COMMENT}\n${PATH_EXPORT_LINE}\n`
-          appendFileSync(rcFile, addition)
+          appendFileSync(envFile, addition)
         }
 
         return { success: true, shell: shellName }
