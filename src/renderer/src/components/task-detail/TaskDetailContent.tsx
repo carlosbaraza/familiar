@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Task, TaskPastedFile } from '@shared/types'
 import { onFileChange } from '@renderer/lib/file-change-hub'
 import { SplitPanel } from './SplitPanel'
@@ -8,9 +8,72 @@ import { TerminalPanel } from '@renderer/components/terminal/TerminalPanel'
 import { BlockEditor } from '@renderer/components/editor'
 import { PastedFileCard, PreviewDialog } from '@renderer/components/common'
 import { TaskFiles } from './TaskFiles'
+import { Tooltip } from '@renderer/components/common'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import styles from './TaskDetailContent.module.css'
+
+function CopyDocumentButton({ taskId }: { taskId: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const content = await window.api.readTaskDocument(taskId)
+      await navigator.clipboard?.writeText(content || '')
+      setCopied(true)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => setCopied(false), 1500)
+    } catch (err) {
+      console.warn('Failed to copy document:', err)
+    }
+  }, [taskId])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return (
+    <Tooltip placement="bottom" content={copied ? 'Copied!' : 'Copy as markdown'}>
+      <button
+        className={styles.copyDocumentButton}
+        onClick={handleCopy}
+        data-testid="copy-document-button"
+      >
+        {copied ? (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3.5 8.5L6.5 11.5L12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <rect
+              x="5.5"
+              y="5.5"
+              width="8"
+              height="8"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+            <path
+              d="M10.5 5.5V3.5C10.5 2.67 9.83 2 9 2H3.5C2.67 2 2 2.67 2 3.5V9C2 9.83 2.67 10.5 3.5 10.5H5.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+            />
+          </svg>
+        )}
+      </button>
+    </Tooltip>
+  )
+}
 
 interface TaskDetailContentProps {
   taskId: string
@@ -96,6 +159,9 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
             <ActivityPreview taskId={taskId} />
             <div className={styles.scrollArea}>
               <div className={styles.editorSection}>
+                <div className={styles.copyDocumentWrapper}>
+                  <CopyDocumentButton taskId={taskId} />
+                </div>
                 {documentLoaded ? (
                   <BlockEditor
                     key={taskId}

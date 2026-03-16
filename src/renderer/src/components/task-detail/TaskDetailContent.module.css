@@ -28,9 +28,47 @@
 }
 
 .editorSection {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 120px;
+}
+
+.copyDocumentWrapper {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  height: 0;
+}
+
+.copyDocumentButton {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 6px 8px 0 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.editorSection:hover .copyDocumentButton {
+  opacity: 1;
+}
+
+.copyDocumentButton:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  opacity: 1;
 }
 
 .editorArea {

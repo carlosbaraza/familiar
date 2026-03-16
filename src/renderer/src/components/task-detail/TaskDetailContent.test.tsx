@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { TaskDetailContent } from './TaskDetailContent'
 import type { Task } from '@shared/types'
@@ -35,6 +35,12 @@ vi.mock('./TaskDetailHeader', () => ({
   TaskDetailHeader: ({ task }: any) => (
     <div data-testid="task-detail-header">{task.title}</div>
   )
+}))
+
+vi.mock('@renderer/components/common', () => ({
+  Tooltip: ({ children }: any) => <>{children}</>,
+  PastedFileCard: () => null,
+  PreviewDialog: () => null
 }))
 
 vi.mock('./SplitPanel', () => ({
@@ -185,6 +191,25 @@ describe('TaskDetailContent', () => {
 
     unmount()
     expect(mockWatchUnsub).toHaveBeenCalled()
+  })
+
+  it('copies document markdown to clipboard when copy button is clicked', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    mockApi.readTaskDocument.mockResolvedValue('# Hello\n\nSome **markdown** content')
+
+    render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('copy-document-button')).toBeInTheDocument()
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-document-button'))
+    })
+
+    expect(mockApi.readTaskDocument).toHaveBeenCalledWith('tsk_abc')
+    expect(writeText).toHaveBeenCalledWith('# Hello\n\nSome **markdown** content')
   })
 
   it('re-loads document when taskId changes', async () => {
