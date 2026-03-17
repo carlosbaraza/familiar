@@ -280,6 +280,36 @@ describe('fixHooks (real filesystem)', () => {
     fixHooks(testRoot)
     expect(checkHooksConfigured(testRoot)).toBe(true)
   })
+
+  it('adds hook entries to .gitignore', () => {
+    fixHooks(testRoot)
+    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
+    expect(gitignore).toContain('.claude/hooks/')
+    expect(gitignore).toContain('.claude/settings.local.json')
+  })
+
+  it('appends to existing .gitignore without duplicating', () => {
+    writeFileSync(join(testRoot, '.gitignore'), 'node_modules/\n')
+    fixHooks(testRoot)
+    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
+    expect(gitignore).toContain('node_modules/')
+    expect(gitignore).toContain('.claude/hooks/')
+    expect(gitignore).toContain('.claude/settings.local.json')
+
+    // Run again — should not duplicate
+    fixHooks(testRoot)
+    const gitignore2 = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
+    const hooksCount = gitignore2.split('\n').filter((l) => l.trim() === '.claude/hooks/').length
+    expect(hooksCount).toBe(1)
+  })
+
+  it('does not add entries already present in .gitignore', () => {
+    writeFileSync(join(testRoot, '.gitignore'), '.claude/hooks/\n.claude/settings.local.json\n')
+    fixHooks(testRoot)
+    const gitignore = readFileSync(join(testRoot, '.gitignore'), 'utf-8')
+    const lines = gitignore.split('\n').filter((l) => l.trim().length > 0)
+    expect(lines).toHaveLength(2)
+  })
 })
 
 // ── fixSkill ──
