@@ -111,14 +111,14 @@ export function checkSkillInstalled(projectRoot: string): boolean {
 export function fixHooks(projectRoot: string): void {
   const claudeDir = join(projectRoot, '.claude')
   const hooksDir = join(claudeDir, 'hooks')
-  const settingsPath = join(claudeDir, 'settings.json')
+  const settingsPath = join(claudeDir, 'settings.local.json')
 
   // Ensure directories exist
   if (!existsSync(hooksDir)) {
     mkdirSync(hooksDir, { recursive: true })
   }
 
-  // Create/update .claude/settings.json with hooks
+  // Create/update .claude/settings.local.json with hooks (not tracked by git)
   let settings: Record<string, unknown> = {}
   if (existsSync(settingsPath)) {
     try {
