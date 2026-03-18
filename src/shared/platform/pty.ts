@@ -3,7 +3,7 @@
  * Electron implementation lives in src/main/platform/.
  */
 export interface IPtyManager {
-  create(taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string> // returns sessionId
+  create(taskId: string, paneId: string, cwd: string, copySessionFrom?: string): Promise<string> // returns sessionId
   write(sessionId: string, data: string): Promise<void>
   resize(sessionId: string, cols: number, rows: number): Promise<void>
   destroy(sessionId: string): Promise<void>

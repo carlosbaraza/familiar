@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { ElectronTmuxManager } from '../platform/electron-tmux'
 import type { DataService } from '../services/data-service'
-import { resolveClaudeSessionCommand, ensureForkSessionCopied } from '../services/claude-session'
+import { resolveClaudeSessionCommand, ensureSessionCopied } from '../services/claude-session'
 
 export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataService: DataService): void {
   // Track in-progress warmups to prevent duplicate concurrent calls.
@@ -38,7 +38,7 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
     }
   )
 
-  ipcMain.handle('tmux:warmup', (_event, taskId: string, forkedFrom?: string) => {
+  ipcMain.handle('tmux:warmup', (_event, taskId: string, copySessionFrom?: string) => {
     // If a warmup is already in progress for this task, return its promise
     // so all callers await the same completion.
     const existing = warmupInProgress.get(taskId)
@@ -57,8 +57,8 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
       }
 
       // Copy parent's Claude session file before creating the tmux session
-      if (forkedFrom) {
-        ensureForkSessionCopied(taskId, forkedFrom, projectRoot)
+      if (copySessionFrom) {
+        ensureSessionCopied(taskId, copySessionFrom, projectRoot)
       }
 
       await tmuxManager.createSession(sessionName, projectRoot, env)

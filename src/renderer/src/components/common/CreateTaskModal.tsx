@@ -7,10 +7,10 @@ import type { CreateTaskInputHandle, PendingPastedFile } from './CreateTaskInput
 
 export function CreateTaskModal(): React.JSX.Element | null {
   const open = useUIStore((s) => s.createTaskModalOpen)
-  const forkFrom = useUIStore((s) => s.createTaskForkFrom)
+  const parentId = useUIStore((s) => s.createTaskParentId)
   const closeModal = useUIStore((s) => s.closeCreateTaskModal)
   const addTask = useTaskStore((s) => s.addTask)
-  const forkTask = useTaskStore((s) => s.forkTask)
+  const createSubtask = useTaskStore((s) => s.createSubtask)
   const inputRef = useRef<CreateTaskInputHandle>(null)
 
   useEffect(() => {
@@ -29,8 +29,8 @@ export function CreateTaskModal(): React.JSX.Element | null {
       pendingPastedFiles?: PendingPastedFile[]
     ) => {
       let task: import('@shared/types').Task
-      if (forkFrom) {
-        task = await forkTask(forkFrom, title, document)
+      if (parentId) {
+        task = await createSubtask(parentId, title, { documentContent: document })
       } else {
         task = await addTask(title)
         if (document) {
@@ -49,12 +49,12 @@ export function CreateTaskModal(): React.JSX.Element | null {
       }
       closeModal()
 
-      // Open the forked task in detail view
-      if (forkFrom) {
+      // Open the subtask in detail view
+      if (parentId) {
         useUIStore.getState().openTaskDetail(task.id)
       }
     },
-    [addTask, forkTask, forkFrom, closeModal]
+    [addTask, createSubtask, parentId, closeModal]
   )
 
   const handleOverlayClick = useCallback(
@@ -71,13 +71,13 @@ export function CreateTaskModal(): React.JSX.Element | null {
   return (
     <div style={overlayStyle} onClick={handleOverlayClick}>
       <div style={wrapperStyle}>
-        <div style={headerStyle}>{forkFrom ? 'Fork Task' : 'New Task'}</div>
+        <div style={headerStyle}>{parentId ? 'Create Subtask' : 'New Task'}</div>
         <CreateTaskInput
           ref={inputRef}
           variant="rounded"
           onSubmit={handleSubmit}
           onCancel={closeModal}
-          forkFrom={forkFrom}
+          parentId={parentId}
           placeholder="Task title... (Shift+Enter for notes, paste images)"
         />
       </div>

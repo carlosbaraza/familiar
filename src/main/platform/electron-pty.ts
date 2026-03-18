@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process'
 import { IPtyManager } from '../../shared/platform/pty'
 import { ElectronTmuxManager } from './electron-tmux'
 import type { DataService } from '../services/data-service'
-import { resolveClaudeSessionCommand, ensureForkSessionCopied } from '../services/claude-session'
+import { resolveClaudeSessionCommand, ensureSessionCopied } from '../services/claude-session'
 
 interface PtySession {
   id: string
@@ -223,7 +223,7 @@ export class ElectronPtyManager implements IPtyManager {
     return this._tmuxPath
   }
 
-  async create(taskId: string, paneId: string, cwd: string, forkedFrom?: string, overrideCommand?: string): Promise<string> {
+  async create(taskId: string, paneId: string, cwd: string, copySessionFrom?: string, overrideCommand?: string): Promise<string> {
     const validCwd = getValidCwd(cwd)
     const env = getShellEnv()
 
@@ -232,9 +232,9 @@ export class ElectronPtyManager implements IPtyManager {
     env.FAMILIAR_PROJECT_ROOT = cwd
     env.FAMILIAR_SETTINGS_PATH = `${cwd}/.familiar/settings.json`
 
-    // Copy parent's Claude session file for forked tasks (before tmux session creation)
-    if (forkedFrom) {
-      ensureForkSessionCopied(taskId, forkedFrom, cwd)
+    // Copy parent's Claude session file when requested (before tmux session creation)
+    if (copySessionFrom) {
+      ensureSessionCopied(taskId, copySessionFrom, cwd)
     }
 
     const tmuxPath = this._getTmuxPath()

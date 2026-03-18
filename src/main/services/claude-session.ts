@@ -39,13 +39,13 @@ function getClaudeProjectDir(projectRoot: string): string {
  * Returns true if the copy was performed, false if skipped (child already
  * has a session, or parent session doesn't exist).
  */
-export function ensureForkSessionCopied(
+export function ensureSessionCopied(
   taskId: string,
-  forkedFrom: string,
+  copyFrom: string,
   projectRoot: string
 ): boolean {
   const childUuid = taskIdToUuid(taskId)
-  const parentUuid = taskIdToUuid(forkedFrom)
+  const parentUuid = taskIdToUuid(copyFrom)
   const claudeProjectDir = getClaudeProjectDir(projectRoot)
   const childSessionFile = path.join(claudeProjectDir, `${childUuid}.jsonl`)
   const parentSessionFile = path.join(claudeProjectDir, `${parentUuid}.jsonl`)
@@ -56,7 +56,7 @@ export function ensureForkSessionCopied(
   }
 
   if (!fs.existsSync(parentSessionFile)) {
-    console.warn(`Parent session file not found for fork from ${forkedFrom}, will start fresh`)
+    console.warn(`Parent session file not found for session copy from ${copyFrom}, will start fresh`)
     return false
   }
 
@@ -87,11 +87,11 @@ export function ensureForkSessionCopied(
       // Only copy from the last compaction boundary onward
       const trimmedContent = lines.slice(lastCompactIndex).join('\n') + '\n'
       fs.writeFileSync(childSessionFile, trimmedContent, 'utf-8')
-      console.log(`Copied compacted session from ${forkedFrom} to ${taskId} (trimmed ${lastCompactIndex} pre-compaction lines)`)
+      console.log(`Copied compacted session from ${copyFrom} to ${taskId} (trimmed ${lastCompactIndex} pre-compaction lines)`)
     } else {
       // No compaction — copy the entire file
       fs.copyFileSync(parentSessionFile, childSessionFile)
-      console.log(`Copied session from ${forkedFrom} to ${taskId}`)
+      console.log(`Copied session from ${copyFrom} to ${taskId}`)
     }
 
     return true

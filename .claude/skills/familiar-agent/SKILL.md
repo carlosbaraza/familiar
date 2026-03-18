@@ -42,6 +42,16 @@ cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
 
 If `$FAMILIAR_TASK_ID` is not set, you are not inside a Familiar terminal. Skip this skill.
 
+**If your task.json has a `parentTaskId` field**, you are a subtask. Before starting any work, read the parent task's context:
+
+```bash
+# Replace <parentTaskId> with the actual value from your task.json
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/document.md"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/task.json"
+ls "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/attachments/" 2>/dev/null
+# Read any relevant attachments — the parent may contain shared plans, specs, or documentation
+```
+
 ## Step 2: Signal you're working
 
 ```bash
@@ -109,7 +119,7 @@ familiar log $FAMILIAR_TASK_ID "ERROR: <description>"
 | `familiar update <id> --priority <p>` | Set priority: `urgent`, `high`, `medium`, `low`, `none` |
 | `familiar log <id> "<message>"` | Append to activity log |
 | `familiar notify "<title>" "<body>"` | Send in-app notification |
-| `familiar add "<title>" [--priority p] [--status s]` | Create a new task |
+| `familiar add "<title>" [--priority p] [--status s] [--parent id]` | Create a new task (or subtask with --parent) |
 | `familiar list [--status s] [--json]` | List tasks |
 | `familiar setup [--copy]` | Print tmux setup prompt |
 | `familiar doctor [--copy]` | Print environment diagnostic prompt |

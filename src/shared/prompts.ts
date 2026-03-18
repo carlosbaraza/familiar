@@ -444,6 +444,16 @@ cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
 \`\`\`
 
+**If your task has a \`parentTaskId\` in task.json**, you are a subtask. Before starting any work, read the parent task's context — it may contain shared plans, specs, or documentation critical to your subtask:
+
+\`\`\`bash
+# Read parentTaskId from your task.json, then:
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/document.md"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/task.json"
+ls "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/<parentTaskId>/attachments/" 2>/dev/null
+# Read any relevant attachments
+\`\`\`
+
 ### 2. Signal you're working
 
 \`\`\`bash

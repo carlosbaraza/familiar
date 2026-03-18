@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus, Snippet } from '@shared/types'
+import { useTaskStore } from '@renderer/stores/task-store'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
@@ -31,6 +32,8 @@ interface KanbanColumnProps {
   headerAction?: React.ReactNode
   dashboardSnippets?: Snippet[]
   allSnippets?: Snippet[]
+  currentParentId?: string | null
+  onClearParent?: () => void
   alwaysShowInput?: boolean
   onInputExit?: () => void
 }
@@ -61,6 +64,8 @@ export function KanbanColumn({
   headerAction,
   dashboardSnippets = [],
   allSnippets = [],
+  currentParentId = null,
+  onClearParent,
   alwaysShowInput = false,
   onInputExit
 }: KanbanColumnProps): React.JSX.Element {
@@ -216,6 +221,21 @@ export function KanbanColumn({
         <span className={styles.taskCount}>{tasks.length}</span>
         {headerAction}
       </div>
+
+      {alwaysShowInput && currentParentId && (() => {
+        const parentTask = useTaskStore.getState().getTaskById(currentParentId)
+        return (
+          <div className={styles.parentBanner}>
+            <div className={styles.parentBannerContent}>
+              <span className={styles.parentBannerLabel}>CREATING SUBTASKS FOR</span>
+              <span className={styles.parentBannerTitle}>{parentTask?.title ?? currentParentId}</span>
+            </div>
+            <button className={styles.parentBannerClear} onClick={onClearParent} type="button">
+              Clear
+            </button>
+          </div>
+        )
+      })()}
 
       {(alwaysShowInput || isCreating) && (
         <CreateTaskInput

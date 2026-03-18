@@ -28,13 +28,13 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const createSession = useCallback(async (overrideCommand?: string) => {
     try {
       const cwd = await window.api.getProjectRoot()
-      const sid = await window.api.ptyCreate(taskId, 'main', cwd, task?.forkedFrom, overrideCommand)
+      const sid = await window.api.ptyCreate(taskId, 'main', cwd, undefined, overrideCommand)
       return sid
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       return null
     }
-  }, [taskId, task?.forkedFrom])
+  }, [taskId])
 
   useEffect(() => {
     // Don't create terminal sessions for archived tasks

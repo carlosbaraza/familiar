@@ -44,7 +44,7 @@ export interface CreateTaskInputProps {
   /** Snippets to show as toggles */
   allSnippets?: Snippet[]
   /** Fork badge — if set, show fork indicator */
-  forkFrom?: string | null
+  parentId?: string | null
   /** Placeholder text */
   placeholder?: string
   /** Persist draft to localStorage under this key */
@@ -63,7 +63,7 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
       onFocus,
       onBlur,
       allSnippets = [],
-      forkFrom,
+      parentId,
       placeholder = 'Task title... (Shift+Enter for notes, paste images)',
       draftKey,
       rows = 3
@@ -226,8 +226,8 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
 
     return (
       <div className={containerClassName}>
-        {forkFrom && (
-          <div className={styles.forkBadge}>
+        {parentId && (
+          <div className={styles.parentBadge}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="18" r="3" />
               <circle cx="6" cy="6" r="3" />
@@ -235,7 +235,7 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
               <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
               <path d="M12 12v3" />
             </svg>
-            Forking from {forkFrom}
+            Subtask of {parentId}
           </div>
         )}
         <textarea
@@ -320,7 +320,7 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
             disabled={!hasContent}
             onClick={doSubmit}
           >
-            {forkFrom ? 'Fork Task' : 'Create Task'}
+            {parentId ? 'Create Subtask' : 'Create Task'}
           </button>
         </div>
       </div>

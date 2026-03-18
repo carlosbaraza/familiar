@@ -101,83 +101,147 @@
   gap: 4px;
 }
 
-/* Fork indicators */
-.forkLink {
+/* Parent link (shown in subtask detail view) */
+.parentLink {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--accent);
   cursor: pointer;
   transition: background-color var(--transition-fast);
   border-bottom: 1px solid var(--border);
-}
-
-.forkLink:hover {
-  background-color: var(--bg-hover);
-}
-
-.forkLink strong {
-  color: var(--accent);
   font-weight: 500;
 }
 
-.forkDeleted {
+.parentLink:hover {
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
+.parentDeleted {
   color: var(--text-tertiary);
   font-style: italic;
   font-size: 11px;
 }
 
-.forksSection {
+/* Subtasks section (shown in parent task detail view) */
+.subtasksSection {
   flex-shrink: 0;
   padding: 8px 12px;
   border-top: 1px solid var(--border);
 }
 
-.forksSectionHeader {
+.subtasksSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.subtasksSectionTitle {
   font-size: 11px;
   font-weight: var(--font-weight-semibold);
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 6px;
 }
 
-.forksList {
+.addSubtaskBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-elevated);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.addSubtaskBtn:hover {
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+  color: var(--text-secondary);
+}
+
+.subtasksList {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.forkItem {
+.subtaskItem {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
   transition: background-color var(--transition-fast);
 }
 
-.forkItem:hover {
-  background-color: var(--bg-hover);
+.subtaskItem:hover {
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
 }
 
-.forkItemId {
-  color: var(--accent);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
+.subtaskStatus {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
 }
 
-.forkItemTitle {
+.subtaskStatus_todo {
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+}
+
+.subtaskStatus_in_progress {
+  background: color-mix(in srgb, var(--status-in-progress) 15%, var(--bg-elevated));
+  color: var(--status-in-progress);
+}
+
+.subtaskStatus_in_review {
+  background: color-mix(in srgb, var(--status-in-review) 15%, var(--bg-elevated));
+  color: var(--status-in-review);
+}
+
+.subtaskStatus_done {
+  background: color-mix(in srgb, var(--status-done) 15%, var(--bg-elevated));
+  color: var(--status-done);
+}
+
+.subtaskName {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.subtaskNameDone {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.subtaskAgentDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .activitySection {

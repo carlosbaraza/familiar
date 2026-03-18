@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as path from 'path'
-import { taskIdToUuid, resolveClaudeSessionCommand, ensureForkSessionCopied } from './claude-session'
+import { taskIdToUuid, resolveClaudeSessionCommand, ensureSessionCopied } from './claude-session'
 
 const mockExistsSync = vi.fn()
 const mockCopyFileSync = vi.fn()
@@ -132,7 +132,7 @@ describe('resolveClaudeSessionCommand', () => {
   })
 })
 
-describe('ensureForkSessionCopied', () => {
+describe('ensureSessionCopied', () => {
   const childUuid = taskIdToUuid('tsk_child')
   const parentUuid = taskIdToUuid('tsk_parent')
   const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
@@ -180,7 +180,7 @@ describe('ensureForkSessionCopied', () => {
     })
     mockReadFileSync.mockReturnValue(simpleSession)
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(true)
     expect(mockCopyFileSync).toHaveBeenCalledWith(parentSessionFile, childSessionFile)
@@ -195,7 +195,7 @@ describe('ensureForkSessionCopied', () => {
     })
     mockReadFileSync.mockReturnValue(compactedSession)
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(true)
     // Should NOT use copyFileSync for compacted sessions
@@ -237,7 +237,7 @@ describe('ensureForkSessionCopied', () => {
     })
     mockReadFileSync.mockReturnValue(doubleCompactedSession)
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(true)
     const writtenContent = mockWriteFileSync.mock.calls[0][1] as string
@@ -251,7 +251,7 @@ describe('ensureForkSessionCopied', () => {
   it('skips copy when child session already exists', () => {
     mockExistsSync.mockImplementation((p: string) => p === childSessionFile)
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(false)
     expect(mockCopyFileSync).not.toHaveBeenCalled()
@@ -261,7 +261,7 @@ describe('ensureForkSessionCopied', () => {
   it('returns false when parent session does not exist', () => {
     mockExistsSync.mockReturnValue(false)
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(false)
     expect(mockCopyFileSync).not.toHaveBeenCalled()
@@ -277,13 +277,13 @@ describe('ensureForkSessionCopied', () => {
       throw new Error('EACCES: permission denied')
     })
 
-    const result = ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    const result = ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     expect(result).toBe(false)
   })
 
   it('after copy, resolveClaudeSessionCommand uses --resume for the child', () => {
-    // First call: ensureForkSessionCopied — child doesn't exist, parent does
+    // First call: ensureSessionCopied — child doesn't exist, parent does
     mockExistsSync.mockImplementation((p: string) => {
       if (p === childSessionFile) return false
       if (p === parentSessionFile) return true
@@ -291,7 +291,7 @@ describe('ensureForkSessionCopied', () => {
     })
     mockReadFileSync.mockReturnValue(simpleSession)
 
-    ensureForkSessionCopied('tsk_child', 'tsk_parent', '/project')
+    ensureSessionCopied('tsk_child', 'tsk_parent', '/project')
 
     // After copy, child session now exists
     mockExistsSync.mockImplementation((p: string) => {

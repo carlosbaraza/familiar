@@ -28,6 +28,6 @@ export interface Task {
   statusChangedAt?: string // ISO 8601 — when the task entered its current status column
   attachments?: string[] // filenames in task attachments folder
   pastedFiles?: TaskPastedFile[] // large pasted content stored as files
-  forkedFrom?: string // parent task ID when this task was forked
-  forks?: string[] // child task IDs created by forking this task
+  parentTaskId?: string // parent task ID when this is a subtask
+  subtaskIds?: string[] // child task IDs (subtasks of this task)
 }

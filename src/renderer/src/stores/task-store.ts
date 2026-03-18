@@ -20,7 +20,7 @@ interface TaskStore {
 
   // Task CRUD
   addTask: (title: string, options?: Partial<Task>) => Promise<Task>
-  forkTask: (parentId: string, title: string, documentContent?: string) => Promise<Task>
+  createSubtask: (parentId: string, title: string, options?: { copySession?: boolean; documentContent?: string }) => Promise<Task>
   updateTask: (task: Task) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
   deleteTasks: (taskIds: string[]) => Promise<void>
@@ -173,8 +173,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set({ projectState: newState })
 
     // Warm up tmux session for non-archived tasks (fire-and-forget).
+    // Note: session copying is only done explicitly via createSubtask with copySession=true
     if (task.status !== 'archived') {
-      window.api.warmupTmuxSession(task.id, task.forkedFrom).catch(() => {
+      window.api.warmupTmuxSession(task.id).catch(() => {
         // Warmup failure is non-critical — terminal will create session on open
       })
     }
@@ -182,27 +183,32 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return task
   },
 
-  forkTask: async (parentId: string, title: string, documentContent?: string): Promise<Task> => {
+  createSubtask: async (parentId: string, title: string, options?: { copySession?: boolean; documentContent?: string }): Promise<Task> => {
     const { projectState, addTask, updateTask: storeUpdateTask } = get()
     if (!projectState) throw new Error('Project not initialized')
 
     const parent = projectState.tasks.find((t: Task) => t.id === parentId)
     if (!parent) throw new Error(`Parent task not found: ${parentId}`)
 
-    // Create the child task with forkedFrom set
-    const child = await addTask(title, { forkedFrom: parentId })
+    // Create the child task with parentTaskId set
+    const child = await addTask(title, { parentTaskId: parentId })
 
     // Write document content if provided
-    if (documentContent) {
-      await window.api.writeTaskDocument(child.id, documentContent)
+    if (options?.documentContent) {
+      await window.api.writeTaskDocument(child.id, options.documentContent)
     }
 
-    // Update parent's forks array
+    // Copy session if requested (opt-in, off by default)
+    if (options?.copySession) {
+      window.api.warmupTmuxSession(child.id, parentId).catch(() => {})
+    }
+
+    // Update parent's subtaskIds array
     const freshParent = get().projectState?.tasks.find((t: Task) => t.id === parentId)
     if (freshParent) {
       const updatedParent = {
         ...freshParent,
-        forks: [...(freshParent.forks ?? []), child.id]
+        subtaskIds: [...(freshParent.subtaskIds ?? []), child.id]
       }
       await storeUpdateTask(updatedParent)
     }
@@ -213,13 +219,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       id: `act_${Date.now()}_p`,
       timestamp: now,
       type: 'status_change',
-      message: `Forked to ${child.id}`
+      message: `Created subtask ${child.id}`
     }
     const childActivity: ActivityEntry = {
       id: `act_${Date.now()}_c`,
       timestamp: now,
       type: 'status_change',
-      message: `Forked from ${parentId}`
+      message: `Subtask created from ${parentId}`
     }
     await window.api.appendActivity(parentId, parentActivity)
     await window.api.appendActivity(child.id, childActivity)
@@ -298,16 +304,29 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Kill tmux sessions before deleting
     await killTmuxSessionsForTask(taskId)
 
-    // If this task was forked from a parent, remove it from the parent's forks array
     const deletedTask = projectState.tasks.find((t: Task) => t.id === taskId)
-    if (deletedTask?.forkedFrom) {
-      const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.forkedFrom)
-      if (parent && parent.forks) {
-        const updatedParent = { ...parent, forks: parent.forks.filter((id) => id !== taskId) }
+
+    // If this is a subtask, remove it from the parent's subtaskIds array
+    if (deletedTask?.parentTaskId) {
+      const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.parentTaskId)
+      if (parent && parent.subtaskIds) {
+        const updatedParent = { ...parent, subtaskIds: parent.subtaskIds.filter((id) => id !== taskId) }
         await window.api.updateTask(updatedParent)
-        // Update in the state array too
         const idx = projectState.tasks.indexOf(parent)
         if (idx !== -1) projectState.tasks[idx] = updatedParent
+      }
+    }
+
+    // If this is a parent task, orphan all subtasks (clear their parentTaskId)
+    if (deletedTask?.subtaskIds && deletedTask.subtaskIds.length > 0) {
+      for (const subtaskId of deletedTask.subtaskIds) {
+        const subtask = projectState.tasks.find((t: Task) => t.id === subtaskId)
+        if (subtask) {
+          const orphaned = { ...subtask, parentTaskId: undefined }
+          await window.api.updateTask(orphaned)
+          const idx = projectState.tasks.indexOf(subtask)
+          if (idx !== -1) projectState.tasks[idx] = orphaned
+        }
       }
     }
 
@@ -327,16 +346,34 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const idSet = new Set(taskIds)
 
-    // Clean up parent forks arrays for forked tasks being deleted
+    // Clean up parent subtaskIds arrays for subtasks being deleted
     for (const taskId of taskIds) {
       const deletedTask = projectState.tasks.find((t: Task) => t.id === taskId)
-      if (deletedTask?.forkedFrom && !idSet.has(deletedTask.forkedFrom)) {
-        const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.forkedFrom)
-        if (parent && parent.forks) {
-          const updatedParent = { ...parent, forks: parent.forks.filter((id) => !idSet.has(id)) }
+      if (deletedTask?.parentTaskId && !idSet.has(deletedTask.parentTaskId)) {
+        const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.parentTaskId)
+        if (parent && parent.subtaskIds) {
+          const updatedParent = { ...parent, subtaskIds: parent.subtaskIds.filter((id) => !idSet.has(id)) }
           await window.api.updateTask(updatedParent)
           const idx = projectState.tasks.indexOf(parent)
           if (idx !== -1) projectState.tasks[idx] = updatedParent
+        }
+      }
+    }
+
+    // Orphan subtasks of parent tasks being deleted
+    for (const taskId of taskIds) {
+      const deletedTask = projectState.tasks.find((t: Task) => t.id === taskId)
+      if (deletedTask?.subtaskIds) {
+        for (const subtaskId of deletedTask.subtaskIds) {
+          if (!idSet.has(subtaskId)) {
+            const subtask = projectState.tasks.find((t: Task) => t.id === subtaskId)
+            if (subtask) {
+              const orphaned = { ...subtask, parentTaskId: undefined }
+              await window.api.updateTask(orphaned)
+              const idx = projectState.tasks.indexOf(subtask)
+              if (idx !== -1) projectState.tasks[idx] = orphaned
+            }
+          }
         }
       }
     }

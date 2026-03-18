@@ -42,7 +42,7 @@ export interface DropIndicator {
 export function KanbanBoard(): React.JSX.Element {
   const { projectState, isLoading, addTask, moveTask, reorderTask, moveTasks, archiveAllDone } =
     useTaskStore()
-  const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex, taskDetailOpen, settingsOpen } =
+  const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex, taskDetailOpen, settingsOpen, currentParentId, setCurrentParentId } =
     useUIStore()
   const {
     setDraggedTask,
@@ -297,7 +297,12 @@ export function KanbanBoard(): React.JSX.Element {
 
   const handleCreateTask = useCallback(
     async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[], pendingPastedFiles?: PendingPastedFile[]) => {
-      const task = await addTask(title, { status })
+      const { createSubtask } = useTaskStore.getState()
+      const parentId = useUIStore.getState().currentParentId
+      // If a parent is selected, create as subtask (board input path — no session copy)
+      const task = parentId
+        ? await createSubtask(parentId, title, { documentContent: document })
+        : await addTask(title, { status })
       if (document) {
         await window.api.writeTaskDocument(task.id, document)
       }
@@ -615,6 +620,8 @@ export function KanbanBoard(): React.JSX.Element {
               }
               focusedTaskIndex={focusedTaskIndex}
               isFocusedColumn={focusedColumnIndex === colIndex}
+              currentParentId={currentParentId}
+              onClearParent={() => setCurrentParentId(null)}
               alwaysShowInput={status === 'todo'}
               showCreateInput={createColumnIndex === colIndex}
               onCreateInputShown={() => setCreateColumnIndex(null)}

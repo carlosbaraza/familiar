@@ -40,7 +40,7 @@ interface UIState {
 
   // Create task modal (used when creating from task detail view)
   createTaskModalOpen: boolean
-  createTaskForkFrom: string | null // parent task ID when forking
+  createTaskParentId: string | null // parent task ID when forking
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: boolean
@@ -51,6 +51,9 @@ interface UIState {
   // Onboarding wizard (can be re-triggered from help menu)
   onboardingOpen: boolean
   onboardingExplicit: boolean // true when opened explicitly from menu (not auto-triggered)
+
+  // Current parent task for subtask creation
+  currentParentId: string | null
 
   // Board filters
   filters: TaskFilters
@@ -79,7 +82,7 @@ interface UIState {
   setLightTheme: (themeId: string) => void
   cycleThemeMode: () => void
   openCreateTaskModal: () => void
-  openCreateTaskModalForFork: (taskId: string) => void
+  openCreateTaskModalForSubtask: (taskId: string) => void
   closeCreateTaskModal: () => void
   openShortcutsModal: () => void
   closeShortcutsModal: () => void
@@ -87,6 +90,7 @@ interface UIState {
   closeAboutDialog: () => void
   openOnboarding: (explicit?: boolean) => void
   closeOnboarding: () => void
+  setCurrentParentId: (taskId: string | null) => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
   setFocusedColumn: (index: number) => void
@@ -140,7 +144,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Create task modal
   createTaskModalOpen: false,
-  createTaskForkFrom: null,
+  createTaskParentId: null,
 
   // Keyboard shortcuts modal
   shortcutsModalOpen: false,
@@ -151,6 +155,9 @@ export const useUIStore = create<UIState>((set) => ({
   // Onboarding
   onboardingOpen: false,
   onboardingExplicit: false,
+
+  // Current parent task — persisted in localStorage per project
+  currentParentId: null,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -213,13 +220,13 @@ export const useUIStore = create<UIState>((set) => ({
     }),
 
   openCreateTaskModal: () =>
-    set({ createTaskModalOpen: true, createTaskForkFrom: null }),
+    set({ createTaskModalOpen: true, createTaskParentId: null }),
 
-  openCreateTaskModalForFork: (taskId: string) =>
-    set({ createTaskModalOpen: true, createTaskForkFrom: taskId }),
+  openCreateTaskModalForSubtask: (taskId: string) =>
+    set({ createTaskModalOpen: true, createTaskParentId: taskId }),
 
   closeCreateTaskModal: () =>
-    set({ createTaskModalOpen: false, createTaskForkFrom: null }),
+    set({ createTaskModalOpen: false, createTaskParentId: null }),
 
   openShortcutsModal: () =>
     set({ shortcutsModalOpen: true }),
@@ -238,6 +245,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeOnboarding: () =>
     set({ onboardingOpen: false, onboardingExplicit: false }),
+
+  setCurrentParentId: (taskId) => set({ currentParentId: taskId }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),

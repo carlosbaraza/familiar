@@ -172,27 +172,28 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
                   <div className={styles.editorArea}>Loading...</div>
                 )}
               </div>
-              {task.forkedFrom && (
-                <div
-                  className={styles.forkLink}
-                  onClick={() => {
-                    const { openTaskDetail } = useUIStore.getState()
-                    openTaskDetail(task.forkedFrom!)
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="18" r="3" />
-                    <circle cx="6" cy="6" r="3" />
-                    <circle cx="18" cy="6" r="3" />
-                    <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
-                    <path d="M12 12v3" />
-                  </svg>
-                  <span>Forked from <strong>{task.forkedFrom}</strong></span>
-                  {!useTaskStore.getState().getTaskById(task.forkedFrom) && (
-                    <span className={styles.forkDeleted}>(deleted)</span>
-                  )}
-                </div>
-              )}
+              {task.parentTaskId && (() => {
+                const parentTask = useTaskStore.getState().getTaskById(task.parentTaskId!)
+                return (
+                  <div
+                    className={styles.parentLink}
+                    onClick={() => {
+                      const { openTaskDetail } = useUIStore.getState()
+                      openTaskDetail(task.parentTaskId!)
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="17" x2="12" y2="3" />
+                      <path d="m5 10 7-7 7 7" />
+                      <path d="M5 21h14" />
+                    </svg>
+                    <span>{parentTask?.title ?? task.parentTaskId}</span>
+                    {!parentTask && (
+                      <span className={styles.parentDeleted}>(deleted)</span>
+                    )}
+                  </div>
+                )
+              })()}
               <TaskFiles taskId={taskId} />
               {pastedFiles.length > 0 && (
                 <div className={styles.pastedFilesSection}>
@@ -209,32 +210,59 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
                   </div>
                 </div>
               )}
-              {task.forks && task.forks.length > 0 && (
-                <div className={styles.forksSection}>
-                  <div className={styles.forksSectionHeader}>Forks</div>
-                  <div className={styles.forksList}>
-                    {task.forks.map((forkId) => {
-                      const forkTask = useTaskStore.getState().getTaskById(forkId)
+              {task.subtaskIds && task.subtaskIds.length > 0 && (
+                <div className={styles.subtasksSection}>
+                  <div className={styles.subtasksSectionHeader}>
+                    <span className={styles.subtasksSectionTitle}>Subtasks</span>
+                    <button
+                      className={styles.addSubtaskBtn}
+                      onClick={() => {
+                        useUIStore.getState().openCreateTaskModalForSubtask(task.id)
+                      }}
+                      type="button"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      Add Subtask
+                    </button>
+                  </div>
+                  <div className={styles.subtasksList}>
+                    {task.subtaskIds.map((subtaskId) => {
+                      const subtask = useTaskStore.getState().getTaskById(subtaskId)
                       return (
-                        <div
-                          key={forkId}
-                          className={styles.forkItem}
+                        <button
+                          key={subtaskId}
+                          className={styles.subtaskItem}
                           onClick={() => {
                             const { openTaskDetail } = useUIStore.getState()
-                            openTaskDetail(forkId)
+                            openTaskDetail(subtaskId)
                           }}
+                          type="button"
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="18" r="3" />
-                            <circle cx="6" cy="6" r="3" />
-                            <circle cx="18" cy="6" r="3" />
-                            <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
-                            <path d="M12 12v3" />
-                          </svg>
-                          <span className={styles.forkItemId}>{forkId}</span>
-                          {forkTask && <span className={styles.forkItemTitle}>{forkTask.title}</span>}
-                          {!forkTask && <span className={styles.forkDeleted}>(deleted)</span>}
-                        </div>
+                          {subtask ? (
+                            <>
+                              <span className={`${styles.subtaskStatus} ${styles[`subtaskStatus_${subtask.status.replace('-', '_')}`] ?? ''}`}>
+                                {subtask.status === 'in-progress' ? 'In Progress' :
+                                 subtask.status === 'in-review' ? 'In Review' :
+                                 subtask.status.charAt(0).toUpperCase() + subtask.status.slice(1)}
+                              </span>
+                              <span className={`${styles.subtaskName} ${subtask.status === 'done' ? styles.subtaskNameDone : ''}`}>
+                                {subtask.title}
+                              </span>
+                              <span
+                                className={styles.subtaskAgentDot}
+                                style={{ backgroundColor: subtask.agentStatus === 'running' ? 'var(--agent-running)' : subtask.agentStatus === 'done' ? 'var(--agent-done)' : subtask.agentStatus === 'error' ? 'var(--agent-error)' : 'var(--agent-idle)' }}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span className={styles.subtaskName}>{subtaskId}</span>
+                              <span className={styles.parentDeleted}>(deleted)</span>
+                            </>
+                          )}
+                        </button>
                       )
                     })}
                   </div>

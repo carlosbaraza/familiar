@@ -147,7 +147,7 @@ describe('useTaskStore', () => {
       mockApi.warmupTmuxSession.mockResolvedValue(undefined)
 
       const task = await useTaskStore.getState().addTask('Test warmup')
-      expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith(task.id, undefined)
+      expect(mockApi.warmupTmuxSession).toHaveBeenCalledWith(task.id)
     })
 
     it('does not call warmupTmuxSession when creating an archived task', async () => {
@@ -1093,8 +1093,8 @@ describe('useTaskStore', () => {
     })
   })
 
-  describe('forkTask', () => {
-    it('creates a child task with forkedFrom set to parent ID', async () => {
+  describe('createSubtask', () => {
+    it('creates a child task with parentTaskId set to parent ID', async () => {
       const parent = makeTask({ id: 'tsk_parent' })
       const state = makeProjectState([parent])
       useTaskStore.setState({ projectState: state })
@@ -1102,13 +1102,13 @@ describe('useTaskStore', () => {
       mockApi.writeProjectState.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
 
-      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+      const child = await useTaskStore.getState().createSubtask('tsk_parent', 'Subtask')
 
-      expect(child.forkedFrom).toBe('tsk_parent')
-      expect(child.title).toBe('Forked task')
+      expect(child.parentTaskId).toBe('tsk_parent')
+      expect(child.title).toBe('Subtask')
     })
 
-    it('updates parent forks array with child ID', async () => {
+    it('updates parent subtaskIds array with child ID', async () => {
       const parent = makeTask({ id: 'tsk_parent' })
       const state = makeProjectState([parent])
       useTaskStore.setState({ projectState: state })
@@ -1116,11 +1116,10 @@ describe('useTaskStore', () => {
       mockApi.writeProjectState.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
 
-      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+      const child = await useTaskStore.getState().createSubtask('tsk_parent', 'Subtask')
 
-      // Parent should have been updated with forks array
       const updatedParent = useTaskStore.getState().getTaskById('tsk_parent')
-      expect(updatedParent?.forks).toContain(child.id)
+      expect(updatedParent?.subtaskIds).toContain(child.id)
     })
 
     it('logs activity on both parent and child', async () => {
@@ -1131,18 +1130,17 @@ describe('useTaskStore', () => {
       mockApi.writeProjectState.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
 
-      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+      const child = await useTaskStore.getState().createSubtask('tsk_parent', 'Subtask')
 
-      // Should log on parent and child
       expect(mockApi.appendActivity).toHaveBeenCalledTimes(2)
       const parentCall = mockApi.appendActivity.mock.calls.find(
-        (c: [string, { message: string }]) => c[0] === 'tsk_parent'
+        (c: unknown[]) => c[0] === 'tsk_parent'
       )
       const childCall = mockApi.appendActivity.mock.calls.find(
-        (c: [string, { message: string }]) => c[0] === child.id
+        (c: unknown[]) => c[0] === child.id
       )
-      expect(parentCall?.[1].message).toContain(`Forked to ${child.id}`)
-      expect(childCall?.[1].message).toContain('Forked from tsk_parent')
+      expect(parentCall?.[1].message).toContain(`Created subtask ${child.id}`)
+      expect(childCall?.[1].message).toContain('Subtask created from tsk_parent')
     })
 
     it('writes document content when provided', async () => {
@@ -1153,7 +1151,7 @@ describe('useTaskStore', () => {
       mockApi.writeProjectState.mockResolvedValue(undefined)
       mockApi.updateTask.mockResolvedValue(undefined)
 
-      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked', 'Some notes')
+      const child = await useTaskStore.getState().createSubtask('tsk_parent', 'Subtask', { documentContent: 'Some notes' })
 
       expect(mockApi.writeTaskDocument).toHaveBeenCalledWith(child.id, 'Some notes')
     })
@@ -1162,15 +1160,15 @@ describe('useTaskStore', () => {
       useTaskStore.setState({ projectState: makeProjectState([]) })
 
       await expect(
-        useTaskStore.getState().forkTask('tsk_nonexistent', 'Forked task')
+        useTaskStore.getState().createSubtask('tsk_nonexistent', 'Subtask')
       ).rejects.toThrow('Parent task not found')
     })
   })
 
-  describe('deleteTask — fork cleanup', () => {
-    it('removes deleted task from parent forks array', async () => {
-      const parent = makeTask({ id: 'tsk_parent', forks: ['tsk_child'] })
-      const child = makeTask({ id: 'tsk_child', forkedFrom: 'tsk_parent' })
+  describe('deleteTask — subtask cleanup', () => {
+    it('removes deleted task from parent subtaskIds array', async () => {
+      const parent = makeTask({ id: 'tsk_parent', subtaskIds: ['tsk_child'] })
+      const child = makeTask({ id: 'tsk_child', parentTaskId: 'tsk_parent' })
       const state = makeProjectState([parent, child])
       useTaskStore.setState({ projectState: state })
       mockApi.deleteTask.mockResolvedValue(undefined)
@@ -1179,13 +1177,12 @@ describe('useTaskStore', () => {
 
       await useTaskStore.getState().deleteTask('tsk_child')
 
-      // Parent should have been updated to remove child from forks
       expect(mockApi.updateTask).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'tsk_parent', forks: [] })
+        expect.objectContaining({ id: 'tsk_parent', subtaskIds: [] })
       )
     })
 
-    it('does not touch parent if deleted task has no forkedFrom', async () => {
+    it('does not touch parent if deleted task has no parentTaskId', async () => {
       const task = makeTask({ id: 'tsk_regular' })
       const state = makeProjectState([task])
       useTaskStore.setState({ projectState: state })
@@ -1199,11 +1196,11 @@ describe('useTaskStore', () => {
     })
   })
 
-  describe('deleteTasks — fork cleanup', () => {
-    it('removes deleted tasks from their parents forks arrays', async () => {
-      const parent = makeTask({ id: 'tsk_parent', forks: ['tsk_child1', 'tsk_child2'] })
-      const child1 = makeTask({ id: 'tsk_child1', forkedFrom: 'tsk_parent' })
-      const child2 = makeTask({ id: 'tsk_child2', forkedFrom: 'tsk_parent' })
+  describe('deleteTasks — subtask cleanup', () => {
+    it('removes deleted tasks from their parents subtaskIds arrays', async () => {
+      const parent = makeTask({ id: 'tsk_parent', subtaskIds: ['tsk_child1', 'tsk_child2'] })
+      const child1 = makeTask({ id: 'tsk_child1', parentTaskId: 'tsk_parent' })
+      const child2 = makeTask({ id: 'tsk_child2', parentTaskId: 'tsk_parent' })
       const state = makeProjectState([parent, child1, child2])
       useTaskStore.setState({ projectState: state })
       mockApi.deleteTask.mockResolvedValue(undefined)
@@ -1213,7 +1210,7 @@ describe('useTaskStore', () => {
       await useTaskStore.getState().deleteTasks(['tsk_child1', 'tsk_child2'])
 
       expect(mockApi.updateTask).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'tsk_parent', forks: [] })
+        expect.objectContaining({ id: 'tsk_parent', subtaskIds: [] })
       )
     })
   })
