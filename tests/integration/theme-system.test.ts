@@ -68,4 +68,55 @@ describe('Theme system integration', () => {
     expect(DEFAULT_SETTINGS.darkTheme).toBe('familiar-dark')
     expect(DEFAULT_SETTINGS.lightTheme).toBe('familiar-light')
   })
+
+  it('store updates atomically when loading settings from a new project', () => {
+    // Simulate the settings loading flow that happens on project switch
+    const store = useUIStore.getState()
+
+    // Start with defaults (as the store would on mount)
+    expect(store.themeMode).toBe('system')
+    expect(store.darkTheme).toBe('familiar-dark')
+    expect(store.lightTheme).toBe('familiar-light')
+
+    // Simulate loading settings from a project with custom theme
+    const settings = {
+      themeMode: 'dark' as const,
+      darkTheme: 'dracula',
+      lightTheme: 'solarized-light'
+    }
+
+    if (settings.themeMode) store.setThemeMode(settings.themeMode)
+    if (settings.darkTheme) store.setDarkTheme(settings.darkTheme)
+    if (settings.lightTheme) store.setLightTheme(settings.lightTheme)
+
+    // All values should be updated
+    const updated = useUIStore.getState()
+    expect(updated.themeMode).toBe('dark')
+    expect(updated.darkTheme).toBe('dracula')
+    expect(updated.lightTheme).toBe('solarized-light')
+  })
+
+  it('store reflects new theme when switching back to defaults', () => {
+    // Set custom theme first
+    const store = useUIStore.getState()
+    store.setThemeMode('dark')
+    store.setDarkTheme('dracula')
+    store.setLightTheme('solarized-light')
+
+    // Then "switch project" with default settings
+    const defaults = {
+      themeMode: 'system' as const,
+      darkTheme: 'familiar-dark',
+      lightTheme: 'familiar-light'
+    }
+
+    store.setThemeMode(defaults.themeMode)
+    store.setDarkTheme(defaults.darkTheme)
+    store.setLightTheme(defaults.lightTheme)
+
+    const updated = useUIStore.getState()
+    expect(updated.themeMode).toBe('system')
+    expect(updated.darkTheme).toBe('familiar-dark')
+    expect(updated.lightTheme).toBe('familiar-light')
+  })
 })
