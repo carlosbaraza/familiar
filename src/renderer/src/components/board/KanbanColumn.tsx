@@ -222,21 +222,6 @@ export function KanbanColumn({
         {headerAction}
       </div>
 
-      {alwaysShowInput && currentParentId && (() => {
-        const parentTask = useTaskStore.getState().getTaskById(currentParentId)
-        return (
-          <div className={styles.parentBanner}>
-            <div className={styles.parentBannerContent}>
-              <span className={styles.parentBannerLabel}>CREATING SUBTASKS FOR</span>
-              <span className={styles.parentBannerTitle}>{parentTask?.title ?? currentParentId}</span>
-            </div>
-            <button className={styles.parentBannerClear} onClick={onClearParent} type="button">
-              Clear
-            </button>
-          </div>
-        )
-      })()}
-
       {(alwaysShowInput || isCreating) && (
         <CreateTaskInput
           ref={inputRef}
@@ -246,6 +231,9 @@ export function KanbanColumn({
           onInputExit={onInputExit}
           onFocus={handleInputFocus}
           allSnippets={allSnippets}
+          parentId={alwaysShowInput ? currentParentId : undefined}
+          parentTitle={alwaysShowInput && currentParentId ? useTaskStore.getState().getTaskById(currentParentId)?.title : undefined}
+          onClearParent={alwaysShowInput ? onClearParent : undefined}
           draftKey={draftKey}
         />
       )}

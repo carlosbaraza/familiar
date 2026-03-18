@@ -43,8 +43,12 @@ export interface CreateTaskInputProps {
   onBlur?: () => void
   /** Snippets to show as toggles */
   allSnippets?: Snippet[]
-  /** Fork badge — if set, show fork indicator */
+  /** Parent task ID — if set, show parent badge */
   parentId?: string | null
+  /** Parent task title for display */
+  parentTitle?: string | null
+  /** Called when user clears the parent selection */
+  onClearParent?: () => void
   /** Placeholder text */
   placeholder?: string
   /** Persist draft to localStorage under this key */
@@ -64,6 +68,8 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
       onBlur,
       allSnippets = [],
       parentId,
+      parentTitle,
+      onClearParent,
       placeholder = 'Task title... (Shift+Enter for notes, paste images)',
       draftKey,
       rows = 3
@@ -228,14 +234,20 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
       <div className={containerClassName}>
         {parentId && (
           <div className={styles.parentBadge}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="18" r="3" />
-              <circle cx="6" cy="6" r="3" />
-              <circle cx="18" cy="6" r="3" />
-              <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
-              <path d="M12 12v3" />
-            </svg>
-            Subtask of {parentId}
+            <div className={styles.parentBadgeContent}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="17" x2="12" y2="3" />
+                <path d="m5 10 7-7 7 7" />
+                <path d="M5 21h14" />
+              </svg>
+              <span className={styles.parentBadgeLabel}>CREATING SUBTASKS FOR</span>
+              <span className={styles.parentBadgeTitle}>{parentTitle ?? parentId}</span>
+            </div>
+            {onClearParent && (
+              <button className={styles.parentBadgeClear} onClick={onClearParent} type="button">
+                Clear
+              </button>
+            )}
           </div>
         )}
         <textarea

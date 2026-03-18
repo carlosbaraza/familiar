@@ -45,14 +45,53 @@
 .parentBadge {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  font-size: 12px;
-  font-weight: var(--font-weight-medium);
-  color: var(--accent);
-  font-family: 'SF Mono', 'Fira Code', monospace;
   border-bottom: 1px solid var(--border);
-  background-color: var(--accent-subtle);
+  background-color: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
+}
+
+.parentBadgeContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.parentBadgeLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.parentBadgeTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parentBadgeClear {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.parentBadgeClear:hover {
+  background-color: color-mix(in srgb, var(--accent) 15%, var(--bg-surface));
+  color: var(--text-primary);
 }
 
 /* ---- Textarea ---- */
