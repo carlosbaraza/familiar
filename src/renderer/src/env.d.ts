@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../../shared/types'
+import type { CodeEditor } from '../../shared/types/settings'
 
 declare global {
   interface Window {
@@ -118,6 +119,7 @@ declare global {
       // Shell
       openPath(path: string): Promise<string>
       openExternal(url: string): Promise<void>
+      openInEditor(path: string, editor?: CodeEditor, customCommand?: string): Promise<string>
 
       // Workspace
       workspaceList(): Promise<Workspace[]>

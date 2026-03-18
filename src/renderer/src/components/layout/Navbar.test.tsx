@@ -19,6 +19,8 @@ vi.mock('@renderer/lib/format-time', () => ({
 // Mock window.api
 const mockGetProjectRoot = vi.fn()
 const mockOpenPath = vi.fn()
+const mockOpenInEditor = vi.fn()
+const mockReadSettings = vi.fn()
 const mockListNotifications = vi.fn()
 const mockMarkNotificationRead = vi.fn()
 const mockMarkNotificationsByTaskRead = vi.fn()
@@ -28,6 +30,8 @@ const mockClearNotifications = vi.fn()
 ;(window as any).api = {
   getProjectRoot: mockGetProjectRoot,
   openPath: mockOpenPath,
+  openInEditor: mockOpenInEditor,
+  readSettings: mockReadSettings,
   listNotifications: mockListNotifications,
   markNotificationRead: mockMarkNotificationRead,
   markNotificationsByTaskRead: mockMarkNotificationsByTaskRead,
@@ -49,6 +53,8 @@ describe('Navbar', () => {
 
     // Re-set mock implementations after clearAllMocks
     mockGetProjectRoot.mockResolvedValue('/Users/test/my-project')
+    mockReadSettings.mockResolvedValue({})
+    mockOpenInEditor.mockResolvedValue('')
     mockListNotifications.mockResolvedValue([])
     mockMarkNotificationRead.mockResolvedValue(undefined)
     mockMarkNotificationsByTaskRead.mockResolvedValue(undefined)
@@ -171,6 +177,28 @@ describe('Navbar', () => {
     const finderBtn = screen.getByTitle('Open in Finder')
     fireEvent.click(finderBtn)
     expect(mockOpenPath).toHaveBeenCalledWith('/Users/test/my-project')
+  })
+
+  // --- Open in Code Editor ---
+
+  it('calls openInEditor with project root when code editor button clicked', async () => {
+    await renderNavbarAndWait()
+
+    const editorBtn = screen.getByTitle('Open in Code Editor')
+    fireEvent.click(editorBtn)
+    expect(mockOpenInEditor).toHaveBeenCalledWith('/Users/test/my-project', undefined, undefined)
+  })
+
+  it('passes editor settings to openInEditor', async () => {
+    mockReadSettings.mockResolvedValue({ codeEditor: 'vscode', codeEditorCustomCommand: undefined })
+    await renderNavbarAndWait()
+
+    // Wait for settings to load
+    await waitFor(() => {
+      const editorBtn = screen.getByTitle('Open in Code Editor')
+      fireEvent.click(editorBtn)
+      expect(mockOpenInEditor).toHaveBeenCalledWith('/Users/test/my-project', 'vscode', undefined)
+    })
   })
 
   // --- Settings button ---

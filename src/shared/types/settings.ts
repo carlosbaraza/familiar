@@ -50,6 +50,28 @@ export interface ProjectSettings {
   lightTheme?: string
   /** Last-used environment variables for the worktree post-create hook */
   worktreeEnvVariables?: WorktreeEnvVariable[]
+  /** Code editor to use when opening project folders. 'system' uses macOS `open`, others use CLI commands */
+  codeEditor?: CodeEditor
+  /** Custom command for code editor when codeEditor is 'custom' */
+  codeEditorCustomCommand?: string
+}
+
+export type CodeEditor = 'system' | 'vscode' | 'cursor' | 'zed' | 'sublime' | 'custom'
+
+export const CODE_EDITOR_LABELS: Record<CodeEditor, string> = {
+  system: 'System Default',
+  vscode: 'Visual Studio Code',
+  cursor: 'Cursor',
+  zed: 'Zed',
+  sublime: 'Sublime Text',
+  custom: 'Custom Command'
+}
+
+export const CODE_EDITOR_COMMANDS: Record<Exclude<CodeEditor, 'system' | 'custom'>, string> = {
+  vscode: 'code',
+  cursor: 'cursor',
+  zed: 'zed',
+  sublime: 'subl'
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [

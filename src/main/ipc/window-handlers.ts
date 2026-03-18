@@ -1,6 +1,9 @@
 import { ipcMain, BrowserWindow, dialog, app, shell } from 'electron'
+import { execFile } from 'child_process'
 import { DataService } from '../services/data-service'
 import { WorkspaceManager } from '../services/workspace-manager'
+import { CODE_EDITOR_COMMANDS } from '@shared/types/settings'
+import type { CodeEditor } from '@shared/types/settings'
 
 export function registerWindowHandlers(
   mainWindow: BrowserWindow,
@@ -33,4 +36,32 @@ export function registerWindowHandlers(
   ipcMain.handle('shell:open-external', async (_, url: string) => {
     return shell.openExternal(url)
   })
+
+  ipcMain.handle(
+    'shell:open-in-editor',
+    async (_, path: string, editor?: CodeEditor, customCommand?: string) => {
+      if (editor === 'custom' && customCommand) {
+        const [cmd, ...args] = customCommand.split(/\s+/)
+        return new Promise<string>((resolve) => {
+          execFile(cmd, [...args, path], (err) => {
+            resolve(err ? err.message : '')
+          })
+        })
+      }
+
+      if (editor && editor !== 'system' && editor !== 'custom') {
+        const cmd = CODE_EDITOR_COMMANDS[editor]
+        if (cmd) {
+          return new Promise<string>((resolve) => {
+            execFile(cmd, [path], (err) => {
+              resolve(err ? err.message : '')
+            })
+          })
+        }
+      }
+
+      // System default: use macOS `open`
+      return shell.openPath(path)
+    }
+  )
 }

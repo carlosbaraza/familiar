@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../shared/types'
+import type { CodeEditor } from '../shared/types/settings'
 
 // Custom APIs for renderer
 const api = {
@@ -195,6 +196,8 @@ const api = {
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+  openInEditor: (path: string, editor?: CodeEditor, customCommand?: string): Promise<string> =>
+    ipcRenderer.invoke('shell:open-in-editor', path, editor, customCommand),
 
   // Workspace
   workspaceList: (): Promise<Workspace[]> => ipcRenderer.invoke('workspace:list'),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -6,6 +6,7 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
+import type { ProjectSettings } from '@shared/types'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
@@ -120,6 +121,20 @@ export function Navbar(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showHelpMenu])
 
+  // Load settings for code editor preference
+  const [editorSettings, setEditorSettings] = useState<Pick<ProjectSettings, 'codeEditor' | 'codeEditorCustomCommand'>>({})
+  useEffect(() => {
+    window.api.readSettings().then((s) => {
+      setEditorSettings({ codeEditor: s.codeEditor, codeEditorCustomCommand: s.codeEditorCustomCommand })
+    }).catch(() => {})
+  }, [])
+
+  const openInEditor = useCallback(() => {
+    if (projectRoot) {
+      window.api.openInEditor(projectRoot, editorSettings.codeEditor, editorSettings.codeEditorCustomCommand)
+    }
+  }, [projectRoot, editorSettings])
+
   const wsCount = workspaceUnreadCount()
   const count = wsCount > 0 ? wsCount : unreadCount()
 
@@ -138,6 +153,20 @@ export function Navbar(): React.JSX.Element {
       <span className={styles.projectName}>{projectName}</span>
 
       <div className={styles.navGroup}>
+        {/* Toggle project sidebar */}
+        <button
+          className={`${styles.navButton} ${sidebarVisible ? styles.navButtonActive : ''}`}
+          onClick={toggleSidebarVisible}
+          title="Projects (⌘B)"
+          data-testid="sidebar-toggle-nav"
+        >
+          {/* Sidebar/panel-left icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="5.5" y1="2" x2="5.5" y2="14" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
+
         {/* Dashboard / home button */}
         <button
           className={`${styles.navButton} ${!taskDetailOpen ? styles.navButtonActive : ''}`}
@@ -173,17 +202,17 @@ export function Navbar(): React.JSX.Element {
           </svg>
         </button>
 
-        {/* Toggle project sidebar */}
+        {/* Open in code editor */}
         <button
-          className={`${styles.navButton} ${sidebarVisible ? styles.navButtonActive : ''}`}
-          onClick={toggleSidebarVisible}
-          title="Projects (⌘B)"
-          data-testid="sidebar-toggle-nav"
+          className={styles.navButton}
+          onClick={openInEditor}
+          title="Open in Code Editor"
+          data-testid="open-in-editor-nav"
         >
-          {/* Sidebar/panel-left icon */}
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1.5" y="2" width="13" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-            <line x1="5.5" y1="2" x2="5.5" y2="14" stroke="currentColor" strokeWidth="1.5" />
+          {/* Code/brackets icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
           </svg>
         </button>
 
