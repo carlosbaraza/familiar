@@ -37,7 +37,7 @@
 }
 
 .rounded:focus-within {
-  border-color: var(--accent);
+  border-color: var(--border);
 }
 
 /* ---- Fork badge ---- */
