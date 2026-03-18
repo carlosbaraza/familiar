@@ -257,6 +257,16 @@
   flex-shrink: 0;
 }
 
+/* ---- Copy session toggle ---- */
+
+.copySessionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+
 /* ---- Snippet toggles ---- */
 
 .snippetToggles {

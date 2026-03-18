@@ -14,11 +14,13 @@ export function CreateTaskModal(): React.JSX.Element | null {
   const createSubtask = useTaskStore((s) => s.createSubtask)
   const inputRef = useRef<CreateTaskInputHandle>(null)
   const [snippets, setSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
+  const [copySession, setCopySession] = useState(false)
 
-  // Load snippets when modal opens
+  // Load snippets and reset state when modal opens
   useEffect(() => {
     if (!open) return
     inputRef.current?.clear()
+    setCopySession(false)
     setTimeout(() => inputRef.current?.focus(), 0)
 
     window.api.readSettings().then((settings) => {
@@ -43,7 +45,7 @@ export function CreateTaskModal(): React.JSX.Element | null {
     ) => {
       let task: import('@shared/types').Task
       if (parentId) {
-        task = await createSubtask(parentId, title, { documentContent: document })
+        task = await createSubtask(parentId, title, { copySession, documentContent: document })
       } else {
         task = await addTask(title)
         if (document) {
@@ -127,6 +129,8 @@ export function CreateTaskModal(): React.JSX.Element | null {
           allSnippets={snippets}
           parentId={parentId}
           parentTitle={parentTitle}
+          copySession={copySession}
+          onCopySessionChange={parentId ? setCopySession : undefined}
           onClearParent={parentId ? () => {
             useUIStore.getState().closeCreateTaskModal()
           } : undefined}

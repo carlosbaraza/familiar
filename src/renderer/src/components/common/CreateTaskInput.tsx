@@ -49,6 +49,10 @@ export interface CreateTaskInputProps {
   parentTitle?: string | null
   /** Called when user clears the parent selection */
   onClearParent?: () => void
+  /** Whether to copy the agent session when creating a subtask */
+  copySession?: boolean
+  /** Called when the copy session toggle changes */
+  onCopySessionChange?: (value: boolean) => void
   /** Placeholder text */
   placeholder?: string
   /** Persist draft to localStorage under this key */
@@ -70,6 +74,8 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
       parentId,
       parentTitle,
       onClearParent,
+      copySession,
+      onCopySessionChange,
       placeholder = 'Task title... (Shift+Enter for notes, paste images)',
       draftKey,
       rows = 3
@@ -323,6 +329,21 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
                 {snippet.title}
               </button>
             ))}
+          </div>
+        )}
+        {parentId && onCopySessionChange && (
+          <div className={styles.copySessionRow}>
+            <button
+              type="button"
+              className={`${styles.snippetToggle} ${copySession ? styles.snippetToggleOn : ''}`}
+              onClick={() => onCopySessionChange(!copySession)}
+              title={copySession ? 'Will copy the parent agent session' : 'Will start with a fresh agent session'}
+            >
+              <span className={styles.snippetToggleCheck}>
+                {copySession ? '✓' : ''}
+              </span>
+              Copy agent session
+            </button>
           </div>
         )}
         <div className={styles.footer}>
