@@ -117,7 +117,7 @@ export function CreateTaskModal(): React.JSX.Element | null {
   if (!open) return null
 
   return (
-    <div style={overlayStyle} onClick={handleOverlayClick}>
+    <div style={overlayStyle} onClick={handleOverlayClick} onKeyDown={(e) => { if (e.key === 'Escape') e.stopPropagation() }}>
       <div style={wrapperStyle}>
         <CreateTaskInput
           ref={inputRef}

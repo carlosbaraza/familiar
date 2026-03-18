@@ -201,6 +201,7 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
           doSubmit()
         }
         if (e.key === 'Escape') {
+          e.stopPropagation()
           updateDraft('')
           setPendingImages([])
           setPendingPastedFiles([])
