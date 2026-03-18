@@ -228,3 +228,209 @@ describe('file-handlers task:move-to-worktree', () => {
     expect(cp).not.toHaveBeenCalled()
   })
 })
+
+describe('file-handlers worktree:migrate-tasks', () => {
+  let handlers: Record<string, Function>
+
+  const mockDataService = {
+    getProjectRoot: vi.fn().mockReturnValue('/projects/source'),
+    readProjectState: vi.fn(),
+    writeProjectState: vi.fn(),
+    createTask: vi.fn(),
+    readTask: vi.fn(),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    readTaskDocument: vi.fn(),
+    writeTaskDocument: vi.fn(),
+    readTaskActivity: vi.fn(),
+    appendActivity: vi.fn(),
+    saveAttachment: vi.fn(),
+    copyTempToAttachment: vi.fn(),
+    listTaskFiles: vi.fn(),
+    savePastedFile: vi.fn(),
+    readPastedFile: vi.fn(),
+    deletePastedFile: vi.fn(),
+    readSettings: vi.fn(),
+    writeSettings: vi.fn(),
+    initProject: vi.fn(),
+    isInitialized: vi.fn()
+  } as any
+
+  const makeTask = (overrides: Partial<Task> = {}): Task => ({
+    id: 'tsk_abc123',
+    title: 'Test task',
+    status: 'todo',
+    priority: 'medium',
+    labels: [],
+    agentStatus: 'idle',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    sortOrder: 0,
+    ...overrides
+  })
+
+  const makeState = (tasks: Task[], labels: { name: string; color: string; description?: string }[] = []): ProjectState => ({
+    projectName: 'test',
+    tasks,
+    columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
+    labels
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    handlers = {}
+    ;(ipcMain.handle as any).mockImplementation((channel: string, handler: Function) => {
+      handlers[channel] = handler
+    })
+    registerFileHandlers(mockDataService, () => null)
+  })
+
+  it('registers the worktree:migrate-tasks handler', () => {
+    expect(handlers['worktree:migrate-tasks']).toBeDefined()
+  })
+
+  it('migrates tasks from worktree to main project with label and archived status', async () => {
+    const task = makeTask({ id: 'tsk_wt1', status: 'in-progress', labels: ['feature'] })
+    const worktreeState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    const result = await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(result).toEqual({ migratedCount: 1 })
+
+    // Should copy task directory
+    expect(cp).toHaveBeenCalledWith(
+      '/projects/worktree/.familiar/tasks/tsk_wt1',
+      '/projects/main/.familiar/tasks/tsk_wt1',
+      { recursive: true }
+    )
+
+    // Check the written task.json
+    const writeCalls = (fs.writeFileSync as any).mock.calls
+    const taskJsonWrite = writeCalls.find((c: any[]) => c[0].includes('tsk_wt1/task.json'))
+    expect(taskJsonWrite).toBeTruthy()
+    const writtenTask = JSON.parse(taskJsonWrite[1])
+    expect(writtenTask.status).toBe('archived')
+    expect(writtenTask.agentStatus).toBe('idle')
+    expect(writtenTask.labels).toContain('my-feature')
+    expect(writtenTask.labels).toContain('feature')
+
+    // Check the written state.json includes the new label
+    const stateWrite = writeCalls.find((c: any[]) =>
+      c[0] === '/projects/main/.familiar/state.json'
+    )
+    expect(stateWrite).toBeTruthy()
+    const writtenState: ProjectState = JSON.parse(stateWrite[1])
+    expect(writtenState.labels.some((l) => l.name === 'my-feature')).toBe(true)
+    expect(writtenState.tasks).toHaveLength(1)
+    expect(writtenState.tasks[0].status).toBe('archived')
+  })
+
+  it('returns 0 when worktree has no .familiar directory', async () => {
+    ;(fs.existsSync as any).mockReturnValueOnce(false) // worktree state.json doesn't exist
+
+    const result = await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(result).toEqual({ migratedCount: 0 })
+    expect(cp).not.toHaveBeenCalled()
+  })
+
+  it('returns 0 when worktree has no tasks', async () => {
+    const worktreeState = makeState([])
+    ;(fs.readFileSync as any).mockReturnValueOnce(JSON.stringify(worktreeState))
+
+    const result = await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(result).toEqual({ migratedCount: 0 })
+  })
+
+  it('does not duplicate label if task already has it', async () => {
+    const task = makeTask({ id: 'tsk_wt2', labels: ['my-feature'] })
+    const worktreeState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    const writeCalls = (fs.writeFileSync as any).mock.calls
+    const taskJsonWrite = writeCalls.find((c: any[]) => c[0].includes('tsk_wt2/task.json'))
+    const writtenTask = JSON.parse(taskJsonWrite[1])
+    // Should have exactly one instance of 'my-feature'
+    expect(writtenTask.labels.filter((l: string) => l === 'my-feature')).toHaveLength(1)
+  })
+
+  it('does not duplicate label config if it already exists in target', async () => {
+    const task = makeTask({ id: 'tsk_wt3' })
+    const worktreeState = makeState([task])
+    const targetState = makeState([], [{ name: 'my-feature', color: '#ff0000' }])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    const writeCalls = (fs.writeFileSync as any).mock.calls
+    const stateWrite = writeCalls.find((c: any[]) =>
+      c[0] === '/projects/main/.familiar/state.json'
+    )
+    const writtenState: ProjectState = JSON.parse(stateWrite[1])
+    // Should still only have one label with that name
+    expect(writtenState.labels.filter((l) => l.name === 'my-feature')).toHaveLength(1)
+    // Should keep the original color
+    expect(writtenState.labels.find((l) => l.name === 'my-feature')?.color).toBe('#ff0000')
+  })
+
+  it('migrates multiple tasks', async () => {
+    const task1 = makeTask({ id: 'tsk_a' })
+    const task2 = makeTask({ id: 'tsk_b' })
+    const worktreeState = makeState([task1, task2])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    const result = await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(result).toEqual({ migratedCount: 2 })
+    expect(cp).toHaveBeenCalledTimes(2)
+  })
+})

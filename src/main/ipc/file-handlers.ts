@@ -214,4 +214,93 @@ export function registerFileHandlers(
       return { movedCount }
     }
   )
+
+  // Migrate tasks from a worktree to the main project:
+  // - Creates a label with the worktree slug name in the target project
+  // - Moves all tasks from worktree to target
+  // - Labels each moved task with the worktree name
+  // - Archives each moved task
+  ipcMain.handle(
+    'worktree:migrate-tasks',
+    async (
+      _,
+      worktreeProjectPath: string,
+      targetProjectPath: string,
+      worktreeSlug: string
+    ): Promise<{ migratedCount: number }> => {
+      const worktreeDataDir = join(worktreeProjectPath, DATA_DIR)
+      const targetDataDir = join(targetProjectPath, DATA_DIR)
+
+      // Check if worktree has .familiar initialized
+      const worktreeStatePath = join(worktreeDataDir, STATE_FILE)
+      if (!fs.existsSync(worktreeStatePath)) {
+        return { migratedCount: 0 }
+      }
+
+      const worktreeStateRaw = fs.readFileSync(worktreeStatePath, 'utf-8')
+      const worktreeState: ProjectState = JSON.parse(worktreeStateRaw)
+
+      if (worktreeState.tasks.length === 0) {
+        return { migratedCount: 0 }
+      }
+
+      const targetStatePath = join(targetDataDir, STATE_FILE)
+      if (!fs.existsSync(targetStatePath)) {
+        return { migratedCount: 0 }
+      }
+
+      const targetStateRaw = fs.readFileSync(targetStatePath, 'utf-8')
+      const targetState: ProjectState = JSON.parse(targetStateRaw)
+
+      // Create a label for the worktree if it doesn't exist
+      const labelName = worktreeSlug
+      if (!targetState.labels.some((l) => l.name === labelName)) {
+        targetState.labels.push({
+          name: labelName,
+          color: '#8b5cf6',
+          description: `Tasks from worktree: ${worktreeSlug}`
+        })
+      }
+
+      // Ensure target tasks dir exists
+      const targetTasksDir = join(targetDataDir, TASKS_DIR)
+      if (!fs.existsSync(targetTasksDir)) {
+        fs.mkdirSync(targetTasksDir, { recursive: true })
+      }
+
+      let migratedCount = 0
+
+      for (const task of worktreeState.tasks) {
+        const sourceTaskDir = join(worktreeDataDir, TASKS_DIR, task.id)
+        if (!fs.existsSync(sourceTaskDir)) continue
+
+        const targetTaskDir = join(targetTasksDir, task.id)
+        await cp(sourceTaskDir, targetTaskDir, { recursive: true })
+
+        // Update task: add label, set status to archived, reset agent
+        const migratedTask: Task = {
+          ...task,
+          labels: task.labels.includes(labelName)
+            ? task.labels
+            : [...task.labels, labelName],
+          status: 'archived',
+          agentStatus: 'idle',
+          updatedAt: new Date().toISOString(),
+          sortOrder: 0
+        }
+        fs.writeFileSync(
+          join(targetTaskDir, 'task.json'),
+          JSON.stringify(migratedTask, null, 2)
+        )
+
+        targetState.tasks.push(migratedTask)
+        migratedCount++
+      }
+
+      // Write updated target state
+      fs.writeFileSync(targetStatePath, JSON.stringify(targetState, null, 2))
+
+      return { migratedCount }
+    }
+  )
 }

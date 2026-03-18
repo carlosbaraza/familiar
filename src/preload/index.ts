@@ -240,6 +240,14 @@ const api = {
   ): Promise<{ movedCount: number }> =>
     ipcRenderer.invoke('task:move-to-worktree', taskIds, targetProjectPath, mode),
 
+  // Worktree task migration
+  worktreeMigrateTasks: (
+    worktreeProjectPath: string,
+    targetProjectPath: string,
+    worktreeSlug: string
+  ): Promise<{ migratedCount: number }> =>
+    ipcRenderer.invoke('worktree:migrate-tasks', worktreeProjectPath, targetProjectPath, worktreeSlug),
+
   // Worktree
   worktreeList: (projectPath?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]> =>
     ipcRenderer.invoke('worktree:list', projectPath),

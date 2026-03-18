@@ -64,6 +64,14 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
+  // Remove worktree dialog state
+  const [removeDialog, setRemoveDialog] = useState<{
+    worktreePath: string
+    slug: string
+  } | null>(null)
+  const [removeKeepTasks, setRemoveKeepTasks] = useState(true)
+  const [isRemoving, setIsRemoving] = useState(false)
+
   // Create worktree dialog state
   const [createDialog, setCreateDialog] = useState(false)
   const [createName, setCreateName] = useState('')
@@ -248,15 +256,45 @@ export function ProjectSidebar(): React.JSX.Element | null {
     await handleSwitchProject(worktreePath)
   }
 
-  const handleRemoveWorktree = async (worktreePath: string): Promise<void> => {
-    if (!confirm('Remove this worktree? This will delete the worktree directory and its branch.')) return
+  const handleRemoveWorktree = (worktreePath: string, slug: string): void => {
+    setRemoveKeepTasks(true)
+    setRemoveDialog({ worktreePath, slug })
+  }
+
+  const handleRemoveWorktreeConfirm = async (): Promise<void> => {
+    if (!removeDialog || isRemoving) return
+    setIsRemoving(true)
     try {
+      if (removeKeepTasks) {
+        // Find the main project (parent of this worktree)
+        const mainProject = openProjects.find(
+          (p) => !p.isWorktree && p.worktrees?.some((w) => w.path === removeDialog.worktreePath)
+        )
+        if (mainProject) {
+          await window.api.worktreeMigrateTasks(
+            removeDialog.worktreePath,
+            mainProject.path,
+            removeDialog.slug
+          )
+        }
+      }
       // Run pre-delete hook before removing
-      await window.api.worktreeRunPreDeleteHook(worktreePath, {})
-      await removeWorktree(worktreePath)
+      await window.api.worktreeRunPreDeleteHook(removeDialog.worktreePath, {})
+      await removeWorktree(removeDialog.worktreePath)
+      // Reload project state if we migrated tasks
+      if (removeKeepTasks) {
+        await loadProjectState()
+      }
+      setRemoveDialog(null)
     } catch (err) {
       console.error('Failed to remove worktree:', err)
+    } finally {
+      setIsRemoving(false)
     }
+  }
+
+  const handleRemoveWorktreeCancel = (): void => {
+    setRemoveDialog(null)
   }
 
   const handleOpenRenameDialog = (worktreePath: string, currentSlug: string): void => {
@@ -312,7 +350,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
       {
         label: 'Remove Worktree',
         danger: true,
-        onClick: () => handleRemoveWorktree(worktreePath)
+        onClick: () => handleRemoveWorktree(worktreePath, slug)
       }
     ]
 
@@ -423,7 +461,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
                         className={styles.removeButton}
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleRemoveWorktree(wt.path)
+                          handleRemoveWorktree(wt.path, wt.slug)
                         }}
                         title="Remove worktree"
                       >
@@ -494,6 +532,49 @@ export function ProjectSidebar(): React.JSX.Element | null {
                 disabled={!renameValue.trim()}
               >
                 Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove worktree dialog */}
+      {removeDialog && (
+        <div style={dialogStyles.overlay} onClick={(e) => { if (e.target === e.currentTarget) handleRemoveWorktreeCancel() }}>
+          <div style={dialogStyles.wrapper}>
+            <div style={dialogStyles.header}>Remove Worktree</div>
+            <div style={dialogStyles.body}>
+              <p style={removeDialogStyles.description}>
+                This will delete the worktree directory and its branch for <strong>{removeDialog.slug}</strong>.
+              </p>
+              <label style={removeDialogStyles.toggleRow}>
+                <div style={removeDialogStyles.toggleTrack} onClick={() => setRemoveKeepTasks(!removeKeepTasks)}>
+                  <div style={{
+                    ...removeDialogStyles.toggleThumb,
+                    ...(removeKeepTasks ? removeDialogStyles.toggleThumbActive : {})
+                  }} />
+                </div>
+                <div style={removeDialogStyles.toggleText}>
+                  <span style={removeDialogStyles.toggleLabel}>Keep tasks</span>
+                  <span style={removeDialogStyles.toggleHint}>
+                    Move all tasks to the main project, label them with &quot;{removeDialog.slug}&quot;, and archive them.
+                  </span>
+                </div>
+              </label>
+            </div>
+            <div style={dialogStyles.footer}>
+              <button style={dialogStyles.cancelButton} onClick={handleRemoveWorktreeCancel}>
+                Cancel
+              </button>
+              <button
+                style={{
+                  ...removeDialogStyles.deleteButton,
+                  opacity: isRemoving ? 0.5 : 1
+                }}
+                onClick={handleRemoveWorktreeConfirm}
+                disabled={isRemoving}
+              >
+                {isRemoving ? 'Removing...' : 'Remove Worktree'}
               </button>
             </div>
           </div>
@@ -806,5 +887,79 @@ const createDialogStyles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     borderRadius: 4,
     marginTop: 2
+  }
+}
+
+const removeDialogStyles: Record<string, React.CSSProperties> = {
+  description: {
+    margin: '0 0 16px 0',
+    fontSize: 13,
+    lineHeight: '1.5',
+    color: 'var(--text-secondary)',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+    cursor: 'pointer',
+    padding: '10px 12px',
+    borderRadius: 6,
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-primary)'
+  },
+  toggleTrack: {
+    width: 36,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'var(--border)',
+    position: 'relative' as const,
+    flexShrink: 0,
+    cursor: 'pointer',
+    transition: 'background-color 150ms ease',
+    marginTop: 1
+  },
+  toggleThumb: {
+    position: 'absolute' as const,
+    top: 2,
+    left: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'var(--text-tertiary)',
+    transition: 'transform 150ms ease, background-color 150ms ease'
+  },
+  toggleThumbActive: {
+    transform: 'translateX(16px)',
+    backgroundColor: 'var(--accent)'
+  },
+  toggleText: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 2,
+    flex: 1
+  },
+  toggleLabel: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'var(--text-primary)',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  toggleHint: {
+    fontSize: 12,
+    color: 'var(--text-tertiary)',
+    lineHeight: '1.4',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  deleteButton: {
+    padding: '6px 14px',
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: '#fff',
+    backgroundColor: '#ef4444',
+    border: '1px solid #ef4444',
+    borderRadius: 6,
+    cursor: 'pointer'
   }
 }

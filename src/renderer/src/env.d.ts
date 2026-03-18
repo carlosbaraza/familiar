@@ -148,6 +148,13 @@ declare global {
         mode: 'copy' | 'move'
       ): Promise<{ movedCount: number }>
 
+      // Worktree task migration
+      worktreeMigrateTasks(
+        worktreeProjectPath: string,
+        targetProjectPath: string,
+        worktreeSlug: string
+      ): Promise<{ migratedCount: number }>
+
       // Worktree
       worktreeList(projectPath?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
       worktreeCreate(customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
