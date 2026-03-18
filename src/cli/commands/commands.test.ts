@@ -63,7 +63,7 @@ describe('CLI commands (via file-ops)', () => {
   // Helper: replicate add command logic
   async function runAdd(
     title: string,
-    opts: { priority?: string; status?: string; labels?: string } = {}
+    opts: { priority?: string; status?: string; labels?: string; body?: string; bodyFile?: string } = {}
   ): Promise<Task> {
     const state = await readProjectState(tmpDir)
     const status = (opts.status ?? 'todo') as Task['status']
@@ -87,9 +87,17 @@ describe('CLI commands (via file-ops)', () => {
     await ensureTaskDir(tmpDir, task.id)
     await writeTask(tmpDir, task)
 
-    // Write empty document.md
+    // Determine document content: --body-file > --body > empty
+    let documentContent = ''
+    if (opts.bodyFile) {
+      documentContent = (await fs.readFile(opts.bodyFile, 'utf-8')).trim()
+    } else if (opts.body) {
+      documentContent = opts.body
+    }
+
+    // Write document.md
     const docPath = path.join(tmpDir, DATA_DIR, TASKS_DIR, task.id, 'document.md')
-    await fs.writeFile(docPath, '', 'utf-8')
+    await fs.writeFile(docPath, documentContent, 'utf-8')
 
     // Write initial activity
     await appendActivity(tmpDir, task.id, {
@@ -149,6 +157,51 @@ describe('CLI commands (via file-ops)', () => {
 
       expect(task.priority).toBe('urgent')
       expect(task.status).toBe('todo')
+    })
+
+    it('creates a task with --body option', async () => {
+      await runInit()
+      const body = '## Requirements\n\n- Feature A\n- Feature B'
+      const task = await runAdd('Task with body', { body })
+
+      const docPath = path.join(tmpDir, DATA_DIR, TASKS_DIR, task.id, 'document.md')
+      const content = await fs.readFile(docPath, 'utf-8')
+      expect(content).toBe(body)
+    })
+
+    it('creates a task with --body-file option', async () => {
+      await runInit()
+      const bodyContent = '# Spec\n\nDetailed specification here.'
+      const bodyFilePath = path.join(tmpDir, 'spec.md')
+      await fs.writeFile(bodyFilePath, bodyContent, 'utf-8')
+
+      const task = await runAdd('Task from file', { bodyFile: bodyFilePath })
+
+      const docPath = path.join(tmpDir, DATA_DIR, TASKS_DIR, task.id, 'document.md')
+      const content = await fs.readFile(docPath, 'utf-8')
+      expect(content).toBe(bodyContent.trim())
+    })
+
+    it('--body-file takes precedence over --body', async () => {
+      await runInit()
+      const fileContent = 'Content from file'
+      const bodyFilePath = path.join(tmpDir, 'body.md')
+      await fs.writeFile(bodyFilePath, fileContent, 'utf-8')
+
+      const task = await runAdd('Precedence test', { body: 'Content from --body', bodyFile: bodyFilePath })
+
+      const docPath = path.join(tmpDir, DATA_DIR, TASKS_DIR, task.id, 'document.md')
+      const content = await fs.readFile(docPath, 'utf-8')
+      expect(content).toBe(fileContent.trim())
+    })
+
+    it('creates a task with empty document when no body provided', async () => {
+      await runInit()
+      const task = await runAdd('No body task')
+
+      const docPath = path.join(tmpDir, DATA_DIR, TASKS_DIR, task.id, 'document.md')
+      const content = await fs.readFile(docPath, 'utf-8')
+      expect(content).toBe('')
     })
 
     it('creates a task with labels and adds them to project labels', async () => {

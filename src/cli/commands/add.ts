@@ -25,14 +25,29 @@ export function addCommand(): Command {
     .option('-p, --priority <priority>', 'Priority (urgent, high, medium, low, none)', 'none')
     .option('-s, --status <status>', 'Initial status (todo, in-progress, in-review, done, archived)', 'todo')
     .option('-l, --labels <labels>', 'Comma-separated labels')
-    .option('--fork-from <taskId>', 'Fork from an existing task (copies session context)')
-    .action(async (rawTitle: string, opts: { priority: string; status: string; labels?: string; forkFrom?: string }) => {
+    .option('-b, --body <text>', 'Task body/description (supports markdown)')
+    .option('-f, --body-file <path>', 'Read task body from a file')
+    .option('--parent <taskId>', 'Create as subtask of an existing task')
+    .option('--fork-from <taskId>', 'Alias for --parent (deprecated)')
+    .action(async (rawTitle: string, opts: { priority: string; status: string; labels?: string; body?: string; bodyFile?: string; parent?: string; forkFrom?: string }) => {
       const root = getProjectRoot()
 
       // Support multi-line: first line is the title, rest goes into the document
       const lines = rawTitle.split('\n')
       const title = lines[0].trim()
-      const documentContent = lines.slice(1).join('\n').trim()
+      let documentContent = lines.slice(1).join('\n').trim()
+
+      // --body-file takes precedence over --body, which takes precedence over multiline title
+      if (opts.bodyFile) {
+        try {
+          documentContent = (await fs.readFile(opts.bodyFile, 'utf-8')).trim()
+        } catch (err) {
+          console.error(chalk.red(`Cannot read body file: ${opts.bodyFile}`))
+          process.exit(1)
+        }
+      } else if (opts.body) {
+        documentContent = opts.body
+      }
 
       // Validate priority
       if (!isValidPriority(opts.priority)) {
@@ -66,11 +81,14 @@ export function addCommand(): Command {
         }
       }
 
-      // Validate fork-from parent exists if specified
-      if (opts.forkFrom) {
-        const parentExists = state.tasks.some((t) => t.id === opts.forkFrom)
+      // Support --parent or deprecated --fork-from
+      const parentTaskId = opts.parent ?? opts.forkFrom
+
+      // Validate parent exists if specified
+      if (parentTaskId) {
+        const parentExists = state.tasks.some((t) => t.id === parentTaskId)
         if (!parentExists) {
-          console.error(chalk.red(`Parent task not found: ${opts.forkFrom}`))
+          console.error(chalk.red(`Parent task not found: ${parentTaskId}`))
           process.exit(1)
         }
       }
@@ -80,7 +98,7 @@ export function addCommand(): Command {
         priority: opts.priority as Priority,
         labels,
         sortOrder: 0,
-        ...(opts.forkFrom ? { forkedFrom: opts.forkFrom } : {})
+        ...(parentTaskId ? { parentTaskId } : {})
       })
 
       // Create task directory with files
@@ -100,25 +118,25 @@ export function addCommand(): Command {
         message: `Task created: ${title}`
       })
 
-      // Handle fork relationships
-      if (opts.forkFrom) {
-        // Update parent's forks array
-        const parent = state.tasks.find((t) => t.id === opts.forkFrom)!
-        parent.forks = [...(parent.forks ?? []), task.id]
+      // Handle parent/subtask relationships
+      if (parentTaskId) {
+        // Update parent's subtaskIds array
+        const parent = state.tasks.find((t) => t.id === parentTaskId)!
+        parent.subtaskIds = [...(parent.subtaskIds ?? []), task.id]
         await writeTask(root, parent)
 
         // Log activity on both tasks
-        await appendActivity(root, opts.forkFrom, {
+        await appendActivity(root, parentTaskId, {
           id: generateActivityId(),
           timestamp: task.createdAt,
           type: 'status_change',
-          message: `Forked to ${task.id}`
+          message: `Created subtask ${task.id}`
         })
         await appendActivity(root, task.id, {
           id: generateActivityId(),
           timestamp: task.createdAt,
           type: 'status_change',
-          message: `Forked from ${opts.forkFrom}`
+          message: `Subtask created from ${parentTaskId}`
         })
       }
 
@@ -155,8 +173,8 @@ export function addCommand(): Command {
       if (labels.length > 0) {
         console.log(chalk.dim(`  Labels:   ${labels.join(', ')}`))
       }
-      if (opts.forkFrom) {
-        console.log(chalk.dim(`  Forked:   from ${opts.forkFrom}`))
+      if (parentTaskId) {
+        console.log(chalk.dim(`  Parent:   ${parentTaskId}`))
       }
     })
 }
