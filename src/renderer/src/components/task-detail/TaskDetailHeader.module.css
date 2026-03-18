@@ -12,12 +12,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-1);
 }
 
 .topBarActions {
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  flex-wrap: wrap;
 }
 
 .closeButton {
@@ -26,6 +29,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   transition: background-color var(--transition-fast), color var(--transition-fast);
@@ -81,6 +85,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .metaLabel {
@@ -156,6 +161,7 @@
   transition: background-color var(--transition-fast), color var(--transition-fast),
     border-color var(--transition-fast);
   height: 28px;
+  flex-shrink: 0;
 }
 
 .taskIdBadge:hover {
@@ -173,4 +179,6 @@
   color: var(--text-tertiary);
   display: flex;
   gap: var(--space-3);
+  flex-wrap: wrap;
+  white-space: nowrap;
 }
