@@ -6,7 +6,6 @@ import { useTaskStore } from '@renderer/stores/task-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { formatRelativeTime } from '@renderer/lib/format-time'
 import { APP_NAME } from '@shared/constants'
-import type { ProjectSettings } from '@shared/types'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
@@ -121,19 +120,15 @@ export function Navbar(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showHelpMenu])
 
-  // Load settings for code editor preference
-  const [editorSettings, setEditorSettings] = useState<Pick<ProjectSettings, 'codeEditor' | 'codeEditorCustomCommand'>>({})
-  useEffect(() => {
-    window.api.readSettings().then((s) => {
-      setEditorSettings({ codeEditor: s.codeEditor, codeEditorCustomCommand: s.codeEditorCustomCommand })
-    }).catch(() => {})
-  }, [])
-
-  const openInEditor = useCallback(() => {
-    if (projectRoot) {
-      window.api.openInEditor(projectRoot, editorSettings.codeEditor, editorSettings.codeEditorCustomCommand)
+  const openInEditor = useCallback(async () => {
+    if (!projectRoot) return
+    try {
+      const s = await window.api.readSettings()
+      window.api.openInEditor(projectRoot, s.codeEditor, s.codeEditorCustomCommand)
+    } catch {
+      window.api.openInEditor(projectRoot)
     }
-  }, [projectRoot, editorSettings])
+  }, [projectRoot])
 
   const wsCount = workspaceUnreadCount()
   const count = wsCount > 0 ? wsCount : unreadCount()

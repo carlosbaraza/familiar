@@ -186,17 +186,18 @@ describe('Navbar', () => {
 
     const editorBtn = screen.getByTitle('Open in Code Editor')
     fireEvent.click(editorBtn)
-    expect(mockOpenInEditor).toHaveBeenCalledWith('/Users/test/my-project', undefined, undefined)
+    await waitFor(() => {
+      expect(mockOpenInEditor).toHaveBeenCalledWith('/Users/test/my-project', undefined, undefined)
+    })
   })
 
   it('passes editor settings to openInEditor', async () => {
     mockReadSettings.mockResolvedValue({ codeEditor: 'vscode', codeEditorCustomCommand: undefined })
     await renderNavbarAndWait()
 
-    // Wait for settings to load
+    const editorBtn = screen.getByTitle('Open in Code Editor')
+    fireEvent.click(editorBtn)
     await waitFor(() => {
-      const editorBtn = screen.getByTitle('Open in Code Editor')
-      fireEvent.click(editorBtn)
       expect(mockOpenInEditor).toHaveBeenCalledWith('/Users/test/my-project', 'vscode', undefined)
     })
   })

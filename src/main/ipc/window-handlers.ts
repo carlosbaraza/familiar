@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow, dialog, app, shell } from 'electron'
-import { execFile } from 'child_process'
+import { spawn } from 'child_process'
 import { DataService } from '../services/data-service'
 import { WorkspaceManager } from '../services/workspace-manager'
 import { CODE_EDITOR_COMMANDS } from '@shared/types/settings'
@@ -40,23 +40,29 @@ export function registerWindowHandlers(
   ipcMain.handle(
     'shell:open-in-editor',
     async (_, path: string, editor?: CodeEditor, customCommand?: string) => {
-      if (editor === 'custom' && customCommand) {
-        const [cmd, ...args] = customCommand.split(/\s+/)
-        return new Promise<string>((resolve) => {
-          execFile(cmd, [...args, path], (err) => {
-            resolve(err ? err.message : '')
+      const runCommand = (cmd: string, args: string[]): Promise<string> =>
+        new Promise<string>((resolve) => {
+          const child = spawn(cmd, args, {
+            shell: true,
+            stdio: 'ignore',
+            detached: true
+          })
+          child.on('error', (err) => resolve(err.message))
+          child.on('spawn', () => {
+            child.unref()
+            resolve('')
           })
         })
+
+      if (editor === 'custom' && customCommand) {
+        const [cmd, ...args] = customCommand.split(/\s+/)
+        return runCommand(cmd, [...args, path])
       }
 
       if (editor && editor !== 'system' && editor !== 'custom') {
         const cmd = CODE_EDITOR_COMMANDS[editor]
         if (cmd) {
-          return new Promise<string>((resolve) => {
-            execFile(cmd, [path], (err) => {
-              resolve(err ? err.message : '')
-            })
-          })
+          return runCommand(cmd, [path])
         }
       }
 
