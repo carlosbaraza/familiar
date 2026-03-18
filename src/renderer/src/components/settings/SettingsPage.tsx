@@ -1,18 +1,22 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import type { ProjectSettings, CodingAgent } from '@shared/types'
-import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS, CODING_AGENT_LABELS } from '@shared/types/settings'
+import type { CodeEditor } from '@shared/types/settings'
+import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS, CODING_AGENT_LABELS, CODE_EDITOR_LABELS } from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
 import { SnippetSettings } from './SnippetSettings'
 import { LabelSettings } from './LabelSettings'
 import { WorkspacesSettings } from './WorkspacesSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 
+const AUTOSAVE_DELAY_MS = 500
+
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS)
-  const [isDirty, setIsDirty] = useState(false)
+  const isLoaded = useRef(false)
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load settings on mount
   useEffect(() => {
@@ -23,22 +27,17 @@ export function SettingsPage(): React.JSX.Element {
       } catch {
         // Use defaults
       }
+      isLoaded.current = true
     }
     load()
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    }
   }, [])
 
-  const handleChange = useCallback(
-    <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => {
-      setSettings((prev) => ({ ...prev, [key]: value }))
-      setIsDirty(true)
-    },
-    []
-  )
-
-  const handleSave = useCallback(async () => {
+  const saveSettings = useCallback(async (current: ProjectSettings) => {
     try {
-      // Filter out empty entries before saving
-      const toSave = { ...settings }
+      const toSave = { ...current }
       if (toSave.snippets) {
         toSave.snippets = toSave.snippets.filter((s) => s.title.trim() && s.command.trim())
       }
@@ -46,7 +45,6 @@ export function SettingsPage(): React.JSX.Element {
         toSave.labels = toSave.labels.filter((l) => l.name.trim())
       }
       await window.api.writeSettings(toSave)
-      // Notify consumers
       window.dispatchEvent(
         new CustomEvent('snippets-updated', {
           detail: toSave.snippets ?? DEFAULT_SNIPPETS
@@ -57,23 +55,32 @@ export function SettingsPage(): React.JSX.Element {
           detail: toSave.labels ?? DEFAULT_LABELS
         })
       )
-      setSettings(toSave)
-      setIsDirty(false)
     } catch (err) {
       console.error('Failed to save settings:', err)
     }
-  }, [settings])
+  }, [])
 
-  const handleCancel = useCallback(() => {
-    closeSettings()
-  }, [closeSettings])
+  const handleChange = useCallback(
+    <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => {
+      setSettings((prev) => {
+        const next = { ...prev, [key]: value }
+        // Debounced autosave
+        if (isLoaded.current) {
+          if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+          autosaveTimer.current = setTimeout(() => saveSettings(next), AUTOSAVE_DELAY_MS)
+        }
+        return next
+      })
+    },
+    [saveSettings]
+  )
 
   return (
     <div style={styles.container}>
       <div style={styles.content}>
         <div style={styles.header}>
           <h1 style={styles.title}>Settings</h1>
-          <button style={styles.closeButton} onClick={handleCancel} title="Close (Escape)">
+          <button style={styles.closeButton} onClick={closeSettings} title="Close (Escape)">
             &times;
           </button>
         </div>
@@ -176,6 +183,54 @@ export function SettingsPage(): React.JSX.Element {
             </div>
           </div>
 
+          {/* Code Editor section */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Code Editor</h2>
+
+            <div style={styles.settingRow}>
+              <div style={styles.settingInfo}>
+                <label style={styles.settingLabel}>Default Code Editor</label>
+                <span style={styles.settingDescription}>
+                  Editor used when opening the project folder from the navbar
+                </span>
+              </div>
+              <select
+                style={styles.textInput}
+                value={settings.codeEditor ?? 'system'}
+                onChange={(e) =>
+                  handleChange(
+                    'codeEditor',
+                    (e.target.value as CodeEditor) || undefined
+                  )
+                }
+              >
+                {(Object.keys(CODE_EDITOR_LABELS) as CodeEditor[]).map((key) => (
+                  <option key={key} value={key}>
+                    {CODE_EDITOR_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {settings.codeEditor === 'custom' && (
+              <div style={styles.settingRow}>
+                <div style={styles.settingInfo}>
+                  <label style={styles.settingLabel}>Custom Command</label>
+                  <span style={styles.settingDescription}>
+                    Shell command to open a folder (the project path is appended as an argument)
+                  </span>
+                </div>
+                <input
+                  style={styles.textInput}
+                  type="text"
+                  value={settings.codeEditorCustomCommand ?? ''}
+                  onChange={(e) => handleChange('codeEditorCustomCommand', e.target.value || undefined)}
+                  placeholder="e.g. code, cursor, zed, nvim"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Labels section */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Labels</h2>
@@ -204,21 +259,6 @@ export function SettingsPage(): React.JSX.Element {
           <WorkspacesSettings />
         </div>
 
-        <div style={styles.footer}>
-          <button style={styles.cancelButton} onClick={handleCancel}>
-            Cancel
-          </button>
-          <button
-            style={{
-              ...styles.saveButton,
-              ...(isDirty ? {} : { opacity: 0.5, cursor: 'default' })
-            }}
-            onClick={handleSave}
-            disabled={!isDirty}
-          >
-            Save
-          </button>
-        </div>
       </div>
     </div>
   )
@@ -322,24 +362,6 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     width: '100%',
     boxSizing: 'border-box' as const
   },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '8px',
-    padding: '16px 0',
-    borderTop: '1px solid var(--border)'
-  },
-  cancelButton: {
-    padding: '6px 14px',
-    fontSize: '12px',
-    fontWeight: 500,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    borderRadius: '5px',
-    border: '1px solid var(--border)',
-    backgroundColor: 'var(--bg-surface)',
-    color: 'var(--text-secondary)',
-    cursor: 'pointer'
-  },
   toggleButton: {
     width: 40,
     height: 22,
@@ -371,15 +393,4 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     transform: 'translateX(18px)',
     backgroundColor: 'var(--accent)'
   },
-  saveButton: {
-    padding: '6px 14px',
-    fontSize: '12px',
-    fontWeight: 500,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    borderRadius: '5px',
-    border: '1px solid var(--accent)',
-    backgroundColor: 'var(--accent-subtle)',
-    color: 'var(--accent)',
-    cursor: 'pointer'
-  }
 }
