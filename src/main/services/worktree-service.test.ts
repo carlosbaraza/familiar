@@ -205,6 +205,34 @@ describe('WorktreeService', () => {
       expect(newWt!.branch).toBe('familiar-worktree/listed-wt')
     })
 
+    it('copies settings.json from main project to worktree', () => {
+      // Create a settings.json in the main project's .familiar/
+      const mainFamiliarDir = path.join(gitRoot, '.familiar')
+      fs.mkdirSync(mainFamiliarDir, { recursive: true })
+      const settings = {
+        defaultCommand: 'claude --resume $FAMILIAR_TASK_ID',
+        simplifyTaskTitles: true,
+        snippets: [{ title: 'Start', command: '/familiar-agent', pressEnter: true }]
+      }
+      fs.writeFileSync(
+        path.join(mainFamiliarDir, 'settings.json'),
+        JSON.stringify(settings, null, 2)
+      )
+
+      const result = WorktreeService.createWorktree(gitRoot, 'settings-copy')
+      const worktreeSettingsFile = path.join(result.path, '.familiar', 'settings.json')
+      expect(fs.existsSync(worktreeSettingsFile)).toBe(true)
+
+      const copiedSettings = JSON.parse(fs.readFileSync(worktreeSettingsFile, 'utf-8'))
+      expect(copiedSettings).toEqual(settings)
+    })
+
+    it('does not fail when main project has no settings.json', () => {
+      const result = WorktreeService.createWorktree(gitRoot, 'no-settings')
+      const worktreeSettingsFile = path.join(result.path, '.familiar', 'settings.json')
+      expect(fs.existsSync(worktreeSettingsFile)).toBe(false)
+    })
+
     it('throws for non-git directory', () => {
       const nonGitDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'non-git-')))
       try {

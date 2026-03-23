@@ -184,6 +184,17 @@ export class WorktreeService {
       fs.mkdirSync(tasksDir, { recursive: true })
     }
 
+    // Copy settings.json from the main project if it exists
+    const mainSettingsFile = path.join(mainRoot, '.familiar', 'settings.json')
+    const worktreeSettingsFile = path.join(worktreeFamiliarDir, 'settings.json')
+    if (fs.existsSync(mainSettingsFile)) {
+      try {
+        fs.copyFileSync(mainSettingsFile, worktreeSettingsFile)
+      } catch {
+        // Non-critical — worktree will use default settings
+      }
+    }
+
     return {
       path: worktreePath,
       branch: branchName,
