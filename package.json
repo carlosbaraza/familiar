@@ -1,6 +1,6 @@
 {
   "name": "familiar",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "A macOS Electron desktop app with kanban board, terminals, and block editor for agentic AI coding workflows",
   "main": "./out/main/index.js",
   "bin": {
