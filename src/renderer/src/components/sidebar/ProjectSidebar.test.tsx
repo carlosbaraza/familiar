@@ -260,4 +260,87 @@ describe('ProjectSidebar', () => {
     const sidebar = screen.getByTestId('project-sidebar')
     expect(sidebar.className).toContain('Expanded')
   })
+
+  it('includes worktree unread counts in parent project badge (collapsed)', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        {
+          path: '/tmp/alpha',
+          name: 'alpha',
+          worktrees: [
+            { path: '/tmp/alpha/.familiar/worktrees/wt1', branch: 'wt1', slug: 'wt1', isMain: false }
+          ]
+        }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: false
+    })
+    useNotificationStore.setState({
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha/.familiar/worktrees/wt1' })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    // Parent badge should show 2 (1 own + 1 from worktree)
+    expect(screen.getByTestId('badge-alpha').textContent).toBe('2')
+  })
+
+  it('shows unread text on worktree items when sidebar is expanded', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        {
+          path: '/tmp/alpha',
+          name: 'alpha',
+          worktrees: [
+            { path: '/tmp/alpha/.familiar/worktrees/wt1', branch: 'wt1', slug: 'wt1', isMain: false }
+          ]
+        }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha/.familiar/worktrees/wt1' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha/.familiar/worktrees/wt1' })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    // Worktree should show its own unread count
+    const worktreeItem = screen.getByTestId('worktree-item-wt1')
+    expect(worktreeItem.textContent).toContain('2 unread')
+    // Both parent and worktree show "2 unread"
+    expect(screen.getAllByText('2 unread').length).toBe(2)
+  })
+
+  it('does not show worktree badge when worktree has no unread', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        {
+          path: '/tmp/alpha',
+          name: 'alpha',
+          worktrees: [
+            { path: '/tmp/alpha/.familiar/worktrees/wt1', branch: 'wt1', slug: 'wt1', isMain: false }
+          ]
+        }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      workspaceNotifications: [
+        makeNotification({ read: true, projectPath: '/tmp/alpha/.familiar/worktrees/wt1' })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    const worktreeItem = screen.getByTestId('worktree-item-wt1')
+    expect(worktreeItem.textContent).not.toContain('unread')
+  })
 })

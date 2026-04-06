@@ -35,19 +35,48 @@ export function registerNotificationHandlers(
   })
 
   ipcMain.handle('notification:mark-read', async (_, id: string) => {
-    await dataService.markNotificationRead(id)
+    // Search all open projects (including worktrees) to find and mark the notification
+    const allServices = workspaceManager.getActiveDataServices()
+    for (const [, ds] of allServices) {
+      try {
+        await ds.markNotificationRead(id)
+      } catch {
+        // ignore — notification may not exist in this project
+      }
+    }
   })
 
   ipcMain.handle('notification:mark-read-by-task', async (_, taskId: string) => {
-    await dataService.markNotificationsByTaskRead(taskId)
+    const allServices = workspaceManager.getActiveDataServices()
+    for (const [, ds] of allServices) {
+      try {
+        await ds.markNotificationsByTaskRead(taskId)
+      } catch {
+        // ignore
+      }
+    }
   })
 
   ipcMain.handle('notification:mark-read-by-tasks', async (_, taskIds: string[]) => {
-    await dataService.markNotificationsByTaskIds(taskIds)
+    const allServices = workspaceManager.getActiveDataServices()
+    for (const [, ds] of allServices) {
+      try {
+        await ds.markNotificationsByTaskIds(taskIds)
+      } catch {
+        // ignore
+      }
+    }
   })
 
   ipcMain.handle('notification:mark-all-read', async () => {
-    await dataService.markAllNotificationsRead()
+    const allServices = workspaceManager.getActiveDataServices()
+    for (const [, ds] of allServices) {
+      try {
+        await ds.markAllNotificationsRead()
+      } catch {
+        // ignore
+      }
+    }
   })
 
   ipcMain.handle('notification:clear', async () => {

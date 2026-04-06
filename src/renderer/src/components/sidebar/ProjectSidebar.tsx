@@ -395,8 +395,14 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const isActive = project.path === activeProjectPath
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
-          const unread = workspaceUnreadCountForProject(project.path)
           const worktrees = project.worktrees || []
+          const ownUnread = workspaceUnreadCountForProject(project.path)
+          // Include worktree unread counts in the parent project's badge
+          const worktreeUnread = worktrees.reduce(
+            (sum, wt) => sum + workspaceUnreadCountForProject(wt.path),
+            0
+          )
+          const unread = ownUnread + worktreeUnread
 
           return (
             <div key={project.path}>
@@ -449,6 +455,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
               {/* Worktrees under this project */}
               {worktrees.map((wt) => {
                 const isWtActive = wt.path === activeProjectPath
+                const wtUnread = workspaceUnreadCountForProject(wt.path)
                 return (
                   <div
                     key={wt.path}
@@ -460,10 +467,16 @@ export function ProjectSidebar(): React.JSX.Element | null {
                   >
                     <div className={styles.worktreeIcon}>
                       <BranchIcon />
+                      {!sidebarExpanded && wtUnread > 0 && (
+                        <span className={styles.iconBadge}>{wtUnread > 99 ? '99+' : wtUnread}</span>
+                      )}
                     </div>
                     {sidebarExpanded && (
                       <div className={styles.projectInfo}>
                         <span className={styles.worktreeName}>{wt.slug}</span>
+                        {wtUnread > 0 && (
+                          <span className={styles.projectUnread}>{wtUnread} unread</span>
+                        )}
                       </div>
                     )}
                     {sidebarExpanded && (
