@@ -395,14 +395,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const isActive = project.path === activeProjectPath
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
+          const unread = workspaceUnreadCountForProject(project.path)
           const worktrees = project.worktrees || []
-          const ownUnread = workspaceUnreadCountForProject(project.path)
-          // Include worktree unread counts in the parent project's badge
-          const worktreeUnread = worktrees.reduce(
-            (sum, wt) => sum + workspaceUnreadCountForProject(wt.path),
-            0
-          )
-          const unread = ownUnread + worktreeUnread
 
           return (
             <div key={project.path}>

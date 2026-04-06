@@ -261,7 +261,7 @@ describe('ProjectSidebar', () => {
     expect(sidebar.className).toContain('Expanded')
   })
 
-  it('includes worktree unread counts in parent project badge (collapsed)', () => {
+  it('parent project badge shows only its own unread count, not worktree counts', () => {
     useWorkspaceStore.setState({
       sidebarVisible: true,
       openProjects: [
@@ -284,8 +284,8 @@ describe('ProjectSidebar', () => {
     })
 
     render(<ProjectSidebar />)
-    // Parent badge should show 2 (1 own + 1 from worktree)
-    expect(screen.getByTestId('badge-alpha').textContent).toBe('2')
+    // Parent badge should show only 1 (its own), not 2
+    expect(screen.getByTestId('badge-alpha').textContent).toBe('1')
   })
 
   it('shows unread text on worktree items when sidebar is expanded', () => {
@@ -314,8 +314,8 @@ describe('ProjectSidebar', () => {
     // Worktree should show its own unread count
     const worktreeItem = screen.getByTestId('worktree-item-wt1')
     expect(worktreeItem.textContent).toContain('2 unread')
-    // Both parent and worktree show "2 unread"
-    expect(screen.getAllByText('2 unread').length).toBe(2)
+    // Parent has 0 own unread, so only worktree shows "2 unread"
+    expect(screen.getAllByText('2 unread').length).toBe(1)
   })
 
   it('does not show worktree badge when worktree has no unread', () => {
