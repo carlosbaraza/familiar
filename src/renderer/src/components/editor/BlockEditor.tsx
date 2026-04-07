@@ -114,7 +114,12 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     saveTimerRef.current = setTimeout(async () => {
       saveTimerRef.current = null
       try {
-        const markdown = await editor.blocksToMarkdownLossy(editor.document)
+        let markdown = await editor.blocksToMarkdownLossy(editor.document)
+        // blocksToMarkdownLossy can place adjacent image blocks on the same
+        // line (e.g. "![a](u1)![b](u2)").  The markdown parser then recovers
+        // only the first image on reload.  Insert blank lines between them so
+        // each image survives the round-trip.
+        markdown = markdown.replace(/(\)\s*)(!\[)/g, '$1\n\n$2')
         lastSavedMarkdownRef.current = markdown
         onChange?.(markdown)
         await window.api.writeTaskDocument(taskIdRef.current, markdown)
