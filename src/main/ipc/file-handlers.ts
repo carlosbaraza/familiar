@@ -37,6 +37,17 @@ export function registerFileHandlers(
       return filePath
     }
   )
+  // Save any file (image or non-image) from clipboard to a temp file, return the path
+  ipcMain.handle(
+    'clipboard:save-file',
+    async (_, arrayBuffer: ArrayBuffer, fileName: string): Promise<string> => {
+      const safeName = `clipboard-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      const filePath = join(app.getPath('temp'), safeName)
+      await writeFile(filePath, Buffer.from(arrayBuffer))
+      return filePath
+    }
+  )
+
   // Read image directly from the native clipboard (fallback when paste event lacks image items)
   ipcMain.handle('clipboard:read-native-image', async (): Promise<string | null> => {
     const image = clipboard.readImage()

@@ -9,7 +9,7 @@ import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import { CreateTaskInput } from '@renderer/components/common/CreateTaskInput'
-import type { CreateTaskInputHandle, PendingImage, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
+import type { CreateTaskInputHandle, PendingAttachment, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
 import type { DropIndicator } from './KanbanBoard'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
@@ -19,7 +19,7 @@ interface KanbanColumnProps {
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   onMultiSelect: (taskId: string, append: boolean) => void
-  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[], pendingPastedFiles?: PendingPastedFile[]) => void
+  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingAttachment[], pendingPastedFiles?: PendingPastedFile[]) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null

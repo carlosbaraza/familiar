@@ -53,6 +53,8 @@ const api = {
   // Clipboard
   clipboardSaveImage: (arrayBuffer: ArrayBuffer, mimeType: string): Promise<string> =>
     ipcRenderer.invoke('clipboard:save-image', arrayBuffer, mimeType),
+  clipboardSaveFile: (arrayBuffer: ArrayBuffer, fileName: string): Promise<string> =>
+    ipcRenderer.invoke('clipboard:save-file', arrayBuffer, fileName),
   clipboardReadNativeImage: (): Promise<string | null> =>
     ipcRenderer.invoke('clipboard:read-native-image'),
 

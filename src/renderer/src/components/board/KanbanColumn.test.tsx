@@ -256,7 +256,7 @@ describe('KanbanColumn — image paste', () => {
     fireEvent(textarea, pasteEvent)
 
     await vi.waitFor(() => {
-      const removeBtn = screen.queryByLabelText('Remove image')
+      const removeBtn = screen.queryByLabelText('Remove attachment')
       expect(removeBtn).toBeInTheDocument()
     })
   })

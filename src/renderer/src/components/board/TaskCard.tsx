@@ -505,48 +505,6 @@ export function TaskCard({
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
 
-        {/* Image attachments */}
-        {task.attachments && task.attachments.length > 0 && (
-          <div className={styles.attachmentThumbs}>
-            {task.attachments.slice(0, 4).map((ref, i) => {
-              // Support both legacy absolute paths and new relative filenames
-              const src = ref.startsWith('/')
-                ? `familiar-attachment://file${ref}`
-                : `familiar-attachment://task/${task.id}/attachments/${ref}`
-              return (
-                <img
-                  key={i}
-                  className={styles.attachmentThumb}
-                  src={src}
-                  alt="attachment"
-                  draggable={false}
-                />
-              )
-            })}
-            {task.attachments.length > 4 && (
-              <span className={styles.attachmentMore}>+{task.attachments.length - 4}</span>
-            )}
-          </div>
-        )}
-
-        {/* Pasted file indicators */}
-        {task.pastedFiles && task.pastedFiles.length > 0 && (
-          <div className={styles.pastedFileIndicators}>
-            {task.pastedFiles.slice(0, 3).map((pf) => (
-              <span key={pf.filename} className={styles.pastedFileChip} title={pf.label}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-                {pf.lineCount ? `${pf.lineCount}L` : pf.label.slice(0, 12)}
-              </span>
-            ))}
-            {task.pastedFiles.length > 3 && (
-              <span className={styles.pastedFileChip}>+{task.pastedFiles.length - 3}</span>
-            )}
-          </div>
-        )}
-
         {/* Last activity for in-progress tasks */}
         {task.status === 'in-progress' && lastActivity && (
           <div className={styles.activityPreview}>

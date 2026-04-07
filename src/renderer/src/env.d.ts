@@ -48,6 +48,7 @@ declare global {
 
       // Clipboard
       clipboardSaveImage(arrayBuffer: ArrayBuffer, mimeType: string): Promise<string>
+      clipboardSaveFile(arrayBuffer: ArrayBuffer, fileName: string): Promise<string>
       clipboardReadNativeImage(): Promise<string | null>
 
       // PTY operations

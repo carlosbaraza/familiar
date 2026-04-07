@@ -3,13 +3,16 @@ import type { Snippet, TaskPastedFile } from '@shared/types'
 import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
 import styles from './CreateTaskInput.module.css'
 
-/** A pasted image stored in temp, pending task creation */
-export interface PendingImage {
+/** A pasted file (image or any other file) stored in temp, pending task creation */
+export interface PendingAttachment {
   tempPath: string
   fileName: string
   mimeType: string
-  dataUrl: string // for preview
+  size: number
 }
+
+/** @deprecated Use PendingAttachment instead */
+export type PendingImage = PendingAttachment
 
 /** A large pasted text pending task creation */
 export interface PendingPastedFile {
@@ -30,7 +33,7 @@ export interface CreateTaskInputProps {
     title: string,
     document?: string,
     enabledSnippets?: Snippet[],
-    pendingImages?: PendingImage[],
+    pendingImages?: PendingAttachment[],
     pendingPastedFiles?: PendingPastedFile[]
   ) => void
   /** Called when the user presses Escape */
@@ -86,7 +89,7 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
     const [enabledSnippetIndices, setEnabledSnippetIndices] = useState<Set<number>>(
       () => new Set(allSnippets.map((_, i) => i))
     )
-    const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+    const [pendingImages, setPendingImages] = useState<PendingAttachment[]>([])
     const [pendingPastedFiles, setPendingPastedFiles] = useState<PendingPastedFile[]>([])
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -164,27 +167,31 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
 
     const handlePaste = useCallback(
       async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-        // Check for image paste first
+        // Check for file paste (images and other files)
         const items = e.clipboardData.items
         for (let i = 0; i < items.length; i++) {
           const item = items[i]
-          if (item.kind === 'file' && item.type.startsWith('image/')) {
+          if (item.kind === 'file') {
             e.preventDefault()
             const blob = item.getAsFile()
             if (!blob) continue
             const arrayBuffer = await blob.arrayBuffer()
-            const mimeType = item.type
-            const tempPath = await window.api.clipboardSaveImage(arrayBuffer, mimeType)
-            const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
-            const fileName = `paste-${Date.now()}.${ext}`
+            const mimeType = item.type || 'application/octet-stream'
 
-            // Create data URL for preview
-            const base64 = btoa(
-              new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-            )
-            const dataUrl = `data:${mimeType};base64,${base64}`
+            let tempPath: string
+            let fileName: string
 
-            setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, dataUrl }])
+            if (mimeType.startsWith('image/')) {
+              tempPath = await window.api.clipboardSaveImage(arrayBuffer, mimeType)
+              const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
+              fileName = `paste-${Date.now()}.${ext}`
+            } else {
+              // Use the original file name from the blob, or generate one
+              fileName = blob.name || `paste-${Date.now()}`
+              tempPath = await window.api.clipboardSaveFile(arrayBuffer, fileName)
+            }
+
+            setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, size: blob.size }])
             return
           }
         }
@@ -269,39 +276,49 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
           onBlur={onBlur}
           rows={rows}
         />
-        {pendingImages.length > 0 && (
-          <div className={styles.pendingImages}>
-            {pendingImages.map((img, i) => (
-              <div key={i} className={styles.pendingImageThumb}>
-                <img src={img.dataUrl} alt={img.fileName} />
+        {(pendingImages.length > 0 || pendingPastedFiles.length > 0) && (
+          <div className={styles.pendingAttachments}>
+            {pendingImages.map((att, i) => (
+              <div key={i} className={styles.pendingAttachmentRow}>
+                <div className={styles.pendingAttachmentInfo}>
+                  {att.mimeType.startsWith('image/') ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  )}
+                  <span className={styles.pendingAttachmentName}>{att.fileName}</span>
+                </div>
                 <button
-                  className={styles.pendingImageRemove}
+                  className={styles.pendingAttachmentRemove}
                   onClick={() => setPendingImages((prev) => prev.filter((_, idx) => idx !== i))}
                   type="button"
-                  aria-label="Remove image"
+                  aria-label="Remove attachment"
                 >
                   &times;
                 </button>
               </div>
             ))}
-          </div>
-        )}
-        {pendingPastedFiles.length > 0 && (
-          <div className={styles.pendingPastedFiles}>
             {pendingPastedFiles.map((pf, i) => (
-              <div key={pf.meta.filename} className={styles.pendingPastedCard}>
-                <div className={styles.pendingPastedInfo}>
+              <div key={pf.meta.filename} className={styles.pendingAttachmentRow}>
+                <div className={styles.pendingAttachmentInfo}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
-                  <span className={styles.pendingPastedLabel}>{pf.meta.label}</span>
-                  <span className={styles.pendingPastedMeta}>
+                  <span className={styles.pendingAttachmentName}>{pf.meta.label}</span>
+                  <span className={styles.pendingAttachmentMeta}>
                     {pf.meta.lineCount} lines
                   </span>
                 </div>
                 <button
-                  className={styles.pendingImageRemove}
+                  className={styles.pendingAttachmentRemove}
                   onClick={() => setPendingPastedFiles((prev) => prev.filter((_, idx) => idx !== i))}
                   type="button"
                   aria-label="Remove pasted file"

@@ -4,7 +4,7 @@ import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { CreateTaskInput } from './CreateTaskInput'
-import type { CreateTaskInputHandle, PendingImage, PendingPastedFile } from './CreateTaskInput'
+import type { CreateTaskInputHandle, PendingAttachment, PendingPastedFile } from './CreateTaskInput'
 
 export function CreateTaskModal(): React.JSX.Element | null {
   const open = useUIStore((s) => s.createTaskModalOpen)
@@ -40,7 +40,7 @@ export function CreateTaskModal(): React.JSX.Element | null {
       title: string,
       document?: string,
       enabledSnippets?: Snippet[],
-      pendingImages?: PendingImage[],
+      pendingImages?: PendingAttachment[],
       pendingPastedFiles?: PendingPastedFile[]
     ) => {
       let task: import('@shared/types').Task

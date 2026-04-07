@@ -29,7 +29,7 @@ import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
 import { Onboarding } from '@renderer/components/onboarding'
 import { KanbanColumn } from './KanbanColumn'
-import type { PendingImage, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
+import type { PendingAttachment, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
 import { TaskCardOverlay } from './TaskCard'
 import { WorkspaceHealthBanner } from './WorkspaceHealthBanner'
 import styles from './KanbanBoard.module.css'
@@ -296,7 +296,7 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   const handleCreateTask = useCallback(
-    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingImage[], pendingPastedFiles?: PendingPastedFile[]) => {
+    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[], pendingImages?: PendingAttachment[], pendingPastedFiles?: PendingPastedFile[]) => {
       const { createSubtask } = useTaskStore.getState()
       const parentId = useUIStore.getState().currentParentId
       // If a parent is selected, create as subtask (board input path — no session copy)
