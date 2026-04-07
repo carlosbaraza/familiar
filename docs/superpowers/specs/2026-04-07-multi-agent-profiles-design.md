@@ -92,9 +92,9 @@ In the footer area of `CreateTaskInput`, on the left side before "Enter to creat
 ## Task & Terminal Integration
 
 1. **Task creation**: `addTask` stamps `agentId` from the current `activeAgentId`
-2. **Terminal startup**: when the terminal initializes, look up the agent profile by `task.agentId` and use that profile's `defaultCommand`
-3. **Snippets**: snippet toggles in create task input and terminal panel show the active agent's snippets
-4. **Fallback**: if `task.agentId` references a deleted agent, fall back to the global `defaultCommand`
+2. **Terminal startup**: `ElectronPtyManager.create()` currently receives `taskId` and resolves `defaultCommand` from `settings.defaultCommand` (line ~323). Change: after reading the task's `agentId`, read `settings.agents[]` to find the matching profile and use its `defaultCommand`. The PTY manager already has access to settings via the data service — the additional step is reading the task JSON to get `agentId`, then looking up the agent profile.
+3. **Snippets**: snippet toggles in create task input and terminal panel show the active agent's snippets. `CreateTaskInput` receives agent data as props from `KanbanColumn` (which gets it from `KanbanBoard`). `KanbanBoard` reads settings and passes the active agent's snippets down as `allSnippets`.
+4. **Fallback**: if `task.agentId` references a deleted agent or is missing, fall back to the global `defaultCommand` and `snippets`
 
 ### Backward compatibility
 
@@ -116,6 +116,39 @@ On settings load, if the old `codingAgent` field exists but `agents` array is em
 3. Old `codingAgent` field left in place but ignored going forward
 
 **Onboarding**: the "Select Your Coding Agent" step creates the first `AgentProfile` entry instead of setting the old `codingAgent` string.
+
+## Health Checks
+
+The current health handler (`health-handlers.ts`) only has a `claude-code` branch. With multi-agent:
+
+- **`health:check`**: iterate `settings.agents[]`. For each agent by type:
+  - `claude-code`: check claude binary, hooks, skill (existing logic)
+  - `codex`: check `codex` binary availability. No hooks/skill checks (Codex uses AGENTS.md, not `.claude/hooks/`)
+  - `other`: no agent-specific checks (just CLI availability)
+- **`health:fix-all`**: iterate agents array instead of checking single `settings.codingAgent`. Apply fixes per agent type.
+- **Override agent during onboarding**: the `overrideAgent` parameter becomes `overrideAgentType` to match the new model.
+
+## Agent Default Commands
+
+Known agent types auto-fill these defaults:
+
+- **Claude Code**: `claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID`
+- **Codex**: `codex --full-auto`
+- **Other**: empty (user must fill in)
+
+## CLI Impact
+
+The CLI (`src/cli/`) reads `.familiar/settings.json` directly. Changes needed:
+
+- `familiar agents` command: should read from `settings.agents[]` instead of `settings.codingAgent`
+- The CLI does not need to know `activeAgentId` — that's a renderer concern
+- No other CLI commands reference agent config directly
+
+## Validation
+
+- Agent `id` values are generated with the existing `generateId('agent')` pattern
+- Agent names do not need to be unique (users may want "Claude Code (fast)" and "Claude Code (thorough)")
+- Deleting the active agent resets `activeAgentId` to the first remaining agent, or `undefined` if none left
 
 ## Scope — only new tasks affected
 
@@ -148,6 +181,9 @@ Switching agents only affects tasks created from that point forward. Existing ta
 
 ### Migration
 - `src/main/services/data-service.ts` — Auto-migrate old `codingAgent` to `agents[]` on load
+
+### CLI
+- `src/cli/commands/agents.ts` — Read from `settings.agents[]`
 
 ### Tests
 - Colocated tests for all changed files
