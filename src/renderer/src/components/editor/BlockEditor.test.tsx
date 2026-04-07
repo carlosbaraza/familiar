@@ -85,4 +85,55 @@ describe('BlockEditor', () => {
     // but the component should not throw
     expect(view).toBeDefined()
   })
+
+  it('does not reload content when initialContent matches last saved markdown', async () => {
+    const { useCreateBlockNote } = await import('@blocknote/react')
+    const mockEditor = (useCreateBlockNote as ReturnType<typeof vi.fn>)()
+
+    const { rerender } = render(
+      <BlockEditor taskId="tsk_abc123" initialContent="# Hello" />
+    )
+
+    // Simulate the editor saving markdown (which sets lastSavedMarkdownRef)
+    // The debounced save writes markdown and records it in the ref.
+    // After initial load, replaceBlocks should have been called once.
+    const initialCallCount = mockEditor.replaceBlocks.mock.calls.length
+
+    // Re-render with the same content (simulating file-watcher echo)
+    rerender(<BlockEditor taskId="tsk_abc123" initialContent="# Hello" />)
+
+    // replaceBlocks should NOT have been called again for identical content
+    // (React's useEffect skips if deps haven't changed — same string ref)
+    expect(mockEditor.replaceBlocks.mock.calls.length).toBe(initialCallCount)
+  })
+
+  it('skips reload when a debounced save is pending', async () => {
+    const { useCreateBlockNote } = await import('@blocknote/react')
+    const mockEditor = (useCreateBlockNote as ReturnType<typeof vi.fn>)()
+    mockEditor.tryParseMarkdownToBlocks.mockResolvedValue([{ type: 'paragraph' }])
+
+    const { rerender, getByTestId } = render(
+      <BlockEditor taskId="tsk_abc123" initialContent="# Initial" />
+    )
+
+    // Wait for initial load to complete
+    await vi.waitFor(() => {
+      expect(mockEditor.replaceBlocks).toHaveBeenCalled()
+    })
+
+    const callsAfterInit = mockEditor.replaceBlocks.mock.calls.length
+
+    // Trigger onChange (simulating user edit — starts the debounce timer)
+    const view = getByTestId('blocknote-view')
+    view.click()
+
+    // Now re-render with different content (simulating file-watcher reading stale disk content)
+    rerender(<BlockEditor taskId="tsk_abc123" initialContent="# Stale from disk" />)
+
+    // Give any async effects time to run
+    await new Promise((r) => setTimeout(r, 50))
+
+    // replaceBlocks should NOT have been called again because a save timer is pending
+    expect(mockEditor.replaceBlocks.mock.calls.length).toBe(callsAfterInit)
+  })
 })

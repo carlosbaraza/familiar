@@ -31,6 +31,8 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
   const taskIdRef = useRef(taskId)
   const isLoadingContentRef = useRef(false)
   const editorWrapperRef = useRef<HTMLDivElement>(null)
+  const lastSavedMarkdownRef = useRef<string | null>(null)
+  const hasLoadedInitialContentRef = useRef(false)
   taskIdRef.current = taskId
 
   const uploadFile = useCallback(
@@ -59,6 +61,21 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     if (!editor || initialContent === undefined) return
     // Skip loading if content is empty — editor default state is fine
     if (initialContent === '') return
+
+    // After the first load, skip reloads that would clobber in-flight edits.
+    // Two cases:
+    //   1. The new content matches what the editor itself last wrote to disk
+    //      (file-watcher echo of our own save).
+    //   2. A debounced save is pending — the editor has unsaved changes and the
+    //      file-watcher read stale content from disk.
+    if (hasLoadedInitialContentRef.current) {
+      const isOwnSaveEcho = lastSavedMarkdownRef.current !== null && initialContent === lastSavedMarkdownRef.current
+      const hasPendingSave = saveTimerRef.current !== null
+      if (isOwnSaveEcho || hasPendingSave) {
+        return
+      }
+    }
+
     let cancelled = false
 
     async function loadContent(): Promise<void> {
@@ -67,6 +84,7 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
         const blocks = await editor.tryParseMarkdownToBlocks(initialContent!)
         if (!cancelled && blocks.length > 0) {
           editor.replaceBlocks(editor.document, blocks)
+          hasLoadedInitialContentRef.current = true
         }
       } catch (err) {
         console.error('Failed to parse markdown into blocks:', err)
@@ -96,6 +114,7 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     saveTimerRef.current = setTimeout(async () => {
       try {
         const markdown = await editor.blocksToMarkdownLossy(editor.document)
+        lastSavedMarkdownRef.current = markdown
         onChange?.(markdown)
         await window.api.writeTaskDocument(taskIdRef.current, markdown)
       } catch (err) {
