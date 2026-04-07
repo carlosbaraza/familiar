@@ -208,6 +208,7 @@
   justify-content: center;
   color: var(--text-tertiary);
   flex-shrink: 0;
+  position: relative;
 }
 
 .worktreeName {
