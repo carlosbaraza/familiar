@@ -44,7 +44,7 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
       // Return a custom protocol URL so the editor can display the image inline
       // file:// URLs are blocked by Electron's security policy in the renderer
       // Use task-relative URL format for portability across project renames
-      return `familiar-attachment://task/${taskIdRef.current}/attachments/${savedName}`
+      return `familiar-attachment://task/${taskIdRef.current}/attachments/${encodeURIComponent(savedName)}`
     },
     []
   )
@@ -112,6 +112,7 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
 
     // Debounce: wait 1 second before saving
     saveTimerRef.current = setTimeout(async () => {
+      saveTimerRef.current = null
       try {
         const markdown = await editor.blocksToMarkdownLossy(editor.document)
         lastSavedMarkdownRef.current = markdown

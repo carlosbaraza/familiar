@@ -169,8 +169,8 @@ app.whenReady().then(async () => {
     if (host === 'task') {
       // Relative format: familiar-attachment://task/<taskId>/attachments/<filename>
       const parts = url.pathname.split('/').filter(Boolean)
-      const taskId = parts[0]
-      const fileName = parts.slice(2).join('/') // skip "attachments"
+      const taskId = decodeURIComponent(parts[0])
+      const fileName = decodeURIComponent(parts.slice(2).join('/')) // skip "attachments"
       const projectRoot = dataService.getProjectRoot()
       const filePath = join(projectRoot, '.familiar', 'tasks', taskId, 'attachments', fileName)
       return net.fetch(`file://${filePath}`)
