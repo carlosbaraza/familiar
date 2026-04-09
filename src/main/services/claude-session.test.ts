@@ -105,6 +105,26 @@ describe('resolveClaudeSessionCommand', () => {
     expect(mockExistsSync).toHaveBeenCalledWith(expectedPath)
   })
 
+  it('computes correct session file path for worktree projects (dots in path)', () => {
+    mockExistsSync.mockReturnValue(false)
+
+    resolveClaudeSessionCommand(
+      'claude --resume $FAMILIAR_TASK_ID',
+      'tsk_abc',
+      '/Users/testuser/dev/my-project/.familiar/worktrees/feature-branch'
+    )
+
+    const uuid = taskIdToUuid('tsk_abc')
+    const expectedPath = path.join(
+      '/Users/testuser',
+      '.claude',
+      'projects',
+      '-Users-testuser-dev-my-project--familiar-worktrees-feature-branch',
+      `${uuid}.jsonl`
+    )
+    expect(mockExistsSync).toHaveBeenCalledWith(expectedPath)
+  })
+
   it('handles --resume with quoted $VAR', () => {
     mockExistsSync.mockReturnValue(false)
 

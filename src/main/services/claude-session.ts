@@ -27,7 +27,7 @@ function getClaudeProjectDir(projectRoot: string): string {
     os.homedir(),
     '.claude',
     'projects',
-    projectRoot.replace(/\//g, '-')
+    projectRoot.replace(/[/.]/g, '-')
   )
 }
 
