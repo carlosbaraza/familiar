@@ -21,7 +21,9 @@ Follow those instructions as your base workflow. The sections below provide addi
 
 **ALWAYS** store your task spec, plan, design notes, and requirements in the task's `document.md` file at `.familiar/tasks/$FAMILIAR_TASK_ID/document.md`. This is the file the user sees in the Familiar UI. **NEVER** create separate spec/plan files elsewhere in the repo.
 
-## Step 1: Read your context
+## Step 1: Read your context (CRITICAL — do this FIRST, before anything else)
+
+**You MUST read ALL task files before taking any action, making any plan, or forming any assumptions about the task.** The task title is often a simplified 3–6 word summary — the REAL requirements, specs, and context are in `document.md`. Never rely on the title alone.
 
 ```bash
 # Your task ID, project root, and settings path are in the environment
@@ -33,12 +35,22 @@ echo "Settings: $FAMILIAR_SETTINGS_PATH"
 cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
 # If simplifyTaskTitles is true: shorten the title and move original to document.md
 
-# Read your task spec/document
+# MANDATORY: Read the full document FIRST — this contains the actual requirements
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
 
 # Read task metadata (status, priority, labels)
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
+
+# Check for attachments (screenshots, specs, images the user added)
+ls "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/attachments/" 2>/dev/null
+# If attachments exist, read/view them — they may contain critical context
 ```
+
+**Do NOT skip reading `document.md`.** Even if it appears empty, you must read it. The document may contain:
+- The original user prompt/request (under `## Original Prompt`)
+- Design specs, plans, or requirements
+- Notes from previous work iterations
+- Context that is NOT in the title
 
 If `$FAMILIAR_TASK_ID` is not set, you are not inside a Familiar terminal. Skip this skill.
 
