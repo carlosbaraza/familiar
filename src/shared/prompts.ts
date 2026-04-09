@@ -342,7 +342,9 @@ familiar agents
 
 Follow those instructions as your base workflow. The sections below provide additional context.
 
-## Step 1: Read your context
+## Step 1: Read your context (CRITICAL — do this FIRST, before anything else)
+
+**You MUST read ALL task files before taking any action.** The title is often a simplified summary — the REAL requirements are in \\\`document.md\\\`. Never rely on the title alone.
 
 \\\`\\\`\\\`bash
 echo "Task: $FAMILIAR_TASK_ID"
@@ -350,9 +352,17 @@ echo "Root: $FAMILIAR_PROJECT_ROOT"
 echo "Settings: $FAMILIAR_SETTINGS_PATH"
 
 cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
+
+# MANDATORY: Read the full document FIRST — this contains the actual requirements
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
+
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
+
+# Check for attachments
+ls "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/attachments/" 2>/dev/null
 \\\`\\\`\\\`
+
+**Do NOT skip reading \\\`document.md\\\`.** It may contain the original prompt, design specs, plans, or notes from previous iterations that are NOT in the title.
 
 If \\\`$FAMILIAR_TASK_ID\\\` is not set, you are not inside a Familiar terminal. Skip this skill.
 
@@ -437,12 +447,27 @@ When running inside a Familiar terminal, these environment variables are set:
 
 ## Agent Workflow
 
-### 1. Read your task
+### 1. Read your task (CRITICAL — do this FIRST, before anything else)
+
+**You MUST read ALL task files before taking any action, making any plan, or forming any assumptions about the task.** The task title is often a simplified 3–6 word summary — the REAL requirements, specs, and context are in \`document.md\`. Never rely on the title alone.
 
 \`\`\`bash
+# MANDATORY: Read the full document FIRST — this contains the actual requirements
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
+
+# Read task metadata (status, priority, labels, title)
 cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
+
+# Check for attachments (screenshots, specs, images the user added)
+ls "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/attachments/" 2>/dev/null
+# If attachments exist, read/view them — they may contain critical context
 \`\`\`
+
+**Do NOT skip reading \`document.md\`.** Even if it appears empty, you must read it. The document may contain:
+- The original user prompt/request (under \`## Original Prompt\`)
+- Design specs, plans, or requirements
+- Notes from previous work iterations
+- Context that is NOT in the title
 
 **If your task has a \`parentTaskId\` in task.json**, you are a subtask. Before starting any work, read the parent task's context — it may contain shared plans, specs, or documentation critical to your subtask:
 
