@@ -233,9 +233,30 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   }
 
   if (error) {
+    const handleRetry = async (): Promise<void> => {
+      setError(null)
+      const sid = await createSession()
+      if (sid) {
+        sessionIdRef.current = sid
+        setSessionId(sid)
+      }
+    }
+
     return (
       <div style={panelStyles.container}>
-        <div style={panelStyles.status}>Terminal error: {error}</div>
+        <div style={panelStyles.stoppedContainer}>
+          <div style={{ ...panelStyles.stoppedIcon, color: 'var(--priority-urgent)' }}>&#9888;</div>
+          <div style={panelStyles.stoppedTitle}>Terminal failed to start</div>
+          <div style={panelStyles.stoppedMessage}>
+            {error}
+          </div>
+          <button
+            style={panelStyles.restartButton}
+            onClick={handleRetry}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }

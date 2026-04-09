@@ -152,7 +152,9 @@ describe('TerminalPanel', () => {
       await flushPromises()
     })
 
-    expect(screen.getByText(/Terminal error: PTY connection failed/)).toBeInTheDocument()
+    expect(screen.getByText('Terminal failed to start')).toBeInTheDocument()
+    expect(screen.getByText(/PTY connection failed/)).toBeInTheDocument()
+    expect(screen.getByText('Retry')).toBeInTheDocument()
   })
 
   it('renders terminal and snippet bar when session is active', async () => {
