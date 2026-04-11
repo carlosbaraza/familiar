@@ -327,7 +327,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'flex-start',
     justifyContent: 'center',
     paddingTop: '20vh',
-    zIndex: 400,
+    // Must be above --z-modal (400) so the palette can float on top of
+    // the TaskDetail overlay when opened from inside a task view.
+    zIndex: 'var(--z-command-palette)' as unknown as number,
     animation: 'cmdkFadeIn 120ms ease'
   },
   wrapper: {

@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import type { Task } from '@shared/types'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { TaskDetailContent } from './TaskDetailContent'
 import styles from './TaskDetail.module.css'
@@ -32,9 +33,13 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
   useEffect(() => {
     if (!visible) return
     function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') {
-        onClose()
-      }
+      if (e.key !== 'Escape') return
+      // Skip if a higher-priority overlay is open on top of the task detail
+      // (command palette, settings, shortcuts modal). Those overlays own the
+      // Escape key and should be closed first by their own handlers.
+      const ui = useUIStore.getState()
+      if (ui.commandPaletteOpen || ui.settingsOpen || ui.shortcutsModalOpen) return
+      onClose()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { TaskDetail } from './TaskDetail'
 import type { Task } from '@shared/types'
@@ -85,6 +86,27 @@ describe('TaskDetail', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('does not call onClose on Escape when command palette is open on top', () => {
+    useUIStore.setState({ commandPaletteOpen: true })
+    render(<TaskDetail taskId="tsk_test01" visible={true} onClose={onClose} />)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+
+    // Clean up so subsequent tests see a closed palette
+    useUIStore.setState({ commandPaletteOpen: false })
+  })
+
+  it('does not call onClose on Escape when settings is open on top', () => {
+    useUIStore.setState({ settingsOpen: true })
+    render(<TaskDetail taskId="tsk_test01" visible={true} onClose={onClose} />)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+
+    useUIStore.setState({ settingsOpen: false })
   })
 
   it('has hidden visibility when not visible', () => {

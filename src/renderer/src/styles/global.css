@@ -143,6 +143,9 @@
   --z-overlay: 300;
   --z-modal: 400;
   --z-toast: 500;
+  /* Command palette must float above modals (including TaskDetail) so it can
+     be opened from inside any task view with Cmd+K / Cmd+F. */
+  --z-command-palette: 550;
 }
 
 /* ==========================================================================
