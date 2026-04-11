@@ -36,8 +36,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Persist theme preferences to global settings (~/.familiar/settings.json)
-  // Guard: skip the initial render to avoid writing defaults before settings load
+  // Persist theme preferences to the active workspace (or global settings
+  // as a fallback when no workspace is active). Guard: skip writes until
+  // the initial load from disk has completed, otherwise React's first
+  // commit would overwrite stored preferences with the store defaults.
   const hasLoadedRef = useRef(false)
   useEffect(() => {
     if (!hasLoadedRef.current) {
@@ -46,7 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     }
     const save = async (): Promise<void> => {
       try {
-        await window.api.writeGlobalSettings({
+        await window.api.writeWorkspaceTheme({
           themeMode,
           darkTheme,
           lightTheme

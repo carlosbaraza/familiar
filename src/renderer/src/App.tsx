@@ -38,21 +38,24 @@ function App(): React.JSX.Element {
     loadOpenProjects()
   }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
-  // Load theme preferences from global settings (~/.familiar/settings.json) once on mount.
-  // Theme is global, not per-project, so no need to reload on project switch.
+  // Load theme preferences. Prefers the active workspace's theme (stored in
+  // ~/.familiar/workspaces.json) so each workspace can have its own theme;
+  // falls back to global settings (~/.familiar/settings.json) when no
+  // workspace is active. Reloads when the active workspace changes.
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? null)
   useEffect(() => {
     window.api
-      .readGlobalSettings()
-      .then((settings) => {
+      .readWorkspaceTheme()
+      .then((theme) => {
         const store = useUIStore.getState()
-        if (settings.themeMode) store.setThemeMode(settings.themeMode)
-        if (settings.darkTheme) store.setDarkTheme(settings.darkTheme)
-        if (settings.lightTheme) store.setLightTheme(settings.lightTheme)
+        store.setThemeMode(theme.themeMode)
+        store.setDarkTheme(theme.darkTheme)
+        store.setLightTheme(theme.lightTheme)
       })
       .catch(() => {
         /* use defaults */
       })
-  }, [])
+  }, [activeWorkspaceId])
 
   // When switching to an uninitialized project, open onboarding.
   // When switching to an initialized project, close onboarding.

@@ -141,6 +141,7 @@ declare global {
       workspaceSetActiveProject(path: string): Promise<void>
       workspaceSetActiveWorkspaceId(workspaceId: string): Promise<void>
       workspaceListAllTasks(): Promise<(Task & { projectPath: string })[]>
+      workspaceReadTaskDocument(projectPath: string, taskId: string): Promise<string>
 
       // Task worktree operations
       taskMoveToWorktree(

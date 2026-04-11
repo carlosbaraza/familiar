@@ -233,6 +233,8 @@ const api = {
     ipcRenderer.invoke('workspace:set-active-workspace-id', workspaceId),
   workspaceListAllTasks: (): Promise<(Task & { projectPath: string })[]> =>
     ipcRenderer.invoke('workspace:list-all-tasks'),
+  workspaceReadTaskDocument: (projectPath: string, taskId: string): Promise<string> =>
+    ipcRenderer.invoke('workspace:read-task-document', projectPath, taskId),
 
   // Task worktree operations
   taskMoveToWorktree: (

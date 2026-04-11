@@ -85,17 +85,17 @@ function createWindow(): void {
   // Give workspace manager reference to the window for file watchers
   workspaceManager.setMainWindow(mainWindow)
 
-  // FOUC Prevention: inject theme before showing the window
+  // FOUC Prevention: inject theme before showing the window. Uses the
+  // effective theme (active workspace > global settings) so the splash
+  // matches whatever the renderer will load a moment later.
   mainWindow.webContents.once('dom-ready', async () => {
     try {
-      const settings = await dataService.readSettings()
-      const mode = settings.themeMode || 'system'
-      const dark = settings.darkTheme || 'familiar-dark'
-      const light = settings.lightTheme || 'familiar-light'
+      const theme = workspaceManager.readEffectiveTheme()
+      const mode = theme.themeMode
       let themeId: string
-      if (mode === 'dark') themeId = dark
-      else if (mode === 'light') themeId = light
-      else themeId = nativeTheme.shouldUseDarkColors ? dark : light
+      if (mode === 'dark') themeId = theme.darkTheme
+      else if (mode === 'light') themeId = theme.lightTheme
+      else themeId = nativeTheme.shouldUseDarkColors ? theme.darkTheme : theme.lightTheme
       await mainWindow.webContents.executeJavaScript(
         `document.documentElement.setAttribute('data-theme', '${themeId}')`
       )

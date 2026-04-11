@@ -44,7 +44,13 @@ describe('workspace-handlers', () => {
       getActiveProjectPath: vi.fn().mockReturnValue(null),
       setActiveProjectPath: vi.fn(),
       setActiveWorkspaceId: vi.fn(),
-      getDataService: vi.fn().mockReturnValue(mockDs)
+      getDataService: vi.fn().mockReturnValue(mockDs),
+      readEffectiveTheme: vi.fn().mockReturnValue({
+        themeMode: 'system',
+        darkTheme: 'familiar-dark',
+        lightTheme: 'familiar-light'
+      }),
+      writeEffectiveTheme: vi.fn()
     }
 
     mockDataService = {
@@ -159,5 +165,21 @@ describe('workspace-handlers', () => {
     const handler = handlers.get('workspace:set-active-workspace-id')!
     await handler({}, 'ws_123')
     expect(mockManager.setActiveWorkspaceId).toHaveBeenCalledWith('ws_123')
+  })
+
+  it('workspace-theme:read returns the effective theme', async () => {
+    const handler = handlers.get('workspace-theme:read')!
+    expect(handler).toBeDefined()
+    const theme = await handler({})
+    expect(mockManager.readEffectiveTheme).toHaveBeenCalled()
+    expect(theme.themeMode).toBe('system')
+  })
+
+  it('workspace-theme:write writes the theme through the manager', async () => {
+    const handler = handlers.get('workspace-theme:write')!
+    expect(handler).toBeDefined()
+    const theme = { themeMode: 'dark' as const, darkTheme: 'dracula', lightTheme: 'familiar-light' }
+    await handler({}, theme)
+    expect(mockManager.writeEffectiveTheme).toHaveBeenCalledWith(theme)
   })
 })

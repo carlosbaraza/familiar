@@ -122,4 +122,20 @@ export function registerWorkspaceHandlers(
     }
     return result
   })
+
+  // Read a task's document.md from a SPECIFIC open project (by path).
+  // Used by the command palette to search documents across every open
+  // worktree/project, not just the active one. Returns empty string if the
+  // project is not open or the document cannot be read.
+  ipcMain.handle(
+    'workspace:read-task-document',
+    async (_, projectPath: string, taskId: string): Promise<string> => {
+      try {
+        const ds = workspaceManager.getDataService(projectPath)
+        return await ds.readTaskDocument(taskId)
+      } catch {
+        return ''
+      }
+    }
+  )
 }
