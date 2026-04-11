@@ -16,6 +16,10 @@ export function generateWorkspaceId(): string {
   return `ws_${nanoid(8)}`
 }
 
+export function generateAgentId(): string {
+  return `agent_${nanoid(8)}`
+}
+
 export function generateId(): string {
   return nanoid(8)
 }

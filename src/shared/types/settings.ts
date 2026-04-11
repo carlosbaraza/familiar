@@ -15,11 +15,40 @@ export interface Snippet {
   showIconInTerminal?: boolean
 }
 
-export type CodingAgent = 'claude-code' | 'other'
+export type AgentType = 'claude-code' | 'codex' | 'other'
 
-export const CODING_AGENT_LABELS: Record<CodingAgent, string> = {
+/** @deprecated Use AgentType instead */
+export type CodingAgent = AgentType
+
+export const AGENT_TYPE_LABELS: Record<AgentType, string> = {
   'claude-code': 'Claude Code',
+  codex: 'Codex',
   other: 'Other'
+}
+
+/** @deprecated Use AGENT_TYPE_LABELS instead */
+export const CODING_AGENT_LABELS = AGENT_TYPE_LABELS
+
+export const AGENT_TYPE_ICONS: Record<AgentType, string> = {
+  'claude-code': 'claude-code',
+  codex: 'codex',
+  other: 'terminal'
+}
+
+export const AGENT_TYPE_DEFAULT_COMMANDS: Record<AgentType, string> = {
+  'claude-code':
+    'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
+  codex: 'codex --full-auto',
+  other: ''
+}
+
+export interface AgentProfile {
+  id: string
+  type: AgentType
+  name: string
+  icon: string
+  defaultCommand: string
+  snippets: Snippet[]
 }
 
 export interface WorktreeEnvVariable {
@@ -40,6 +69,10 @@ export interface ProjectSettings {
   labels?: import('./board').LabelConfig[]
   /** Selected coding agent harness (set during onboarding) */
   codingAgent?: CodingAgent
+  /** Configured agent profiles */
+  agents?: AgentProfile[]
+  /** ID of the currently active agent for new tasks */
+  activeAgentId?: string
   /** Whether to skip the doctor check during onboarding */
   skipDoctor?: boolean
   /** @deprecated Theme settings moved to GlobalSettings in ~/.familiar/settings.json */
