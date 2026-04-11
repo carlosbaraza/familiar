@@ -123,6 +123,17 @@ describe('useTaskStore', () => {
       await expect(useTaskStore.getState().addTask('Task')).rejects.toThrow('Project not initialized')
     })
 
+    it('stamps agentId from options when provided', async () => {
+      const state = makeProjectState()
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      const task = await useTaskStore.getState().addTask('Task with agent', { agentId: 'agent_test123' })
+      expect(task.agentId).toBe('agent_test123')
+      expect(mockApi.createTask).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agent_test123' }))
+    })
+
     it('adds new task to the top of the column (sortOrder 0) and shifts existing tasks down', async () => {
       const existing = makeTask({ status: 'todo', sortOrder: 5 })
       const state = makeProjectState([existing])
