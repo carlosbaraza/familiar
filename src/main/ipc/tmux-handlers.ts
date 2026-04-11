@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { ElectronTmuxManager } from '../platform/electron-tmux'
 import type { DataService } from '../services/data-service'
-import { resolveClaudeSessionCommand, ensureSessionCopied } from '../services/claude-session'
+import { ensureSessionCopied, resolveAgentCommand } from '../services/claude-session'
 
 export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataService: DataService): void {
   // Track in-progress warmups to prevent duplicate concurrent calls.
@@ -63,16 +63,14 @@ export function registerTmuxHandlers(tmuxManager: ElectronTmuxManager, dataServi
 
       await tmuxManager.createSession(sessionName, projectRoot, env)
 
-      // Resolve default command, then warm up (wait + Ctrl-C + export + command).
+      // Resolve agent command (uses agent profile's defaultCommand if task.agentId is set,
+      // otherwise falls back to global settings.defaultCommand), then warm up.
       // Await warmup so the IPC caller knows when the session is fully ready.
       let command: string | undefined
       try {
-        const settings = await dataService.readSettings()
-        if (settings.defaultCommand) {
-          command = resolveClaudeSessionCommand(settings.defaultCommand, taskId, projectRoot)
-        }
+        command = await resolveAgentCommand(dataService, taskId, projectRoot)
       } catch {
-        // Settings not available — skip default command
+        // Resolution failed — skip default command
       }
 
       await tmuxManager.warmupSession(sessionName, env, command)

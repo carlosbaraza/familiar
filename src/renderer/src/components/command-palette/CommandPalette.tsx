@@ -225,7 +225,9 @@ export function CommandPalette(): React.JSX.Element | null {
 
   const handleRunDoctor = useCallback((autoFix: boolean) => {
     if (!activeTaskId) return
-    const isClaudeCode = settings?.codingAgent === 'claude-code'
+    const isClaudeCode =
+      settings?.agents?.some((a) => a.type === 'claude-code') ||
+      settings?.codingAgent === 'claude-code'
     let command: string
     if (isClaudeCode) {
       const flags = autoFix ? ' --allow-dangerously-skip-permissions --permission-mode bypassPermissions' : ''

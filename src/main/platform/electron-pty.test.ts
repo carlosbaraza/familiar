@@ -25,9 +25,15 @@ vi.mock('fs', async () => {
 })
 
 // Mock claude-session
-vi.mock('../services/claude-session', () => ({
-  resolveClaudeSessionCommand: vi.fn((cmd: string) => cmd)
-}))
+vi.mock('../services/claude-session', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/claude-session')>()
+  return {
+    ...actual,
+    // Override resolveClaudeSessionCommand to be a passthrough so tests can
+    // assert on the raw agent command without UUID/resume rewriting.
+    resolveClaudeSessionCommand: vi.fn((cmd: string) => cmd)
+  }
+})
 
 import { ElectronPtyManager } from './electron-pty'
 import type { DataService } from '../services/data-service'

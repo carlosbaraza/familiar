@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process'
 import { IPtyManager } from '../../shared/platform/pty'
 import { ElectronTmuxManager } from './electron-tmux'
 import type { DataService } from '../services/data-service'
-import { resolveClaudeSessionCommand, ensureSessionCopied } from '../services/claude-session'
+import { ensureSessionCopied, resolveAgentCommand } from '../services/claude-session'
 
 interface PtySession {
   id: string
@@ -316,31 +316,10 @@ export class ElectronPtyManager implements IPtyManager {
     // Fire-and-forget so the terminal appears immediately.
     // Only for new sessions — existing sessions (pre-warmed by tmux:warmup) are skipped.
     if (isNewSession && tmuxSessionName) {
-      const commandPromise = overrideCommand
+      const commandPromise: Promise<string | undefined> = overrideCommand
         ? Promise.resolve(overrideCommand)
         : this._dataService
-          ? (async () => {
-              const ds = this._dataService!
-              const settings = await ds.readSettings()
-              let command = settings.defaultCommand
-
-              try {
-                const task = await ds.readTask(taskId)
-                if (task?.agentId && settings.agents && settings.agents.length > 0) {
-                  const agent = settings.agents.find((a) => a.id === task.agentId)
-                  if (agent?.defaultCommand) {
-                    command = agent.defaultCommand
-                  }
-                }
-              } catch {
-                // Task not readable — fall back to global default
-              }
-
-              if (command) {
-                return resolveClaudeSessionCommand(command, taskId, cwd)
-              }
-              return undefined
-            })().catch(() => undefined)
+          ? resolveAgentCommand(this._dataService, taskId, cwd).catch(() => undefined)
           : Promise.resolve(undefined)
 
       commandPromise.then((command) => {

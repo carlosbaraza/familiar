@@ -104,21 +104,30 @@ export function KanbanBoard(): React.JSX.Element {
   const [agents, setAgents] = useState<AgentProfile[]>([])
   const [activeAgentId, setActiveAgentId] = useState<string | undefined>(undefined)
 
+  // Track global snippets separately so we can fall back when an active agent has none
+  const [globalSnippets, setGlobalSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
+
+  // Resolve which snippets to show: active agent's snippets if non-empty, else global
+  const resolveSnippets = useCallback(
+    (global: Snippet[], activeAgent: AgentProfile | undefined): Snippet[] => {
+      if (activeAgent?.snippets?.length) return activeAgent.snippets
+      return global.length > 0 ? global : DEFAULT_SNIPPETS
+    },
+    []
+  )
+
   useEffect(() => {
     async function loadSnippets(): Promise<void> {
       try {
         const settings = await window.api.readSettings()
-        if (settings.snippets && settings.snippets.length > 0) {
-          setSnippets(settings.snippets)
-        }
-        if (settings.agents) {
-          setAgents(settings.agents)
-          setActiveAgentId(settings.activeAgentId)
-          const activeAgent = settings.agents.find((a) => a.id === settings.activeAgentId)
-          if (activeAgent?.snippets?.length) {
-            setSnippets(activeAgent.snippets)
-          }
-        }
+        const nextGlobal =
+          settings.snippets && settings.snippets.length > 0 ? settings.snippets : DEFAULT_SNIPPETS
+        setGlobalSnippets(nextGlobal)
+        const nextAgents = settings.agents ?? []
+        setAgents(nextAgents)
+        setActiveAgentId(settings.activeAgentId)
+        const activeAgent = nextAgents.find((a) => a.id === settings.activeAgentId)
+        setSnippets(resolveSnippets(nextGlobal, activeAgent))
       } catch {
         // Use defaults
       }
@@ -128,16 +137,27 @@ export function KanbanBoard(): React.JSX.Element {
     // Re-load when snippets are saved from the settings modal
     function handleSnippetsUpdated(e: Event): void {
       const detail = (e as CustomEvent<Snippet[]>).detail
-      setSnippets(detail.length > 0 ? detail : DEFAULT_SNIPPETS)
+      const nextGlobal = detail.length > 0 ? detail : DEFAULT_SNIPPETS
+      setGlobalSnippets(nextGlobal)
+      // If active agent has no snippets, switch to the new global set
+      setAgents((currentAgents) => {
+        setActiveAgentId((currentActiveId) => {
+          const activeAgent = currentAgents.find((a) => a.id === currentActiveId)
+          setSnippets(resolveSnippets(nextGlobal, activeAgent))
+          return currentActiveId
+        })
+        return currentAgents
+      })
     }
     function handleAgentsUpdated(e: Event): void {
       const detail = (e as CustomEvent<{ agents: AgentProfile[]; activeAgentId?: string }>).detail
       setAgents(detail.agents)
       setActiveAgentId(detail.activeAgentId)
       const activeAgent = detail.agents.find((a) => a.id === detail.activeAgentId)
-      if (activeAgent?.snippets?.length) {
-        setSnippets(activeAgent.snippets)
-      }
+      setGlobalSnippets((current) => {
+        setSnippets(resolveSnippets(current, activeAgent))
+        return current
+      })
     }
     window.addEventListener('snippets-updated', handleSnippetsUpdated)
     window.addEventListener('agents-updated', handleAgentsUpdated)
@@ -145,21 +165,22 @@ export function KanbanBoard(): React.JSX.Element {
       window.removeEventListener('snippets-updated', handleSnippetsUpdated)
       window.removeEventListener('agents-updated', handleAgentsUpdated)
     }
-  }, [])
+  }, [resolveSnippets])
 
-  const handleAgentChange = useCallback(async (agentId: string) => {
-    setActiveAgentId(agentId)
-    const agent = agents.find((a) => a.id === agentId)
-    if (agent?.snippets?.length) {
-      setSnippets(agent.snippets)
-    }
-    try {
-      const settings = await window.api.readSettings()
-      await window.api.writeSettings({ ...settings, activeAgentId: agentId })
-    } catch {
-      // Non-critical — state still updated locally
-    }
-  }, [agents])
+  const handleAgentChange = useCallback(
+    async (agentId: string) => {
+      setActiveAgentId(agentId)
+      const agent = agents.find((a) => a.id === agentId)
+      setSnippets(resolveSnippets(globalSnippets, agent))
+      try {
+        const settings = await window.api.readSettings()
+        await window.api.writeSettings({ ...settings, activeAgentId: agentId })
+      } catch {
+        // Non-critical — state still updated locally
+      }
+    },
+    [agents, globalSnippets, resolveSnippets]
+  )
 
   const dashboardSnippets = useMemo(
     () => snippets.filter((s) => s.showInDashboard),

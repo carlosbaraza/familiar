@@ -2,6 +2,7 @@ import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
+import type { DataService } from './data-service'
 
 /**
  * Generate a deterministic UUID v5 from a task ID.
@@ -128,4 +129,40 @@ export function resolveClaudeSessionCommand(
     // Start a fresh session with the deterministic UUID (no resume picker)
     return command.replace(resumePattern, `--session-id "${sessionUuid}"`)
   }
+}
+
+/**
+ * Resolve the command that should run in a new task terminal, taking the task's
+ * agent profile into account.
+ *
+ * Resolution order:
+ *   1. If the task has `agentId` and that agent exists in `settings.agents`,
+ *      use that agent's `defaultCommand`.
+ *   2. Otherwise fall back to `settings.defaultCommand`.
+ *   3. Pass the result through `resolveClaudeSessionCommand` for $VAR expansion.
+ *
+ * Returns `undefined` if neither the agent nor the global default produces a command.
+ */
+export async function resolveAgentCommand(
+  dataService: DataService,
+  taskId: string,
+  projectRoot: string
+): Promise<string | undefined> {
+  const settings = await dataService.readSettings()
+  let command: string | undefined = settings.defaultCommand
+
+  try {
+    const task = await dataService.readTask(taskId)
+    if (task?.agentId && settings.agents?.length) {
+      const agent = settings.agents.find((a) => a.id === task.agentId)
+      if (agent?.defaultCommand) {
+        command = agent.defaultCommand
+      }
+    }
+  } catch {
+    // Task not readable (may not exist yet) — fall through to global default
+  }
+
+  if (!command) return undefined
+  return resolveClaudeSessionCommand(command, taskId, projectRoot)
 }

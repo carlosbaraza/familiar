@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as path from 'path'
-import { taskIdToUuid, resolveClaudeSessionCommand, ensureSessionCopied } from './claude-session'
+import { taskIdToUuid, resolveClaudeSessionCommand, ensureSessionCopied, resolveAgentCommand } from './claude-session'
+import type { DataService } from './data-service'
+import type { Task, ProjectSettings } from '../../shared/types'
 
 const mockExistsSync = vi.fn()
 const mockCopyFileSync = vi.fn()
@@ -326,5 +328,111 @@ describe('ensureSessionCopied', () => {
     )
 
     expect(result).toBe(`claude --resume "${childUuid}"`)
+  })
+})
+
+describe('resolveAgentCommand', () => {
+  beforeEach(() => {
+    mockExistsSync.mockReturnValue(false) // No existing session by default
+  })
+
+  function makeMockDs(settings: Partial<ProjectSettings>, task?: Task): DataService {
+    return {
+      readSettings: vi.fn().mockResolvedValue(settings),
+      readTask: vi.fn().mockResolvedValue(task)
+    } as unknown as DataService
+  }
+
+  function makeTask(agentId?: string): Task {
+    return {
+      id: 'tsk_abc',
+      title: 'Test',
+      status: 'todo',
+      priority: 'none',
+      labels: [],
+      agentStatus: 'idle',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      sortOrder: 0,
+      ...(agentId ? { agentId } : {})
+    }
+  }
+
+  it('uses agent profile defaultCommand when task has matching agentId', async () => {
+    const ds = makeMockDs(
+      {
+        defaultCommand: 'claude --global',
+        agents: [
+          {
+            id: 'agent_a',
+            type: 'claude-code',
+            name: 'Claude',
+            icon: 'claude-code',
+            defaultCommand: 'claude --custom-flag',
+            snippets: []
+          }
+        ],
+        activeAgentId: 'agent_a'
+      },
+      makeTask('agent_a')
+    )
+
+    const result = await resolveAgentCommand(ds, 'tsk_abc', '/project')
+    expect(result).toBe('claude --custom-flag')
+  })
+
+  it('falls back to global defaultCommand when agentId does not match any agent', async () => {
+    const ds = makeMockDs(
+      {
+        defaultCommand: 'claude --global',
+        agents: []
+      },
+      makeTask('agent_deleted')
+    )
+
+    const result = await resolveAgentCommand(ds, 'tsk_abc', '/project')
+    expect(result).toBe('claude --global')
+  })
+
+  it('falls back to global defaultCommand when task has no agentId', async () => {
+    const ds = makeMockDs(
+      {
+        defaultCommand: 'claude --global',
+        agents: [
+          {
+            id: 'agent_a',
+            type: 'claude-code',
+            name: 'Claude',
+            icon: 'claude-code',
+            defaultCommand: 'claude --custom-flag',
+            snippets: []
+          }
+        ]
+      },
+      makeTask()
+    )
+
+    const result = await resolveAgentCommand(ds, 'tsk_abc', '/project')
+    expect(result).toBe('claude --global')
+  })
+
+  it('returns undefined when no command is configured', async () => {
+    const ds = makeMockDs({ agents: [] }, makeTask())
+
+    const result = await resolveAgentCommand(ds, 'tsk_abc', '/project')
+    expect(result).toBeUndefined()
+  })
+
+  it('falls back to global when readTask throws', async () => {
+    const ds = {
+      readSettings: vi.fn().mockResolvedValue({
+        defaultCommand: 'claude --global',
+        agents: []
+      }),
+      readTask: vi.fn().mockRejectedValue(new Error('Task not found'))
+    } as unknown as DataService
+
+    const result = await resolveAgentCommand(ds, 'tsk_abc', '/project')
+    expect(result).toBe('claude --global')
   })
 })
