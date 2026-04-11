@@ -324,8 +324,11 @@ export function registerHealthHandlers(
     const settings = await ds.readSettings()
     const issues: HealthIssue[] = []
 
-    // Use overrideAgent if provided (e.g. during onboarding when settings may not be synced yet)
-    const effectiveAgent = overrideAgent || settings.codingAgent
+    // Determine effective agent types (supports new agents array + legacy codingAgent + onboarding override)
+    const agents = settings.agents ?? []
+    const agentTypes = new Set<string>(agents.map((a) => a.type))
+    if (settings.codingAgent) agentTypes.add(settings.codingAgent)
+    if (overrideAgent) agentTypes.add(overrideAgent)
 
     // 1. Check CLI
     const cliAvailable = await checkCliAvailable()
@@ -340,7 +343,8 @@ export function registerHealthHandlers(
     }
 
     // 2. Check agent harness
-    const agentHarnessConfigured = !!effectiveAgent
+    const agentHarnessConfigured =
+      agents.length > 0 || !!settings.codingAgent || !!overrideAgent
     if (!agentHarnessConfigured) {
       issues.push({
         id: 'no-agent-harness',
@@ -356,7 +360,7 @@ export function registerHealthHandlers(
     let hooksConfigured: boolean | null = null
     let skillInstalled: boolean | null = null
 
-    if (effectiveAgent === 'claude-code') {
+    if (agentTypes.has('claude-code')) {
       // 3. Check Claude Code binary
       claudeAvailable = await checkClaudeAvailable()
       if (!claudeAvailable) {
@@ -449,7 +453,12 @@ export function registerHealthHandlers(
       const fixed: string[] = []
       const failed: string[] = []
 
-      if (settings.codingAgent === 'claude-code') {
+      const agents = settings.agents ?? []
+      const hasClaudeAgent =
+        agents.some((a) => a.type === 'claude-code') ||
+        settings.codingAgent === 'claude-code'
+
+      if (hasClaudeAgent) {
         // Fix hooks
         if (!checkHooksConfigured(projectRoot)) {
           try {

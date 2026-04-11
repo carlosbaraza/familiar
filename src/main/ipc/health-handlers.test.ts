@@ -157,6 +157,42 @@ describe('health-handlers', () => {
       expect(result.skillInstalled).toBeNull()
     })
 
+    it('checks health for agents array instead of single codingAgent', async () => {
+      mockDs.readSettings.mockResolvedValue({
+        agents: [
+          {
+            id: 'agent_1',
+            type: 'claude-code',
+            name: 'Claude',
+            icon: 'claude-code',
+            defaultCommand: 'claude',
+            snippets: []
+          }
+        ],
+        activeAgentId: 'agent_1'
+      })
+
+      const handler = handlers.get('health:check')!
+      const result = (await handler()) as {
+        agentHarnessConfigured: boolean
+      }
+      expect(result.agentHarnessConfigured).toBe(true)
+    })
+
+    it('reports no agent harness when agents array is empty and no codingAgent', async () => {
+      mockDs.readSettings.mockResolvedValue({ agents: [] })
+
+      const handler = handlers.get('health:check')!
+      const result = (await handler()) as {
+        agentHarnessConfigured: boolean
+        issues: { id: string }[]
+      }
+      expect(result.agentHarnessConfigured).toBe(false)
+      expect(
+        result.issues.find((i) => i.id === 'no-agent-harness')
+      ).toBeDefined()
+    })
+
     it('reports hooks configured when all files exist correctly', async () => {
       mockDs.readSettings.mockResolvedValue({ codingAgent: 'claude-code' })
 
