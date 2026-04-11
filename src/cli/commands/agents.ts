@@ -25,11 +25,28 @@ export function buildSettingsSection(settings: ProjectSettings): string {
 
   // Future settings can be added here with the same pattern.
 
-  if (lines.length === 0) {
-    return '\n## Active Settings\n\nNo special settings are enabled.\n'
+  const settingsBlock =
+    lines.length === 0
+      ? '\n## Active Settings\n\nNo special settings are enabled.\n'
+      : '\n## Active Settings\n\nThe following settings are enabled for this project — obey them:\n\n' +
+        lines.join('\n') +
+        '\n'
+
+  // Agents section — show configured agents, highlighting the active one
+  const agents = settings.agents ?? []
+  let agentsBlock = ''
+  if (agents.length > 0) {
+    const agentLines = agents.map((agent) => {
+      const activeMark = agent.id === settings.activeAgentId ? ' **(active)**' : ''
+      return `- ${agent.name} (${agent.type})${activeMark}`
+    })
+    agentsBlock = '\n## Configured Agents\n\n' + agentLines.join('\n') + '\n'
+  } else if (settings.codingAgent) {
+    // Legacy fallback
+    agentsBlock = `\n## Configured Agents\n\n- ${settings.codingAgent} (legacy)\n`
   }
 
-  return '\n## Active Settings\n\nThe following settings are enabled for this project — obey them:\n\n' + lines.join('\n') + '\n'
+  return settingsBlock + agentsBlock
 }
 
 export function agentsCommand(): Command {
