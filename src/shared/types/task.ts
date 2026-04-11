@@ -30,4 +30,5 @@ export interface Task {
   pastedFiles?: TaskPastedFile[] // large pasted content stored as files
   parentTaskId?: string // parent task ID when this is a subtask
   subtaskIds?: string[] // child task IDs (subtasks of this task)
+  agentId?: string // ID of the agent profile used for this task
 }
