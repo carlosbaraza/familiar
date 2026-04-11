@@ -436,6 +436,59 @@ describe('DataService', () => {
     })
   })
 
+  describe('readSettings agent migration', () => {
+    it('migrates old codingAgent to agents array', async () => {
+      await service.initProject('Test')
+
+      const snippets = [
+        { title: 'Run', command: 'npm start', pressEnter: true }
+      ]
+      const defaultCommand = 'claude --resume $FAMILIAR_TASK_ID'
+
+      await service.writeSettings({
+        codingAgent: 'claude-code',
+        defaultCommand,
+        snippets
+      })
+
+      const result = await service.readSettings()
+
+      expect(result.agents).toBeDefined()
+      expect(result.agents).toHaveLength(1)
+      expect(result.agents![0].type).toBe('claude-code')
+      expect(result.agents![0].name).toBe('Claude Code')
+      expect(result.agents![0].defaultCommand).toBe(defaultCommand)
+      expect(result.agents![0].snippets).toEqual(snippets)
+      expect(result.activeAgentId).toBe(result.agents![0].id)
+    })
+
+    it('does not migrate when agents array already exists', async () => {
+      await service.initProject('Test')
+
+      const existingAgent = {
+        id: 'agent_existing',
+        type: 'claude-code' as const,
+        name: 'Existing Agent',
+        icon: 'claude-code',
+        defaultCommand: 'claude',
+        snippets: []
+      }
+
+      await service.writeSettings({
+        codingAgent: 'claude-code',
+        defaultCommand: 'claude',
+        snippets: [],
+        agents: [existingAgent],
+        activeAgentId: 'agent_existing'
+      })
+
+      const result = await service.readSettings()
+
+      expect(result.agents).toHaveLength(1)
+      expect(result.agents![0].id).toBe('agent_existing')
+    })
+  })
+
   describe('markNotificationsByTaskIds', () => {
     it('marks notifications for multiple taskIds in a single write', async () => {
       await service.initProject('Test')

@@ -1,6 +1,8 @@
 import { ElectronFileSystem } from '../platform/electron-file-system'
 import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../../shared/types'
 import { DEFAULT_SETTINGS } from '../../shared/types'
+import { AGENT_TYPE_LABELS, AGENT_TYPE_ICONS, type AgentProfile } from '../../shared/types/settings'
+import { generateAgentId } from '../../shared/utils/id-generator'
 import {
   DATA_DIR,
   STATE_FILE,
@@ -433,6 +435,22 @@ export class DataService {
       } catch {
         settings.labels = [...DEFAULT_LABELS]
       }
+      await this.writeSettings(settings)
+    }
+
+    // Migrate: if old codingAgent exists but no agents array, convert to single profile
+    if (settings.codingAgent && (!settings.agents || settings.agents.length === 0)) {
+      const agentType = settings.codingAgent
+      const profile: AgentProfile = {
+        id: generateAgentId(),
+        type: agentType,
+        name: AGENT_TYPE_LABELS[agentType] ?? agentType,
+        icon: AGENT_TYPE_ICONS[agentType] ?? 'terminal',
+        defaultCommand: settings.defaultCommand ?? '',
+        snippets: settings.snippets ?? []
+      }
+      settings.agents = [profile]
+      settings.activeAgentId = profile.id
       await this.writeSettings(settings)
     }
 
