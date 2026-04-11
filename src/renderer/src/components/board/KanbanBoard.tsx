@@ -83,7 +83,7 @@ export function KanbanBoard(): React.JSX.Element {
     window.api
       .readSettings()
       .then((settings) => {
-        const agentConfigured = !!settings.codingAgent
+        const agentConfigured = (settings.agents?.length ?? 0) > 0 || !!settings.codingAgent
         const doctorHandled = settings.skipDoctor === true
         setNeedsOnboarding(!agentConfigured || !doctorHandled)
       })

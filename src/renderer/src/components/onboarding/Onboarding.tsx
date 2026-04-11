@@ -1,9 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { CodingAgent, ProjectSettings } from '@shared/types'
-import { CODING_AGENT_LABELS } from '@shared/types/settings'
+import type { AgentType, AgentProfile, ProjectSettings } from '@shared/types'
+import {
+  AGENT_TYPE_LABELS,
+  AGENT_TYPE_ICONS,
+  AGENT_TYPE_DEFAULT_COMMANDS
+} from '@shared/types/settings'
+import { generateAgentId } from '@shared/utils/id-generator'
 import { DOCTOR_PROMPT } from '@shared/prompts'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { ClaudeIcon, OpenAIIcon } from '@renderer/components/common/AgentIcons'
 
 type OnboardingStep = 'open-folder' | 'select-agent' | 'install-cli' | 'doctor'
 
@@ -17,7 +23,7 @@ interface OnboardingProps {
 export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.JSX.Element {
   const [step, setStep] = useState<OnboardingStep>(hasProject ? 'select-agent' : 'open-folder')
   const [skipDoctor, setSkipDoctor] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState<CodingAgent | null>(null)
+  const [selectedAgent, setSelectedAgent] = useState<AgentType | null>(null)
   const [copied, setCopied] = useState(false)
   const openWorkspace = useTaskStore((s) => s.openWorkspace)
   const initProject = useTaskStore((s) => s.initProject)
@@ -107,11 +113,11 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     // Check if agent is already configured
     try {
       const settings = await window.api.readSettings()
-      if (settings.codingAgent) {
+      if (settings.agents?.length || settings.codingAgent) {
         if (settings.skipDoctor || skipDoctor) {
           onComplete()
         } else {
-          setSelectedAgent(settings.codingAgent)
+          setSelectedAgent((settings.agents?.[0]?.type ?? settings.codingAgent) as AgentType)
           setStep('install-cli')
         }
         return
@@ -124,24 +130,38 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   }, [openWorkspace, skipDoctor, onComplete])
 
   const handleSelectAgent = useCallback(
-    async (agent: CodingAgent) => {
+    async (agent: AgentType) => {
       setSelectedAgent(agent)
 
-      // Save agent choice to settings
+      // Create agent profile and save to settings
       try {
         const settings = await window.api.readSettings()
-        const updated: ProjectSettings = { ...settings, codingAgent: agent, skipDoctor }
+        const profile: AgentProfile = {
+          id: generateAgentId(),
+          type: agent,
+          name: AGENT_TYPE_LABELS[agent],
+          icon: AGENT_TYPE_ICONS[agent],
+          defaultCommand: AGENT_TYPE_DEFAULT_COMMANDS[agent],
+          snippets:
+            agent === 'claude-code'
+              ? (settings.snippets ?? [
+                  { title: 'Start', command: '/familiar-agent', pressEnter: true }
+                ])
+              : []
+        }
+        const updated: ProjectSettings = {
+          ...settings,
+          codingAgent: agent, // Keep for backward compat with existing checks
+          agents: [...(settings.agents ?? []), profile],
+          activeAgentId: settings.activeAgentId ?? profile.id,
+          skipDoctor
+        }
         await window.api.writeSettings(updated)
       } catch {
         // Will be saved later
       }
 
-      if (skipDoctor) {
-        // Still show install-cli — it's quick and important
-        setStep('install-cli')
-      } else {
-        setStep('install-cli')
-      }
+      setStep('install-cli')
     },
     [skipDoctor]
   )
@@ -514,10 +534,17 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           <div style={styles.agentGrid}>
             <button style={styles.agentCard} onClick={() => handleSelectAgent('claude-code')}>
               <div style={styles.agentIcon}>
-                <TerminalIcon size={32} />
+                <ClaudeIcon size={32} />
               </div>
-              <span style={styles.agentName}>{CODING_AGENT_LABELS['claude-code']}</span>
+              <span style={styles.agentName}>{AGENT_TYPE_LABELS['claude-code']}</span>
               <span style={styles.agentBadge}>Recommended</span>
+            </button>
+
+            <button style={styles.agentCard} onClick={() => handleSelectAgent('codex')}>
+              <div style={styles.agentIcon}>
+                <OpenAIIcon size={32} />
+              </div>
+              <span style={styles.agentName}>{AGENT_TYPE_LABELS['codex']}</span>
             </button>
 
             <button style={styles.agentCard} onClick={() => handleSelectAgent('other')}>
@@ -794,7 +821,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           <h1 style={styles.title}>Environment Check</h1>
           <p style={styles.subtitle}>
             Running doctor diagnostics for{' '}
-            {selectedAgent ? CODING_AGENT_LABELS[selectedAgent] : 'your agent'}...
+            {selectedAgent ? AGENT_TYPE_LABELS[selectedAgent] : 'your agent'}...
           </p>
 
           <div
@@ -851,7 +878,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
         <h1 style={styles.title}>Environment Check</h1>
         <p style={styles.subtitle}>
           Run the doctor command to verify your environment is properly configured for{' '}
-          {selectedAgent ? CODING_AGENT_LABELS[selectedAgent] : 'your agent'}.
+          {selectedAgent ? AGENT_TYPE_LABELS[selectedAgent] : 'your agent'}.
         </p>
 
         <div style={styles.doctorPreview}>
