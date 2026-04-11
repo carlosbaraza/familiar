@@ -4,6 +4,7 @@ import { CommandPalette } from './CommandPalette'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import type { ProjectState, Task } from '@shared/types'
 
 const PROJECT_A = '/tmp/project-a'
@@ -135,6 +136,12 @@ function resetStores(): void {
     openProjects: [{ path: PROJECT_A, name: 'project-a' }],
     activeProjectPath: PROJECT_A
   })
+
+  // Clear notifications between tests — some tests populate them manually.
+  useNotificationStore.setState({
+    notifications: [],
+    workspaceNotifications: []
+  })
 }
 
 describe('CommandPalette', () => {
@@ -166,6 +173,95 @@ describe('CommandPalette', () => {
     // Archived and todo tasks — hidden
     expect(screen.queryByText('Archived task about payments')).not.toBeInTheDocument()
     expect(screen.queryByText('Backlog idea about payments')).not.toBeInTheDocument()
+  })
+
+  it('sorts the default task list with in-review first, then in-progress, newest updated first', async () => {
+    // Override the default project state with three active tasks in a known order.
+    const now = Date.now()
+    useTaskStore.setState({
+      projectState: {
+        version: 1,
+        projectName: 'Test',
+        tasks: [
+          {
+            id: 'tsk_ip1',
+            title: 'Alpha in progress (older)',
+            status: 'in-progress',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 10_000).toISOString(),
+            updatedAt: new Date(now - 10 * 60 * 1000).toISOString(),
+            sortOrder: 0
+          },
+          {
+            id: 'tsk_ip2',
+            title: 'Bravo in progress (newer)',
+            status: 'in-progress',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 10_000).toISOString(),
+            updatedAt: new Date(now - 2 * 60 * 1000).toISOString(),
+            sortOrder: 0
+          },
+          {
+            id: 'tsk_ir1',
+            title: 'Charlie in review (older)',
+            status: 'in-review',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 10_000).toISOString(),
+            updatedAt: new Date(now - 30 * 60 * 1000).toISOString(),
+            sortOrder: 0
+          },
+          {
+            id: 'tsk_ir2',
+            title: 'Delta in review (newest)',
+            status: 'in-review',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 10_000).toISOString(),
+            updatedAt: new Date(now - 1 * 60 * 1000).toISOString(),
+            sortOrder: 0
+          }
+        ],
+        columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
+        labels: []
+      }
+    })
+
+    useUIStore.setState({ commandPaletteOpen: true })
+    render(<CommandPalette />)
+    await waitFor(() => {
+      expect(screen.getByText('Delta in review (newest)')).toBeInTheDocument()
+    })
+
+    // Compare DOM ordering via compareDocumentPosition — rearrange the four
+    // titles into whatever order the palette actually rendered them.
+    const titles = [
+      'Alpha in progress (older)',
+      'Bravo in progress (newer)',
+      'Charlie in review (older)',
+      'Delta in review (newest)'
+    ]
+    const order = titles
+      .map((t) => ({ t, el: screen.getByText(t) }))
+      .sort((a, b) => {
+        const pos = a.el.compareDocumentPosition(b.el)
+        return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+      })
+      .map((x) => x.t)
+
+    // Expected: in-review newest → in-review older → in-progress newest → in-progress older
+    expect(order).toEqual([
+      'Delta in review (newest)',
+      'Charlie in review (older)',
+      'Bravo in progress (newer)',
+      'Alpha in progress (older)'
+    ])
   })
 
   it('shows tasks from every status once the user starts searching', async () => {
@@ -494,6 +590,157 @@ describe('CommandPalette', () => {
       expect(screen.getByText('Fix authentication bug')).toBeInTheDocument()
     })
     expect(screen.queryAllByTestId('command-palette-project-badge')).toHaveLength(0)
+  })
+
+  it('highlights tasks with unread notifications with an orange outline', async () => {
+    // Task 1 (in-progress) has an unread notification. Task 2 (in-review) does not.
+    useNotificationStore.setState({
+      notifications: [],
+      workspaceNotifications: [
+        {
+          id: 'notif1',
+          taskId: 'tsk_test01',
+          projectPath: PROJECT_A,
+          title: 'Agent finished',
+          body: 'ready for review',
+          createdAt: new Date().toISOString(),
+          read: false
+        }
+      ]
+    })
+
+    useUIStore.setState({ commandPaletteOpen: true })
+    render(<CommandPalette />)
+    await waitFor(() => {
+      expect(screen.getByText('Fix authentication bug')).toBeInTheDocument()
+    })
+
+    // The notified task's list item should carry the `data-has-unread` marker.
+    const notifiedTitle = screen.getByText('Fix authentication bug')
+    const notifiedItem = notifiedTitle.closest('[data-has-unread]')
+    expect(notifiedItem).not.toBeNull()
+    expect(notifiedItem?.getAttribute('data-has-unread')).toBe('true')
+
+    // The non-notified task should NOT carry the marker.
+    const otherTitle = screen.getByText('Add unit tests')
+    expect(otherTitle.closest('[data-has-unread]')).toBeNull()
+  })
+
+  it('sorts tasks with unread notifications to the very top regardless of status', async () => {
+    // An archived task with an unread notification — should normally be hidden
+    // by the default filter, but the unread notification brings it in and
+    // pins it to the top.
+    const now = Date.now()
+    useTaskStore.setState({
+      projectState: {
+        version: 1,
+        projectName: 'Test',
+        tasks: [
+          {
+            id: 'tsk_review',
+            title: 'In review task',
+            status: 'in-review',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 10_000).toISOString(),
+            updatedAt: new Date(now - 1_000).toISOString(),
+            sortOrder: 0
+          },
+          {
+            id: 'tsk_arch',
+            title: 'Archived but notified',
+            status: 'archived',
+            priority: 'none',
+            labels: [],
+            agentStatus: 'idle',
+            createdAt: new Date(now - 100_000).toISOString(),
+            updatedAt: new Date(now - 50_000).toISOString(),
+            sortOrder: 0
+          }
+        ],
+        columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
+        labels: []
+      }
+    })
+
+    useNotificationStore.setState({
+      notifications: [],
+      workspaceNotifications: [
+        {
+          id: 'notif1',
+          taskId: 'tsk_arch',
+          projectPath: PROJECT_A,
+          title: 'Notification',
+          body: '',
+          createdAt: new Date(now - 500).toISOString(),
+          read: false
+        }
+      ]
+    })
+
+    useUIStore.setState({ commandPaletteOpen: true })
+    render(<CommandPalette />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Archived but notified')).toBeInTheDocument()
+    })
+
+    const archivedEl = screen.getByText('Archived but notified')
+    const reviewEl = screen.getByText('In review task')
+    // Archived-but-notified should appear BEFORE the in-review task.
+    const pos = archivedEl.compareDocumentPosition(reviewEl)
+    expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('labels worktree tasks with a worktree badge even when only one project is open', async () => {
+    const WORKTREE_PATH = '/tmp/project-a/.worktrees/feature-x'
+    // Simulate: active project is a worktree (isWorktree: true) plus its main
+    // project is also in openProjects with worktrees[] populated.
+    useWorkspaceStore.setState({
+      openProjects: [
+        {
+          path: PROJECT_A,
+          name: 'project-a',
+          isWorktree: false,
+          worktrees: [
+            { path: WORKTREE_PATH, branch: 'feature-x', slug: 'feature-x', isMain: false }
+          ]
+        },
+        {
+          path: WORKTREE_PATH,
+          name: 'feature-x',
+          isWorktree: true
+        }
+      ],
+      activeProjectPath: WORKTREE_PATH
+    })
+
+    installApiMock({
+      allTasks: [
+        {
+          id: 'tsk_wt1',
+          title: 'Worktree task',
+          status: 'in-progress',
+          priority: 'none',
+          labels: [],
+          agentStatus: 'running',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          sortOrder: 0,
+          projectPath: WORKTREE_PATH
+        }
+      ]
+    })
+
+    useUIStore.setState({ commandPaletteOpen: true })
+    render(<CommandPalette />)
+    await waitFor(() => {
+      expect(screen.getByText('Worktree task')).toBeInTheDocument()
+    })
+    const badge = screen.getByTestId('command-palette-project-badge')
+    expect(badge.getAttribute('data-kind')).toBe('worktree')
+    expect(badge.textContent).toContain('project-a / feature-x')
   })
 
   it('dispatches run-doctor event with claude flags for claude-code agent', async () => {

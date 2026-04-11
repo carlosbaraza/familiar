@@ -112,6 +112,15 @@ export function useGlobalShortcuts(): void {
       // Escape or Shift+Escape — close whatever's open (detail, palette, etc.)
       // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
       if (e.key === 'Escape') {
+        // The command palette owns Escape even when its own search input is
+        // focused — otherwise the user can't close the palette from the search.
+        // Check this BEFORE the input-focus bail-out below.
+        if (commandPaletteOpen) {
+          e.preventDefault()
+          toggleCommandPalette()
+          return
+        }
+
         // Don't handle if typing in inputs (let other handlers deal with it)
         // Exception: Shift+Escape always closes (it's the explicit "close task view" shortcut)
         if (!e.shiftKey && isInputFocused()) return
@@ -119,11 +128,6 @@ export function useGlobalShortcuts(): void {
         if (shortcutsModalOpen) {
           e.preventDefault()
           closeShortcutsModal()
-          return
-        }
-        if (commandPaletteOpen) {
-          e.preventDefault()
-          toggleCommandPalette()
           return
         }
         if (settingsOpen) {

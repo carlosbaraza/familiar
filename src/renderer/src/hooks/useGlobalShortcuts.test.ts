@@ -210,6 +210,25 @@ describe('useGlobalShortcuts', () => {
     document.body.removeChild(input)
   })
 
+  it('Escape closes command palette even when its search input is focused', () => {
+    // The command palette Command.Input is an <input> element, so Escape
+    // would normally be ignored by the "input focused" guard. The palette is
+    // special-cased: Escape should still close it.
+    useUIStore.setState({ commandPaletteOpen: true, taskDetailOpen: true, activeTaskId: 'tsk_1' })
+    renderHook(() => useGlobalShortcuts())
+
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.focus()
+
+    act(() => fireKey('Escape'))
+
+    // Palette closes; task detail stays open.
+    expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+    expect(useUIStore.getState().taskDetailOpen).toBe(true)
+    document.body.removeChild(input)
+  })
+
   // --- Shift+Escape ---
 
   it('Shift+Escape closes task detail even when input is focused', () => {

@@ -26,23 +26,53 @@ function taskKey(projectPath: string, taskId: string): string {
   return `${projectPath}::${taskId}`
 }
 
-// Build a display label for a task's project/worktree. For a worktree, prefer
-// `parentName / slug`; for a plain project, use its basename. Returns null
-// when the workspace contains only one open project (no need to disambiguate).
+// A label shown next to a task to identify which project/worktree it belongs
+// to. Worktrees are always labeled (even when only one project is open) so the
+// user can tell them apart from the main workspace. Plain projects only need a
+// label when multiple projects are open.
+type ProjectLabel =
+  | { kind: 'worktree'; text: string }
+  | { kind: 'project'; text: string }
+  | null
+
 function getProjectLabel(
   projectPath: string,
   openProjects: ProjectInfo[]
-): string | null {
-  if (openProjects.length <= 1) return null
+): ProjectLabel {
   const project = openProjects.find((p) => p.path === projectPath)
-  if (project && !project.isWorktree) return project.name
-  // Worktree — find the parent project that owns this worktree path.
-  for (const p of openProjects) {
-    const wt = p.worktrees?.find((w) => w.path === projectPath)
-    if (wt) return `${p.name} / ${wt.slug}`
+
+  // Worktree entry — always label, regardless of how many projects are open.
+  if (project?.isWorktree) {
+    for (const p of openProjects) {
+      const wt = p.worktrees?.find((w) => w.path === projectPath)
+      if (wt) {
+        const text = openProjects.length > 1 ? `${p.name} / ${wt.slug}` : wt.slug
+        return { kind: 'worktree', text }
+      }
+    }
+    // Fallback: we know it's a worktree but we couldn't find its parent in the
+    // list. Use the basename so the user still sees *something* meaningful.
+    return {
+      kind: 'worktree',
+      text: project.name || projectPath.split('/').pop() || projectPath
+    }
   }
-  // Fallback: basename of the path
-  return project?.name ?? projectPath.split('/').pop() ?? projectPath
+
+  // Plain project — only label when disambiguation is needed.
+  if (openProjects.length <= 1) return null
+  if (project) return { kind: 'project', text: project.name }
+  return {
+    kind: 'project',
+    text: projectPath.split('/').pop() || projectPath
+  }
+}
+
+// Ordering weight for the default (no-query) task list: tasks in `in-review`
+// come before `in-progress`, so "finished, waiting for review" work is always
+// at the top of the palette. Unknown statuses sort after both.
+const DEFAULT_STATUS_ORDER: Record<string, number> = {
+  'in-review': 0,
+  'in-progress': 1
 }
 
 export function CommandPalette(): React.JSX.Element | null {
@@ -61,6 +91,35 @@ export function CommandPalette(): React.JSX.Element | null {
 
   const openProjects = useWorkspaceStore((s) => s.openProjects)
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
+
+  // Workspace-wide notifications — used to highlight tasks with unread notices
+  // and to sort notified tasks to the top of the default view.
+  const workspaceNotifications = useNotificationStore((s) => s.workspaceNotifications)
+  const localNotifications = useNotificationStore((s) => s.notifications)
+
+  // Map from task key → the latest unread notification timestamp for that task.
+  // Used both to mark tasks as notified and to sort by most recent notification.
+  const unreadByTask = useMemo(() => {
+    const map = new Map<string, number>()
+    const add = (projectPath: string | undefined | null, taskId: string | undefined, timestamp: string | undefined): void => {
+      if (!taskId) return
+      const path = projectPath ?? activeProjectPath
+      if (!path) return
+      const key = taskKey(path, taskId)
+      const ts = timestamp ? new Date(timestamp).getTime() : 0
+      const existing = map.get(key) ?? 0
+      if (ts > existing) map.set(key, ts)
+    }
+    for (const n of workspaceNotifications) {
+      if (n.read) continue
+      add(n.projectPath, n.taskId, n.createdAt)
+    }
+    for (const n of localNotifications) {
+      if (n.read) continue
+      add(activeProjectPath, n.taskId, n.createdAt)
+    }
+    return map
+  }, [workspaceNotifications, localNotifications, activeProjectPath])
 
   const [settings, setSettings] = useState<ProjectSettings | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -183,35 +242,63 @@ export function CommandPalette(): React.JSX.Element | null {
   // Results include a `projectLabel` so the palette can disambiguate tasks that
   // come from different worktrees/projects open in the workspace.
   //
-  // Default (no query): only show "active" tasks — statuses `in-progress` and
-  // `in-review`. Everything else (todo, done, archived) is hidden until the
-  // user starts searching. As soon as any query is entered, all statuses are
-  // considered so the user can reach archived/done tasks via search.
+  // Default (no query): show tasks with unread notifications FIRST (any status),
+  // followed by `in-review`, then `in-progress`. All other statuses are hidden
+  // until the user searches. As soon as any query is entered, every task is
+  // considered.
+  //
+  // Default ordering:
+  //   1. Tasks with unread notifications — sorted by notification timestamp desc
+  //   2. In-review tasks — sorted by updatedAt desc
+  //   3. In-progress tasks — sorted by updatedAt desc
   const taskResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     const isEmptyQuery = q === ''
-    return allTasks
-      .map((task) => {
-        const key = taskKey(task.projectPath, task.id)
-        const doc = documentCache[key] ?? ''
-        const projectLabel = getProjectLabel(task.projectPath, openProjects)
-        if (isEmptyQuery) {
-          if (task.status !== 'in-progress' && task.status !== 'in-review') return null
-          return { task, projectLabel, snippet: null as ReturnType<typeof buildSearchSnippet> | null }
+    type Result = {
+      task: WorkspaceTask
+      projectLabel: ProjectLabel
+      snippet: ReturnType<typeof buildSearchSnippet> | null
+      hasUnread: boolean
+      unreadAt: number
+    }
+    const results: Result[] = []
+    for (const task of allTasks) {
+      const key = taskKey(task.projectPath, task.id)
+      const doc = documentCache[key] ?? ''
+      const projectLabel = getProjectLabel(task.projectPath, openProjects)
+      const unreadAt = unreadByTask.get(key) ?? 0
+      const hasUnread = unreadAt > 0
+      if (isEmptyQuery) {
+        const isActive = task.status === 'in-progress' || task.status === 'in-review'
+        if (!hasUnread && !isActive) continue
+        results.push({ task, projectLabel, snippet: null, hasUnread, unreadAt })
+        continue
+      }
+      const titleHit = task.title.toLowerCase().includes(q) || task.id.toLowerCase().includes(q)
+      const snippet = buildSearchSnippet(doc, q)
+      if (!titleHit && !snippet) continue
+      results.push({ task, projectLabel, snippet, hasUnread, unreadAt })
+    }
+    if (isEmptyQuery) {
+      results.sort((a, b) => {
+        // 1. Unread notifications always first
+        if (a.hasUnread !== b.hasUnread) return a.hasUnread ? -1 : 1
+        if (a.hasUnread && b.hasUnread) {
+          // Newest notification first
+          return b.unreadAt - a.unreadAt
         }
-        const titleHit = task.title.toLowerCase().includes(q) || task.id.toLowerCase().includes(q)
-        const snippet = buildSearchSnippet(doc, q)
-        if (!titleHit && !snippet) return null
-        return { task, projectLabel, snippet }
+        // 2. Then group by status (in-review before in-progress)
+        const weightA = DEFAULT_STATUS_ORDER[a.task.status] ?? 99
+        const weightB = DEFAULT_STATUS_ORDER[b.task.status] ?? 99
+        if (weightA !== weightB) return weightA - weightB
+        // 3. Within the same status, most recently updated first
+        return (
+          new Date(b.task.updatedAt).getTime() - new Date(a.task.updatedAt).getTime()
+        )
       })
-      .filter(
-        (r): r is {
-          task: WorkspaceTask
-          projectLabel: string | null
-          snippet: ReturnType<typeof buildSearchSnippet> | null
-        } => r !== null
-      )
-  }, [allTasks, documentCache, searchQuery, openProjects])
+    }
+    return results
+  }, [allTasks, documentCache, searchQuery, openProjects, unreadByTask])
 
   // Simple substring filter for static items (actions, navigation).
   const matchesQuery = useCallback(
@@ -257,14 +344,15 @@ export function CommandPalette(): React.JSX.Element | null {
             {/* Tasks section */}
             {taskResults.length > 0 && (
               <Command.Group heading="Tasks" style={styles.group}>
-                {taskResults.map(({ task, projectLabel, snippet }) => (
+                {taskResults.map(({ task, projectLabel, snippet, hasUnread }) => (
                   <Command.Item
                     key={`${task.projectPath}::${task.id}`}
                     value={`task-${task.projectPath}-${task.id}`}
                     onSelect={() => {
                       void handleOpenTask(task)
                     }}
-                    style={styles.itemTask}
+                    style={hasUnread ? styles.itemTaskNotified : styles.itemTask}
+                    data-has-unread={hasUnread || undefined}
                   >
                     <span style={styles.itemIcon}>
                       <StatusDot status={task.status} />
@@ -274,11 +362,23 @@ export function CommandPalette(): React.JSX.Element | null {
                         <span style={styles.itemLabel}>{task.title}</span>
                         {projectLabel && (
                           <span
-                            style={styles.projectBadge}
-                            title={`In ${projectLabel}`}
+                            style={
+                              projectLabel.kind === 'worktree'
+                                ? styles.worktreeBadge
+                                : styles.projectBadge
+                            }
+                            title={
+                              projectLabel.kind === 'worktree'
+                                ? `Worktree: ${projectLabel.text}`
+                                : `In ${projectLabel.text}`
+                            }
                             data-testid="command-palette-project-badge"
+                            data-kind={projectLabel.kind}
                           >
-                            {projectLabel}
+                            {projectLabel.kind === 'worktree' && (
+                              <BranchIcon />
+                            )}
+                            {projectLabel.text}
                           </span>
                         )}
                       </span>
@@ -413,6 +513,29 @@ export function CommandPalette(): React.JSX.Element | null {
   )
 }
 
+function BranchIcon(): React.JSX.Element {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx="4" cy="3" r="1.5" />
+      <circle cx="4" cy="13" r="1.5" />
+      <circle cx="12" cy="6" r="1.5" />
+      <path d="M4 4.5 V 11.5" />
+      <path d="M12 7.5 C 12 10.5, 10 11, 5.5 12.5" />
+    </svg>
+  )
+}
+
 function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
   const colorMap: Record<TaskStatus, string> = {
     todo: 'var(--status-todo)',
@@ -442,18 +565,23 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: 'blur(8px)',
     WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: '20vh',
+    padding: '6vh 4vw',
     // Must be above --z-modal (400) so the palette can float on top of
     // the TaskDetail overlay when opened from inside a task view.
     zIndex: 'var(--z-command-palette)' as unknown as number,
     animation: 'cmdkFadeIn 120ms ease'
   },
   wrapper: {
-    width: '100%',
-    maxWidth: 560,
-    borderRadius: 8,
+    width: '70vw',
+    maxWidth: 1100,
+    minWidth: 480,
+    height: '70vh',
+    maxHeight: '85vh',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: 10,
     border: '1px solid var(--border)',
     backgroundColor: 'var(--bg-surface)',
     boxShadow: '0 16px 70px rgba(0, 0, 0, 0.5)',
@@ -461,22 +589,26 @@ const styles: Record<string, React.CSSProperties> = {
   },
   command: {
     width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
   input: {
     width: '100%',
-    padding: '14px 18px',
-    fontSize: 15,
+    padding: '16px 20px',
+    fontSize: 16,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     color: 'var(--text-primary)',
     backgroundColor: 'transparent',
     border: 'none',
     borderBottom: '1px solid var(--border)',
     outline: 'none',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    flexShrink: 0
   },
   list: {
-    maxHeight: 420,
+    flex: 1,
     overflowY: 'auto',
     padding: '8px 0'
   },
@@ -509,6 +641,24 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     cursor: 'pointer',
     borderRadius: 0,
+    transition: 'background-color 100ms ease'
+  },
+  // Matches the board TaskCard `.cardNotified` look: an orange (--priority-high)
+  // rounded outline that calls out tasks with unread notifications. We inset
+  // the item inside the list padding (8px on each side) so the outline has
+  // breathing room and doesn't touch the list edges.
+  itemTaskNotified: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: '8px 14px',
+    margin: '2px 8px',
+    fontSize: 13,
+    color: 'var(--text-primary)',
+    cursor: 'pointer',
+    borderRadius: 8,
+    border: '1px solid var(--priority-high)',
+    boxShadow: '0 0 0 1px var(--priority-high)',
     transition: 'background-color 100ms ease'
   },
   itemIcon: {
@@ -552,7 +702,24 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    maxWidth: 180
+    maxWidth: 220
+  },
+  worktreeBadge: {
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 10,
+    padding: '1px 6px 1px 5px',
+    borderRadius: 10,
+    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    color: 'var(--text-secondary)',
+    border: '1px solid rgba(139, 92, 246, 0.35)',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: 260
   },
   snippet: {
     fontSize: 11,
