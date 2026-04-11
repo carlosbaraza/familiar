@@ -1,10 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
-import { useWorkspaceStore } from '@renderer/stores/workspace-store'
-import type { ProjectSettings, CodingAgent } from '@shared/types'
-import type { CodeEditor } from '@shared/types/settings'
-import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS, CODING_AGENT_LABELS, CODE_EDITOR_LABELS } from '@shared/types/settings'
+import type { ProjectSettings, AgentProfile } from '@shared/types'
+import type { CodeEditor, AgentType } from '@shared/types/settings'
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_SNIPPETS,
+  CODE_EDITOR_LABELS,
+  AGENT_TYPE_LABELS,
+  AGENT_TYPE_DEFAULT_COMMANDS,
+  AGENT_TYPE_ICONS
+} from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
+import { generateAgentId } from '@shared/utils/id-generator'
+import { AgentIcon } from '@renderer/components/common/AgentIcons'
 import { SnippetSettings } from './SnippetSettings'
 import { LabelSettings } from './LabelSettings'
 import { WorkspacesSettings } from './WorkspacesSettings'
@@ -74,6 +82,85 @@ export function SettingsPage(): React.JSX.Element {
     },
     [saveSettings]
   )
+
+  const [addingAgent, setAddingAgent] = useState(false)
+  const [newAgentType, setNewAgentType] = useState<AgentType>('claude-code')
+  const [newAgentName, setNewAgentName] = useState(AGENT_TYPE_LABELS['claude-code'])
+  const [newAgentCommand, setNewAgentCommand] = useState(
+    AGENT_TYPE_DEFAULT_COMMANDS['claude-code']
+  )
+  const [newAgentIcon, setNewAgentIcon] = useState(AGENT_TYPE_ICONS['claude-code'])
+
+  const dispatchAgentsUpdated = useCallback(
+    (agents: AgentProfile[], activeAgentId?: string) => {
+      window.dispatchEvent(
+        new CustomEvent('agents-updated', { detail: { agents, activeAgentId } })
+      )
+    },
+    []
+  )
+
+  const handleAddAgent = useCallback(() => {
+    const type = newAgentType
+    const profile: AgentProfile = {
+      id: generateAgentId(),
+      type,
+      name: newAgentName || AGENT_TYPE_LABELS[type],
+      icon: type === 'other' ? newAgentIcon || 'terminal' : AGENT_TYPE_ICONS[type],
+      defaultCommand: newAgentCommand || AGENT_TYPE_DEFAULT_COMMANDS[type],
+      snippets: []
+    }
+    const agents = [...(settings.agents ?? []), profile]
+    const activeAgentId = settings.activeAgentId ?? profile.id
+    handleChange('agents', agents)
+    if (!settings.activeAgentId) {
+      handleChange('activeAgentId', activeAgentId)
+    }
+    dispatchAgentsUpdated(agents, activeAgentId)
+    setAddingAgent(false)
+    // Reset form to defaults
+    setNewAgentType('claude-code')
+    setNewAgentName(AGENT_TYPE_LABELS['claude-code'])
+    setNewAgentCommand(AGENT_TYPE_DEFAULT_COMMANDS['claude-code'])
+    setNewAgentIcon(AGENT_TYPE_ICONS['claude-code'])
+  }, [
+    settings,
+    newAgentType,
+    newAgentName,
+    newAgentCommand,
+    newAgentIcon,
+    handleChange,
+    dispatchAgentsUpdated
+  ])
+
+  const handleDeleteAgent = useCallback(
+    (agentId: string) => {
+      const agents = (settings.agents ?? []).filter((a) => a.id !== agentId)
+      handleChange('agents', agents)
+      let newActiveId = settings.activeAgentId
+      if (settings.activeAgentId === agentId) {
+        newActiveId = agents.length > 0 ? agents[0].id : undefined
+        handleChange('activeAgentId', newActiveId)
+      }
+      dispatchAgentsUpdated(agents, newActiveId)
+    },
+    [settings, handleChange, dispatchAgentsUpdated]
+  )
+
+  const handleSetActiveAgent = useCallback(
+    (agentId: string) => {
+      handleChange('activeAgentId', agentId)
+      dispatchAgentsUpdated(settings.agents ?? [], agentId)
+    },
+    [settings, handleChange, dispatchAgentsUpdated]
+  )
+
+  const handleNewAgentTypeChange = useCallback((type: AgentType) => {
+    setNewAgentType(type)
+    setNewAgentName(AGENT_TYPE_LABELS[type])
+    setNewAgentCommand(AGENT_TYPE_DEFAULT_COMMANDS[type])
+    setNewAgentIcon(AGENT_TYPE_ICONS[type])
+  }, [])
 
   return (
     <div style={styles.container}>
@@ -152,35 +239,218 @@ export function SettingsPage(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Coding Agent section */}
+          {/* Coding Agents section */}
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Coding Agent</h2>
+            <h2 style={styles.sectionTitle}>Coding Agents</h2>
 
-            <div style={styles.settingRow}>
-              <div style={styles.settingInfo}>
-                <label style={styles.settingLabel}>Agent Harness</label>
-                <span style={styles.settingDescription}>
-                  The coding agent used in this project
-                </span>
-              </div>
-              <select
-                style={styles.textInput}
-                value={settings.codingAgent ?? ''}
-                onChange={(e) =>
-                  handleChange(
-                    'codingAgent',
-                    (e.target.value as CodingAgent) || undefined
-                  )
-                }
+            {(settings.agents ?? []).map((agent) => (
+              <div
+                key={agent.id}
+                style={{
+                  border:
+                    agent.id === settings.activeAgentId
+                      ? '1px solid var(--accent)'
+                      : '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-3)',
+                  marginBottom: 'var(--space-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)'
+                }}
               >
-                <option value="">Not configured</option>
-                {(Object.keys(CODING_AGENT_LABELS) as CodingAgent[]).map((key) => (
-                  <option key={key} value={key}>
-                    {CODING_AGENT_LABELS[key]}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <AgentIcon agentType={agent.type} size={20} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...styles.settingLabel, marginBottom: 2 }}>{agent.name}</div>
+                  <div
+                    style={{
+                      ...styles.settingDescription,
+                      fontSize: 11,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {agent.defaultCommand || 'No command configured'}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--space-1)',
+                    alignItems: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  {agent.id === settings.activeAgentId ? (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: 'var(--accent)',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}
+                    >
+                      Active
+                    </span>
+                  ) : (
+                    <button
+                      style={{ ...styles.actionButton, fontSize: 11, padding: '2px 8px' }}
+                      onClick={() => handleSetActiveAgent(agent.id)}
+                    >
+                      Set Active
+                    </button>
+                  )}
+                  <button
+                    style={{
+                      ...styles.actionButton,
+                      fontSize: 11,
+                      padding: '2px 8px',
+                      color: 'var(--priority-urgent)'
+                    }}
+                    onClick={() => handleDeleteAgent(agent.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {addingAgent ? (
+              <div
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 'var(--space-3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-2)'
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      ...styles.settingLabel,
+                      fontSize: 11,
+                      marginBottom: 4,
+                      display: 'block'
+                    }}
+                  >
+                    Agent Type
+                  </label>
+                  <select
+                    style={styles.textInput}
+                    value={newAgentType}
+                    onChange={(e) => handleNewAgentTypeChange(e.target.value as AgentType)}
+                  >
+                    {(Object.keys(AGENT_TYPE_LABELS) as AgentType[]).map((key) => (
+                      <option key={key} value={key}>
+                        {AGENT_TYPE_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      ...styles.settingLabel,
+                      fontSize: 11,
+                      marginBottom: 4,
+                      display: 'block'
+                    }}
+                  >
+                    Name
+                  </label>
+                  <input
+                    style={styles.textInput}
+                    type="text"
+                    value={newAgentName}
+                    onChange={(e) => setNewAgentName(e.target.value)}
+                    placeholder={AGENT_TYPE_LABELS[newAgentType]}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      ...styles.settingLabel,
+                      fontSize: 11,
+                      marginBottom: 4,
+                      display: 'block'
+                    }}
+                  >
+                    Default Command
+                  </label>
+                  <input
+                    style={styles.textInput}
+                    type="text"
+                    value={newAgentCommand}
+                    onChange={(e) => setNewAgentCommand(e.target.value)}
+                    placeholder={AGENT_TYPE_DEFAULT_COMMANDS[newAgentType]}
+                  />
+                </div>
+                {newAgentType === 'other' && (
+                  <div>
+                    <label
+                      style={{
+                        ...styles.settingLabel,
+                        fontSize: 11,
+                        marginBottom: 4,
+                        display: 'block'
+                      }}
+                    >
+                      Icon (Lucide name)
+                    </label>
+                    <input
+                      style={styles.textInput}
+                      type="text"
+                      value={newAgentIcon}
+                      onChange={(e) => setNewAgentIcon(e.target.value)}
+                      placeholder="terminal"
+                    />
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--space-2)',
+                    justifyContent: 'flex-end'
+                  }}
+                >
+                  <button
+                    style={{ ...styles.actionButton, fontSize: 11, padding: '4px 12px' }}
+                    onClick={() => setAddingAgent(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    style={{
+                      ...styles.actionButton,
+                      fontSize: 11,
+                      padding: '4px 12px',
+                      backgroundColor: 'var(--accent)',
+                      color: 'white',
+                      borderColor: 'var(--accent)'
+                    }}
+                    onClick={handleAddAgent}
+                  >
+                    Add Agent
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                style={{
+                  ...styles.actionButton,
+                  fontSize: 12,
+                  padding: '6px 12px',
+                  width: '100%'
+                }}
+                onClick={() => setAddingAgent(true)}
+              >
+                + Add Agent
+              </button>
+            )}
           </div>
 
           {/* Code Editor section */}
@@ -392,5 +662,16 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
   toggleKnobActive: {
     transform: 'translateX(18px)',
     backgroundColor: 'var(--accent)'
+  },
+  actionButton: {
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    borderRadius: '6px',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    color: 'var(--text-primary)',
+    cursor: 'pointer',
+    outline: 'none'
   },
 }
