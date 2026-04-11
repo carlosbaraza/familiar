@@ -74,6 +74,8 @@ function createMockTmux(): ConstructorParameters<typeof ElectronPtyManager>[0] {
   return {
     hasSession: vi.fn().mockResolvedValue(false),
     createSession: vi.fn().mockResolvedValue(undefined),
+    setEnvironment: vi.fn().mockResolvedValue(undefined),
+    warmupSession: vi.fn().mockResolvedValue(undefined),
     sendKeys: vi.fn().mockResolvedValue(undefined)
   } as unknown as ConstructorParameters<typeof ElectronPtyManager>[0]
 }
@@ -336,5 +338,136 @@ describe('ElectronPtyManager inactivity detection', () => {
     // Should track time but NOT call readTask to auto-promote status
     expect(mgr._lastActivityTime.has('task-1')).toBe(true)
     expect(ds.readTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('ElectronPtyManager agent profile command resolution', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('uses agent profile defaultCommand when task has agentId', async () => {
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    const task = createMockTask({ id: 'tsk_test01', agentId: 'agent_custom' })
+    const ds = createMockDataService([task])
+    ;(ds.readSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      defaultCommand: 'claude --global',
+      agents: [
+        {
+          id: 'agent_custom',
+          type: 'claude-code',
+          name: 'Custom Agent',
+          icon: 'claude-code',
+          defaultCommand: 'claude --custom-flag',
+          snippets: []
+        }
+      ],
+      activeAgentId: 'agent_custom'
+    })
+    manager.setDataService(ds)
+
+    await manager.create('tsk_test01', 'pane-0', '/tmp')
+
+    // warmupSession is fire-and-forget — wait for it to be called
+    await vi.waitFor(() => {
+      expect(mockTmux.warmupSession).toHaveBeenCalled()
+    })
+
+    const warmupCall = (mockTmux.warmupSession as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(warmupCall).toBeDefined()
+    const commandArg = warmupCall[2] as string | undefined
+    expect(commandArg).toContain('claude --custom-flag')
+    expect(commandArg).not.toContain('claude --global')
+  })
+
+  it('falls back to global defaultCommand when agentId references deleted agent', async () => {
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    const task = createMockTask({ id: 'tsk_test02', agentId: 'agent_deleted' })
+    const ds = createMockDataService([task])
+    ;(ds.readSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      defaultCommand: 'claude --global',
+      agents: []
+    })
+    manager.setDataService(ds)
+
+    await manager.create('tsk_test02', 'pane-0', '/tmp')
+
+    await vi.waitFor(() => {
+      expect(mockTmux.warmupSession).toHaveBeenCalled()
+    })
+
+    const warmupCall = (mockTmux.warmupSession as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(warmupCall).toBeDefined()
+    const commandArg = warmupCall[2] as string | undefined
+    expect(commandArg).toContain('claude --global')
+  })
+
+  it('falls back to global defaultCommand when task has no agentId', async () => {
+    const pty = await import('node-pty')
+    const mockPty = {
+      onData: vi.fn(),
+      onExit: vi.fn(),
+      write: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+      pid: 123
+    }
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockReturnValue(mockPty)
+
+    const mockTmux = createMockTmux()
+    const manager = new ElectronPtyManager(mockTmux)
+
+    const task = createMockTask({ id: 'tsk_test03' })
+    const ds = createMockDataService([task])
+    ;(ds.readSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+      defaultCommand: 'claude --global',
+      agents: [
+        {
+          id: 'agent_custom',
+          type: 'claude-code',
+          name: 'Custom Agent',
+          icon: 'claude-code',
+          defaultCommand: 'claude --custom-flag',
+          snippets: []
+        }
+      ]
+    })
+    manager.setDataService(ds)
+
+    await manager.create('tsk_test03', 'pane-0', '/tmp')
+
+    await vi.waitFor(() => {
+      expect(mockTmux.warmupSession).toHaveBeenCalled()
+    })
+
+    const warmupCall = (mockTmux.warmupSession as ReturnType<typeof vi.fn>).mock.calls[0]
+    const commandArg = warmupCall[2] as string | undefined
+    expect(commandArg).toContain('claude --global')
   })
 })

@@ -319,12 +319,28 @@ export class ElectronPtyManager implements IPtyManager {
       const commandPromise = overrideCommand
         ? Promise.resolve(overrideCommand)
         : this._dataService
-          ? this._dataService.readSettings().then((settings) => {
-              if (settings.defaultCommand) {
-                return resolveClaudeSessionCommand(settings.defaultCommand, taskId, cwd)
+          ? (async () => {
+              const ds = this._dataService!
+              const settings = await ds.readSettings()
+              let command = settings.defaultCommand
+
+              try {
+                const task = await ds.readTask(taskId)
+                if (task?.agentId && settings.agents && settings.agents.length > 0) {
+                  const agent = settings.agents.find((a) => a.id === task.agentId)
+                  if (agent?.defaultCommand) {
+                    command = agent.defaultCommand
+                  }
+                }
+              } catch {
+                // Task not readable — fall back to global default
+              }
+
+              if (command) {
+                return resolveClaudeSessionCommand(command, taskId, cwd)
               }
               return undefined
-            }).catch(() => undefined)
+            })().catch(() => undefined)
           : Promise.resolve(undefined)
 
       commandPromise.then((command) => {
