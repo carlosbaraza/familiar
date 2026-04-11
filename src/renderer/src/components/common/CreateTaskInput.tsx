@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
 import type { Snippet, TaskPastedFile } from '@shared/types'
+import type { AgentProfile } from '@shared/types/settings'
 import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
+import { AgentIcon } from './AgentIcons'
 import styles from './CreateTaskInput.module.css'
 
 /** A pasted file (image or any other file) stored in temp, pending task creation */
@@ -62,6 +64,12 @@ export interface CreateTaskInputProps {
   draftKey?: string
   /** Number of default rows */
   rows?: number
+  /** Available agent profiles for the agent selector. Pass undefined to hide the control. */
+  agents?: AgentProfile[]
+  /** ID of the currently active agent */
+  activeAgentId?: string
+  /** Called when the user changes the active agent */
+  onAgentChange?: (agentId: string) => void
 }
 
 export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInputProps>(
@@ -81,7 +89,10 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
       onCopySessionChange,
       placeholder = 'Task title... (Shift+Enter for notes, paste images)',
       draftKey,
-      rows = 3
+      rows = 3,
+      agents,
+      activeAgentId,
+      onAgentChange
     },
     ref
   ) {
@@ -364,6 +375,35 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
           </div>
         )}
         <div className={styles.footer}>
+          {agents !== undefined && agents.length > 0 && (
+            <div className={styles.agentSelect}>
+              <AgentIcon
+                agentType={agents.find((a) => a.id === activeAgentId)?.type ?? 'other'}
+                size={14}
+              />
+              <select
+                className={styles.agentSelectDropdown}
+                value={activeAgentId ?? ''}
+                onChange={(e) => onAgentChange?.(e.target.value)}
+                aria-label="Select coding agent"
+              >
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {agents !== undefined && agents.length === 0 && (
+            <div className={styles.agentWarning} title="No agents configured — go to Settings">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+          )}
           <span className={styles.hint}>Enter to create</span>
           <button
             type="button"
