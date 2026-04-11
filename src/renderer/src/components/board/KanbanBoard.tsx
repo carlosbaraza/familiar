@@ -18,6 +18,7 @@ import type {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { Task, TaskStatus, Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
+import type { AgentProfile } from '@shared/types/settings'
 import { DEFAULT_COLUMNS } from '@shared/constants'
 import { filterTasks } from '@shared/utils/task-utils'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -100,6 +101,8 @@ export function KanbanBoard(): React.JSX.Element {
   const dropIndicatorRef = useRef<DropIndicator | null>(null)
 
   const [snippets, setSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
+  const [agents, setAgents] = useState<AgentProfile[]>([])
+  const [activeAgentId, setActiveAgentId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     async function loadSnippets(): Promise<void> {
@@ -107,6 +110,14 @@ export function KanbanBoard(): React.JSX.Element {
         const settings = await window.api.readSettings()
         if (settings.snippets && settings.snippets.length > 0) {
           setSnippets(settings.snippets)
+        }
+        if (settings.agents) {
+          setAgents(settings.agents)
+          setActiveAgentId(settings.activeAgentId)
+          const activeAgent = settings.agents.find((a) => a.id === settings.activeAgentId)
+          if (activeAgent?.snippets?.length) {
+            setSnippets(activeAgent.snippets)
+          }
         }
       } catch {
         // Use defaults
@@ -119,9 +130,36 @@ export function KanbanBoard(): React.JSX.Element {
       const detail = (e as CustomEvent<Snippet[]>).detail
       setSnippets(detail.length > 0 ? detail : DEFAULT_SNIPPETS)
     }
+    function handleAgentsUpdated(e: Event): void {
+      const detail = (e as CustomEvent<{ agents: AgentProfile[]; activeAgentId?: string }>).detail
+      setAgents(detail.agents)
+      setActiveAgentId(detail.activeAgentId)
+      const activeAgent = detail.agents.find((a) => a.id === detail.activeAgentId)
+      if (activeAgent?.snippets?.length) {
+        setSnippets(activeAgent.snippets)
+      }
+    }
     window.addEventListener('snippets-updated', handleSnippetsUpdated)
-    return () => window.removeEventListener('snippets-updated', handleSnippetsUpdated)
+    window.addEventListener('agents-updated', handleAgentsUpdated)
+    return () => {
+      window.removeEventListener('snippets-updated', handleSnippetsUpdated)
+      window.removeEventListener('agents-updated', handleAgentsUpdated)
+    }
   }, [])
+
+  const handleAgentChange = useCallback(async (agentId: string) => {
+    setActiveAgentId(agentId)
+    const agent = agents.find((a) => a.id === agentId)
+    if (agent?.snippets?.length) {
+      setSnippets(agent.snippets)
+    }
+    try {
+      const settings = await window.api.readSettings()
+      await window.api.writeSettings({ ...settings, activeAgentId: agentId })
+    } catch {
+      // Non-critical — state still updated locally
+    }
+  }, [agents])
 
   const dashboardSnippets = useMemo(
     () => snippets.filter((s) => s.showInDashboard),
@@ -302,7 +340,7 @@ export function KanbanBoard(): React.JSX.Element {
       // If a parent is selected, create as subtask (board input path — no session copy)
       const task = parentId
         ? await createSubtask(parentId, title, { documentContent: document })
-        : await addTask(title, { status })
+        : await addTask(title, { status, agentId: activeAgentId })
       if (document) {
         await window.api.writeTaskDocument(task.id, document)
       }
@@ -358,7 +396,7 @@ export function KanbanBoard(): React.JSX.Element {
         }).catch(() => {})
       }
     },
-    [addTask]
+    [addTask, activeAgentId]
   )
 
   // Find which column a task belongs to (always uses real data, not virtual)
@@ -608,6 +646,9 @@ export function KanbanBoard(): React.JSX.Element {
               tasks={tasksByStatus[status] ?? []}
               dashboardSnippets={dashboardSnippets}
               allSnippets={snippets}
+              agents={agents}
+              activeAgentId={activeAgentId}
+              onAgentChange={handleAgentChange}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
               onCreateTask={(title, document, enabledSnippets, pendingImages, pendingPastedFiles) => handleCreateTask(status, title, document, enabledSnippets, pendingImages, pendingPastedFiles)}

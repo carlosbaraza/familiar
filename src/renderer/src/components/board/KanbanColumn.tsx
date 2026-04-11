@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Task, TaskStatus, Snippet } from '@shared/types'
+import type { AgentProfile } from '@shared/types/settings'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -32,6 +33,9 @@ interface KanbanColumnProps {
   headerAction?: React.ReactNode
   dashboardSnippets?: Snippet[]
   allSnippets?: Snippet[]
+  agents?: AgentProfile[]
+  activeAgentId?: string
+  onAgentChange?: (agentId: string) => void
   currentParentId?: string | null
   onClearParent?: () => void
   alwaysShowInput?: boolean
@@ -64,6 +68,9 @@ export function KanbanColumn({
   headerAction,
   dashboardSnippets = [],
   allSnippets = [],
+  agents,
+  activeAgentId,
+  onAgentChange,
   currentParentId = null,
   onClearParent,
   alwaysShowInput = false,
@@ -231,6 +238,9 @@ export function KanbanColumn({
           onInputExit={onInputExit}
           onFocus={handleInputFocus}
           allSnippets={allSnippets}
+          agents={agents}
+          activeAgentId={activeAgentId}
+          onAgentChange={onAgentChange}
           parentId={alwaysShowInput ? currentParentId : undefined}
           parentTitle={alwaysShowInput && currentParentId ? useTaskStore.getState().getTaskById(currentParentId)?.title : undefined}
           onClearParent={alwaysShowInput ? onClearParent : undefined}
