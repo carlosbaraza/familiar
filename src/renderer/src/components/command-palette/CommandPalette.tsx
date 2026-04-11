@@ -2,9 +2,14 @@ import { useCallback, useState, useEffect, useMemo } from 'react'
 import { Command } from 'cmdk'
 import { useUIStore } from '../../stores/ui-store'
 import { useTaskStore } from '../../stores/task-store'
+import { useWorkspaceStore } from '../../stores/workspace-store'
+import { useNotificationStore } from '../../stores/notification-store'
 import { formatRelativeTime } from '../../lib/format-time'
 import { buildSearchSnippet } from './search-snippet'
-import type { TaskStatus, ProjectSettings } from '@shared/types'
+import type { Task, TaskStatus, ProjectSettings } from '@shared/types'
+import type { ProjectInfo } from '../../stores/workspace-store'
+
+type WorkspaceTask = Task & { projectPath: string }
 
 const COLUMN_LABELS: { status: TaskStatus; label: string }[] = [
   { status: 'todo', label: 'Todo' },
@@ -14,6 +19,32 @@ const COLUMN_LABELS: { status: TaskStatus; label: string }[] = [
   { status: 'archived', label: 'Archive' }
 ]
 
+// Key used for the document cache and task lookup. Task IDs are only unique
+// within a single project, so we prefix with projectPath when searching across
+// worktrees/projects.
+function taskKey(projectPath: string, taskId: string): string {
+  return `${projectPath}::${taskId}`
+}
+
+// Build a display label for a task's project/worktree. For a worktree, prefer
+// `parentName / slug`; for a plain project, use its basename. Returns null
+// when the workspace contains only one open project (no need to disambiguate).
+function getProjectLabel(
+  projectPath: string,
+  openProjects: ProjectInfo[]
+): string | null {
+  if (openProjects.length <= 1) return null
+  const project = openProjects.find((p) => p.path === projectPath)
+  if (project && !project.isWorktree) return project.name
+  // Worktree — find the parent project that owns this worktree path.
+  for (const p of openProjects) {
+    const wt = p.worktrees?.find((w) => w.path === projectPath)
+    if (wt) return `${p.name} / ${wt.slug}`
+  }
+  // Fallback: basename of the path
+  return project?.name ?? projectPath.split('/').pop() ?? projectPath
+}
+
 export function CommandPalette(): React.JSX.Element | null {
   const open = useUIStore((s) => s.commandPaletteOpen)
   const toggleCommandPalette = useUIStore((s) => s.toggleCommandPalette)
@@ -21,16 +52,20 @@ export function CommandPalette(): React.JSX.Element | null {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const openSettings = useUIStore((s) => s.openSettings)
   const setFocusedColumn = useUIStore((s) => s.setFocusedColumn)
+  const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
 
   const activeTaskId = useUIStore((s) => s.activeTaskId)
 
   const projectState = useTaskStore((s) => s.projectState)
   const addTask = useTaskStore((s) => s.addTask)
-  const tasks = projectState?.tasks ?? []
+
+  const openProjects = useWorkspaceStore((s) => s.openProjects)
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
 
   const [settings, setSettings] = useState<ProjectSettings | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [documentCache, setDocumentCache] = useState<Record<string, string>>({})
+  const [allTasks, setAllTasks] = useState<WorkspaceTask[]>([])
 
   useEffect(() => {
     if (open && window.api?.readSettings) {
@@ -38,20 +73,57 @@ export function CommandPalette(): React.JSX.Element | null {
     }
   }, [open])
 
-  // Load task document content when palette opens so we can search inside docs.
-  const taskIdsKey = tasks.map((t) => t.id).join(',')
+  // Load tasks from ALL open projects/worktrees when the palette opens. Falls
+  // back to the active project's tasks if the workspace IPC is unavailable
+  // (e.g. older preload or test environments).
   useEffect(() => {
     if (!open) return
-    const readDoc = window.api?.readTaskDocument
-    if (!readDoc) return
+    let cancelled = false
+    const listAll = window.api?.workspaceListAllTasks
+    if (listAll) {
+      listAll()
+        .then((tasks) => {
+          if (!cancelled) setAllTasks(tasks)
+        })
+        .catch(() => {
+          if (!cancelled && projectState && activeProjectPath) {
+            setAllTasks(
+              projectState.tasks.map((t) => ({ ...t, projectPath: activeProjectPath }))
+            )
+          }
+        })
+    } else if (projectState && activeProjectPath) {
+      setAllTasks(
+        projectState.tasks.map((t) => ({ ...t, projectPath: activeProjectPath }))
+      )
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectState, activeProjectPath])
+
+  // Load task document content for EVERY task in the workspace when the
+  // palette opens, so we can search inside docs across projects/worktrees.
+  const taskIdsKey = allTasks.map((t) => taskKey(t.projectPath, t.id)).join(',')
+  useEffect(() => {
+    if (!open) return
+    const readCross = window.api?.workspaceReadTaskDocument
+    const readLocal = window.api?.readTaskDocument
+    if (!readCross && !readLocal) return
     let cancelled = false
     Promise.all(
-      tasks.map(async (t) => {
+      allTasks.map(async (t) => {
         try {
-          const content = await readDoc(t.id)
-          return [t.id, content ?? ''] as const
+          let content = ''
+          if (readCross) {
+            content = await readCross(t.projectPath, t.id)
+          } else if (readLocal && t.projectPath === activeProjectPath) {
+            // Fallback for environments without the workspace-scoped IPC.
+            content = await readLocal(t.id)
+          }
+          return [taskKey(t.projectPath, t.id), content ?? ''] as const
         } catch {
-          return [t.id, ''] as const
+          return [taskKey(t.projectPath, t.id), ''] as const
         }
       })
     ).then((entries) => {
@@ -60,9 +132,9 @@ export function CommandPalette(): React.JSX.Element | null {
     return () => {
       cancelled = true
     }
-    // taskIdsKey captures the task set; tasks ref changes every render but ids rarely do.
+    // taskIdsKey captures the task set; allTasks ref changes every render but ids rarely do.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, taskIdsKey])
+  }, [open, taskIdsKey, activeProjectPath])
 
   // Reset the query when the palette closes so the next open starts fresh.
   useEffect(() => {
@@ -72,6 +144,25 @@ export function CommandPalette(): React.JSX.Element | null {
   const handleClose = useCallback(() => {
     if (open) toggleCommandPalette()
   }, [open, toggleCommandPalette])
+
+  // Open a task, switching the active project first if the task lives in
+  // another open worktree/project. Mirrors the AgentSwapWidget flow.
+  const handleOpenTask = useCallback(
+    async (task: WorkspaceTask) => {
+      if (task.projectPath && task.projectPath !== activeProjectPath) {
+        if (activeProjectPath) {
+          saveProjectTaskState(activeProjectPath)
+        }
+        await useWorkspaceStore.getState().switchProject(task.projectPath)
+        await useTaskStore.getState().loadProjectState()
+        await useNotificationStore.getState().loadNotifications()
+        await useNotificationStore.getState().loadWorkspaceNotifications()
+      }
+      openTaskDetail(task.id)
+      handleClose()
+    },
+    [activeProjectPath, openTaskDetail, saveProjectTaskState, handleClose]
+  )
 
   const handleRunDoctor = useCallback((autoFix: boolean) => {
     if (!activeTaskId) return
@@ -89,21 +180,38 @@ export function CommandPalette(): React.JSX.Element | null {
   }, [activeTaskId, settings, handleClose])
 
   // Compute task results, filtering by title/id/document content and attaching snippets.
+  // Results include a `projectLabel` so the palette can disambiguate tasks that
+  // come from different worktrees/projects open in the workspace.
+  //
+  // Default (no query): only show "active" tasks — statuses `in-progress` and
+  // `in-review`. Everything else (todo, done, archived) is hidden until the
+  // user starts searching. As soon as any query is entered, all statuses are
+  // considered so the user can reach archived/done tasks via search.
   const taskResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    return tasks
+    const isEmptyQuery = q === ''
+    return allTasks
       .map((task) => {
-        const doc = documentCache[task.id] ?? ''
-        if (q === '') {
-          return { task, snippet: null as ReturnType<typeof buildSearchSnippet> | null }
+        const key = taskKey(task.projectPath, task.id)
+        const doc = documentCache[key] ?? ''
+        const projectLabel = getProjectLabel(task.projectPath, openProjects)
+        if (isEmptyQuery) {
+          if (task.status !== 'in-progress' && task.status !== 'in-review') return null
+          return { task, projectLabel, snippet: null as ReturnType<typeof buildSearchSnippet> | null }
         }
         const titleHit = task.title.toLowerCase().includes(q) || task.id.toLowerCase().includes(q)
         const snippet = buildSearchSnippet(doc, q)
         if (!titleHit && !snippet) return null
-        return { task, snippet }
+        return { task, projectLabel, snippet }
       })
-      .filter((r): r is { task: typeof tasks[number]; snippet: ReturnType<typeof buildSearchSnippet> | null } => r !== null)
-  }, [tasks, documentCache, searchQuery])
+      .filter(
+        (r): r is {
+          task: WorkspaceTask
+          projectLabel: string | null
+          snippet: ReturnType<typeof buildSearchSnippet> | null
+        } => r !== null
+      )
+  }, [allTasks, documentCache, searchQuery, openProjects])
 
   // Simple substring filter for static items (actions, navigation).
   const matchesQuery = useCallback(
@@ -149,13 +257,12 @@ export function CommandPalette(): React.JSX.Element | null {
             {/* Tasks section */}
             {taskResults.length > 0 && (
               <Command.Group heading="Tasks" style={styles.group}>
-                {taskResults.map(({ task, snippet }) => (
+                {taskResults.map(({ task, projectLabel, snippet }) => (
                   <Command.Item
-                    key={task.id}
-                    value={`task-${task.id}`}
+                    key={`${task.projectPath}::${task.id}`}
+                    value={`task-${task.projectPath}-${task.id}`}
                     onSelect={() => {
-                      openTaskDetail(task.id)
-                      handleClose()
+                      void handleOpenTask(task)
                     }}
                     style={styles.itemTask}
                   >
@@ -163,7 +270,18 @@ export function CommandPalette(): React.JSX.Element | null {
                       <StatusDot status={task.status} />
                     </span>
                     <span style={styles.taskBody}>
-                      <span style={styles.itemLabel}>{task.title}</span>
+                      <span style={styles.taskTitleRow}>
+                        <span style={styles.itemLabel}>{task.title}</span>
+                        {projectLabel && (
+                          <span
+                            style={styles.projectBadge}
+                            title={`In ${projectLabel}`}
+                            data-testid="command-palette-project-badge"
+                          >
+                            {projectLabel}
+                          </span>
+                        )}
+                      </span>
                       {snippet && (
                         <span style={styles.snippet} title="Match in task document">
                           <span>{snippet.before}</span>
@@ -415,6 +533,26 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 2,
     flex: 1,
     minWidth: 0
+  },
+  taskTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0
+  },
+  projectBadge: {
+    flexShrink: 0,
+    fontSize: 10,
+    padding: '1px 6px',
+    borderRadius: 10,
+    backgroundColor: 'var(--bg-elevated)',
+    color: 'var(--text-tertiary)',
+    border: '1px solid var(--border)',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: 180
   },
   snippet: {
     fontSize: 11,
