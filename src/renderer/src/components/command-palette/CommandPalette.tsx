@@ -636,7 +636,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   itemTask: {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 10,
     padding: '8px 18px',
     fontSize: 13,
@@ -648,12 +648,14 @@ const styles: Record<string, React.CSSProperties> = {
   // Matches the board TaskCard `.cardNotified` look: an orange (--priority-high)
   // rounded outline with a subtle tinted background that calls out tasks with
   // unread notifications. Extra vertical margin adds breathing room between
-  // consecutive notified items.
+  // consecutive notified items. Horizontal margin is inset slightly for the
+  // rounded corners, with padding adjusted so content stays left-aligned
+  // with non-highlighted rows (8 margin + 1 border + 9 padding = 18).
   itemTaskNotified: {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 10,
-    padding: '8px 14px',
+    padding: '8px 9px',
     margin: '6px 8px',
     fontSize: 13,
     color: 'var(--text-primary)',
@@ -671,8 +673,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 20,
     color: 'var(--text-secondary)',
     fontSize: 14,
-    flexShrink: 0,
-    marginTop: 2
+    flexShrink: 0
   },
   itemLabel: {
     flex: 1,
