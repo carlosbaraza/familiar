@@ -129,12 +129,56 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     }, 1000)
   }, [editor, onChange])
 
-  // Intercept large pastes in the editor
+  // Intercept pastes in the editor (capture phase — runs before BlockNote)
   useEffect(() => {
     const wrapper = editorWrapperRef.current
     if (!wrapper) return
 
     const handlePaste = async (e: ClipboardEvent): Promise<void> => {
+      // ── Image/file pastes ──────────────────────────────────────────
+      // BlockNote's internal handleFileInsertion has a race condition:
+      // uploadFile is async and subsequent pastes can overwrite the block
+      // being updated.  We intercept file pastes, upload ourselves, and
+      // insert image blocks directly to avoid this.
+      const files = Array.from(e.clipboardData?.files ?? [])
+      const imageFiles = files.filter((f) => f.type.startsWith('image/'))
+      if (imageFiles.length > 0) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        let referenceBlock = editor.getTextCursorPosition().block
+        for (const file of imageFiles) {
+          try {
+            const url = await uploadFile(file)
+            const isEmptyParagraph =
+              referenceBlock.type === 'paragraph' &&
+              Array.isArray(referenceBlock.content) &&
+              referenceBlock.content.length === 0
+            if (isEmptyParagraph) {
+              // Replace the empty paragraph with the image
+              editor.updateBlock(referenceBlock, {
+                type: 'image',
+                props: { url, name: file.name }
+              })
+            } else {
+              // Insert after the current block
+              editor.insertBlocks(
+                [{ type: 'image', props: { url, name: file.name } }],
+                referenceBlock,
+                'after'
+              )
+            }
+            // Move reference to the last block so next image goes after it
+            const cursorPos = editor.getTextCursorPosition()
+            referenceBlock = cursorPos.block
+          } catch (err) {
+            console.warn('Failed to upload pasted image:', err)
+          }
+        }
+        return
+      }
+
+      // ── Large text pastes ──────────────────────────────────────────
       const text = e.clipboardData?.getData('text/plain')
       if (!text || !isLargePaste(text)) return
 
@@ -157,7 +201,7 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
 
     wrapper.addEventListener('paste', handlePaste, { capture: true })
     return () => wrapper.removeEventListener('paste', handlePaste, { capture: true })
-  }, [onPastedFileAdded])
+  }, [editor, uploadFile, onPastedFileAdded])
 
   // Listen for focus requests from keyboard navigation
   useEffect(() => {

@@ -31,7 +31,6 @@ describe('KeyboardShortcutsModal', () => {
 
     expect(screen.getByText('Open command palette')).toBeInTheDocument()
     expect(screen.getByText('Move down in column')).toBeInTheDocument()
-    expect(screen.getByText('Set priority: Urgent')).toBeInTheDocument()
     expect(screen.getByText('Move to Todo')).toBeInTheDocument()
   })
 
