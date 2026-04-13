@@ -397,17 +397,23 @@ pre {
   user-select: none;
 }
 
-/* cmdk item hover / active state */
+/* cmdk item hover / active state — needs enough contrast to be clearly
+   visible during keyboard navigation.  The `!important` is necessary
+   because task items use inline styles that would otherwise win. */
 [cmdk-item] {
   transition: background-color 100ms ease;
 }
 
 [cmdk-item][data-selected='true'] {
-  background-color: var(--accent-subtle);
+  background-color: rgba(94, 106, 210, 0.22) !important;
 }
 
 [cmdk-item]:hover {
   background-color: var(--overlay-hover);
+}
+
+[cmdk-item][data-selected='true']:hover {
+  background-color: rgba(94, 106, 210, 0.28) !important;
 }
 
 /* cmdk separator */
