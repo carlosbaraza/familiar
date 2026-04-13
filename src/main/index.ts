@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell, protocol, net, nativeTheme, Menu } from 'electron'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { ElectronTmuxManager } from './platform/electron-tmux'
 import { ElectronPtyManager } from './platform/electron-pty'
@@ -173,12 +174,13 @@ app.whenReady().then(async () => {
       const fileName = decodeURIComponent(parts.slice(2).join('/')) // skip "attachments"
       const projectRoot = dataService.getProjectRoot()
       const filePath = join(projectRoot, '.familiar', 'tasks', taskId, 'attachments', fileName)
-      return net.fetch(`file://${filePath}`)
+      // pathToFileURL properly encodes spaces, @, etc. for the file:// protocol
+      return net.fetch(pathToFileURL(filePath).href)
     }
 
     // Legacy absolute path format: familiar-attachment://file/<absolute-path>
     const filePath = decodeURIComponent(url.pathname)
-    return net.fetch(`file://${filePath}`)
+    return net.fetch(pathToFileURL(filePath).href)
   })
 
   // When --project-root was explicitly provided (e.g. "Open Workspace in New Window"),
