@@ -354,7 +354,7 @@ export function TaskCard({
               ? `Mark ${selectedTaskIds.size} as Unread`
               : 'Mark as Unread',
             onClick: handleMarkAsUnread,
-            shortcut: 'U'
+            shortcut: 'R'
           },
           { label: '', onClick: () => {}, divider: true } as ContextMenuItem
         ]),

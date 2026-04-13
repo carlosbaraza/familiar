@@ -18,7 +18,8 @@ const mockApi = {
   writeProjectState: vi.fn().mockResolvedValue(undefined),
   markNotificationsByTaskRead: vi.fn().mockResolvedValue(undefined),
   markNotificationsByTaskIds: vi.fn().mockResolvedValue(undefined),
-  listNotifications: vi.fn().mockResolvedValue([])
+  listNotifications: vi.fn().mockResolvedValue([]),
+  appendNotification: vi.fn().mockResolvedValue(undefined)
 }
 
 ;(window as any).api = mockApi
@@ -495,6 +496,38 @@ describe('useKeyboardNavigation', () => {
     expect(mockApi.markNotificationsByTaskIds).toHaveBeenCalledWith(
       expect.arrayContaining(['tsk_a', 'tsk_b'])
     )
+  })
+
+  it('r marks focused task as unread when all notifications are read', async () => {
+    useNotificationStore.setState({
+      notifications: [
+        { id: 'n1', title: 'Test', body: 'msg', taskId: 'tsk_a', read: true, createdAt: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    await act(async () => fireKey('r'))
+    expect(mockApi.appendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 'tsk_a', read: false })
+    )
+  })
+
+  it('r marks selected tasks as unread when no unread notifications exist', async () => {
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    useNotificationStore.setState({
+      notifications: [
+        { id: 'n1', title: 'Test', body: 'msg', taskId: 'tsk_a', read: true, createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'n2', title: 'Test2', body: 'msg', taskId: 'tsk_b', read: true, createdAt: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    await act(async () => fireKey('r'))
+    expect(mockApi.appendNotification).toHaveBeenCalled()
   })
 
   // Option+Arrow (Alt+Arrow) — reorder card within column

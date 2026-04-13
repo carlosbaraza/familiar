@@ -31,8 +31,10 @@ export function useKeyboardNavigation({
   const { updateTask, deleteTask, deleteTasks, reorderTask, moveTasks, setTasksPriority } =
     useTaskStore()
   const { selectedTaskIds, clearSelection, toggleTaskSelection } = useBoardStore()
+  const notifications = useNotificationStore((s) => s.notifications)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const markReadByTaskIds = useNotificationStore((s) => s.markReadByTaskIds)
+  const markUnread = useNotificationStore((s) => s.markUnread)
 
   // Track 's' key prefix for status-change chord (s + 1-5)
   const statusPending = useRef(false)
@@ -280,18 +282,35 @@ export function useKeyboardNavigation({
         }
 
         case 'r': {
-          // Mark focused task (or selected tasks) notifications as read
+          // Toggle read/unread for focused task (or selected tasks)
           e.preventDefault()
           if (selectedTaskIds.size > 0) {
-            // Include the focused task and use a single batch write to avoid race conditions
             const effectiveIds = new Set(selectedTaskIds)
             const focused = getFocusedTask()
             if (focused) effectiveIds.add(focused.id)
-            markReadByTaskIds(Array.from(effectiveIds))
+            const hasUnread = notifications.some(
+              (n) => !n.read && n.taskId && effectiveIds.has(n.taskId)
+            )
+            if (hasUnread) {
+              markReadByTaskIds(Array.from(effectiveIds))
+            } else {
+              const { projectState } = useTaskStore.getState()
+              for (const id of effectiveIds) {
+                const t = projectState?.tasks.find((tk) => tk.id === id)
+                if (t) markUnread(id, t.title)
+              }
+            }
           } else {
             const task = getFocusedTask()
             if (task) {
-              markReadByTaskId(task.id)
+              const hasUnread = notifications.some(
+                (n) => !n.read && n.taskId === task.id
+              )
+              if (hasUnread) {
+                markReadByTaskId(task.id)
+              } else {
+                markUnread(task.id, task.title)
+              }
             }
           }
           break
@@ -372,7 +391,9 @@ export function useKeyboardNavigation({
     selectedTaskIds,
     clearSelection,
     toggleTaskSelection,
+    notifications,
     markReadByTaskId,
-    markReadByTaskIds
+    markReadByTaskIds,
+    markUnread
   ])
 }

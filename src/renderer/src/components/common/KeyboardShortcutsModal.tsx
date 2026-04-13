@@ -76,7 +76,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['s', '3'], description: 'Move to In Review' },
       { keys: ['s', '4'], description: 'Move to Done' },
       { keys: ['s', '5'], description: 'Move to Archived' },
-      { keys: ['r'], description: 'Mark as read' },
+      { keys: ['r'], description: 'Toggle read/unread' },
       { keys: ['⌫'], description: 'Delete selected task(s)' }
     ]
   }
