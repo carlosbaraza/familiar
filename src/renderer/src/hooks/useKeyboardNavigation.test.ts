@@ -296,7 +296,7 @@ describe('useKeyboardNavigation', () => {
     expect(onCreateTask).toHaveBeenCalledWith(0)
   })
 
-  it('1-4 set priority on focused task', async () => {
+  it('1-4 set status on focused task', async () => {
     mockApi.updateTask.mockResolvedValue(undefined)
     mockApi.writeProjectState.mockResolvedValue(undefined)
 
@@ -304,13 +304,30 @@ describe('useKeyboardNavigation', () => {
       useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
     )
 
-    act(() => fireKey('1'))
-    // Give the async updateTask a tick to resolve
+    act(() => fireKey('2'))
     await vi.waitFor(() => {
       const stored = useTaskStore.getState().projectState!.tasks.find(
         (t) => t.id === 'tsk_a'
       )
-      expect(stored?.priority).toBe('urgent')
+      expect(stored?.status).toBe('in-progress')
+    })
+  })
+
+  it('1-4 set status on opened task detail', async () => {
+    mockApi.updateTask.mockResolvedValue(undefined)
+    mockApi.writeProjectState.mockResolvedValue(undefined)
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('3'))
+    await vi.waitFor(() => {
+      const stored = useTaskStore.getState().projectState!.tasks.find(
+        (t) => t.id === 'tsk_a'
+      )
+      expect(stored?.status).toBe('in-review')
     })
   })
 
@@ -383,7 +400,7 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().taskDetailOpen).toBe(false)
   })
 
-  it('does not process create/priority/delete keys when task detail is open', () => {
+  it('does not process create/delete keys when task detail is open', () => {
     const onCreateTask = vi.fn()
     useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
     renderHook(() =>
@@ -396,13 +413,6 @@ describe('useKeyboardNavigation', () => {
 
     act(() => fireKey('c'))
     expect(onCreateTask).not.toHaveBeenCalled()
-
-    act(() => fireKey('1'))
-    // Priority should remain unchanged
-    const task = useTaskStore.getState().projectState!.tasks.find(
-      (t) => t.id === 'tsk_a'
-    )
-    expect(task?.priority).toBe('none')
   })
 
   it('Delete deletes all selected tasks when multi-select is active', async () => {
@@ -656,7 +666,7 @@ describe('useKeyboardNavigation', () => {
     )
   })
 
-  it('S chord includes focused task when moving all selected to new status', async () => {
+  it('1-4 includes focused task when moving all selected to new status', async () => {
     // tsk_a selected, tsk_b focused but not selected
     useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a']) })
     useUIStore.setState({ focusedColumnIndex: 0, focusedTaskIndex: 1 }) // focus on tsk_b
@@ -664,7 +674,6 @@ describe('useKeyboardNavigation', () => {
       useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
     )
 
-    act(() => fireKey('s'))
     await act(async () => fireKey('4')) // move to 'done'
 
     await vi.waitFor(() => {

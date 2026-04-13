@@ -1,9 +1,9 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
-import type { Task, TaskStatus, Priority } from '@shared/types'
+import type { Task, TaskStatus } from '@shared/types'
 
 interface UseKeyboardNavigationOptions {
   tasksByStatus: Record<string, Task[]>
@@ -28,17 +28,13 @@ export function useKeyboardNavigation({
     taskDetailOpen
   } = useUIStore()
 
-  const { updateTask, deleteTask, deleteTasks, reorderTask, moveTasks, setTasksPriority } =
+  const { updateTask, deleteTask, deleteTasks, reorderTask, moveTasks } =
     useTaskStore()
   const { selectedTaskIds, clearSelection, toggleTaskSelection } = useBoardStore()
   const notifications = useNotificationStore((s) => s.notifications)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const markReadByTaskIds = useNotificationStore((s) => s.markReadByTaskIds)
   const markUnread = useNotificationStore((s) => s.markUnread)
-
-  // Track 's' key prefix for status-change chord (s + 1-5)
-  const statusPending = useRef(false)
-  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const getFocusedTask = useCallback((): Task | undefined => {
     const column = columnOrder[focusedColumnIndex]
@@ -61,48 +57,8 @@ export function useKeyboardNavigation({
         return
       }
 
-      // Handle status chord: if 's' was pressed, next key 1-5 sets status
-      if (statusPending.current) {
-        statusPending.current = false
-        if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
-        const statusMap: Record<string, TaskStatus> = {
-          '1': 'todo',
-          '2': 'in-progress',
-          '3': 'in-review',
-          '4': 'done',
-          '5': 'archived'
-        }
-        const newStatus = statusMap[e.key]
-        if (newStatus) {
-          e.preventDefault()
-          if (selectedTaskIds.size > 0) {
-            // Include the focused task in the batch if not already selected
-            const effectiveIds = new Set(selectedTaskIds)
-            const focused = getFocusedTask()
-            if (focused) effectiveIds.add(focused.id)
-
-            // Sort by current sortOrder so cards keep their relative order
-            const { projectState } = useTaskStore.getState()
-            const sortedIds = Array.from(effectiveIds).sort((a, b) => {
-              const taskA = projectState?.tasks.find((t) => t.id === a)
-              const taskB = projectState?.tasks.find((t) => t.id === b)
-              return (taskA?.sortOrder ?? 0) - (taskB?.sortOrder ?? 0)
-            })
-            moveTasks(sortedIds, newStatus, 0)
-            clearSelection()
-          } else {
-            const task = getFocusedTask()
-            if (task) {
-              updateTask({ ...task, status: newStatus })
-            }
-          }
-          return
-        }
-        // If key wasn't 1-5, fall through to normal handling
-      }
-
-      // When task detail is open, only allow Escape to close it
-      if (taskDetailOpen && e.key !== 'Escape') {
+      // When task detail is open, allow 1-4 for status change and Escape to close
+      if (taskDetailOpen && e.key !== 'Escape' && !['1', '2', '3', '4'].includes(e.key)) {
         return
       }
 
@@ -255,26 +211,42 @@ export function useKeyboardNavigation({
         case '2':
         case '3':
         case '4': {
-          // Set priority of selected tasks or focused task
+          // Set status of focused/selected/opened task
           e.preventDefault()
-          const priorityMap: Record<string, Priority> = {
-            '1': 'urgent',
-            '2': 'high',
-            '3': 'medium',
-            '4': 'low'
+          const statusMap: Record<string, TaskStatus> = {
+            '1': 'todo',
+            '2': 'in-progress',
+            '3': 'in-review',
+            '4': 'done'
           }
-          const newPriority = priorityMap[e.key]
-          if (newPriority) {
-            if (selectedTaskIds.size > 0) {
+          const newStatus = statusMap[e.key]
+          if (newStatus) {
+            if (taskDetailOpen) {
+              // Task detail is open — change the status of the opened task
+              const { activeTaskId } = useUIStore.getState()
+              const { projectState } = useTaskStore.getState()
+              const openedTask = projectState?.tasks.find((t) => t.id === activeTaskId)
+              if (openedTask) {
+                updateTask({ ...openedTask, status: newStatus })
+              }
+            } else if (selectedTaskIds.size > 0) {
+              // Multi-selection on board
               const effectiveIds = new Set(selectedTaskIds)
               const focused = getFocusedTask()
               if (focused) effectiveIds.add(focused.id)
-              setTasksPriority(Array.from(effectiveIds), newPriority)
+              const { projectState } = useTaskStore.getState()
+              const sortedIds = Array.from(effectiveIds).sort((a, b) => {
+                const taskA = projectState?.tasks.find((t) => t.id === a)
+                const taskB = projectState?.tasks.find((t) => t.id === b)
+                return (taskA?.sortOrder ?? 0) - (taskB?.sortOrder ?? 0)
+              })
+              moveTasks(sortedIds, newStatus, 0)
               clearSelection()
             } else {
+              // Single focused task on board
               const task = getFocusedTask()
               if (task) {
-                updateTask({ ...task, priority: newPriority })
+                updateTask({ ...task, status: newStatus })
               }
             }
           }
@@ -312,20 +284,6 @@ export function useKeyboardNavigation({
                 markUnread(task.id, task.title)
               }
             }
-          }
-          break
-        }
-
-        case 's': {
-          // Start status-change chord: s + 1-5
-          e.preventDefault()
-          const hasTarget = selectedTaskIds.size > 0 || getFocusedTask()
-          if (hasTarget) {
-            statusPending.current = true
-            if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current)
-            statusTimeoutRef.current = setTimeout(() => {
-              statusPending.current = false
-            }, 1500)
           }
           break
         }
@@ -384,7 +342,6 @@ export function useKeyboardNavigation({
     deleteTasks,
     reorderTask,
     moveTasks,
-    setTasksPriority,
     getFocusedTask,
     onCreateTask,
     onFocusInput,

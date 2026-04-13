@@ -43,7 +43,7 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['k', '↑'], description: 'Move up in column' },
       { keys: ['h', '←'], description: 'Move to previous column' },
       { keys: ['l', '→'], description: 'Move to next column' },
-      { keys: ['⇧', '↑'], description: 'Select previous card', detail: 'Extends multi-selection upward. Hold Shift and press Up to select multiple cards. Use with status chords (s+1-5) to bulk-move tasks.' },
+      { keys: ['⇧', '↑'], description: 'Select previous card', detail: 'Extends multi-selection upward. Hold Shift and press Up to select multiple cards. Use with 1-4 to bulk-move tasks.' },
       { keys: ['⇧', '↓'], description: 'Select next card', detail: 'Extends multi-selection downward. Selected cards are highlighted with an accent border.' },
       { keys: ['⌥', '↑'], description: 'Move card up', detail: 'Reorders the focused card one position up within the same column. The sort order is persisted automatically.' },
       { keys: ['⌥', '↓'], description: 'Move card down' },
@@ -66,16 +66,10 @@ const shortcutGroups: ShortcutGroup[] = [
   {
     title: 'Task Actions',
     shortcuts: [
-      { keys: ['1'], description: 'Set priority: Urgent' },
-      { keys: ['2'], description: 'Set priority: High' },
-      { keys: ['3'], description: 'Set priority: Medium' },
-      { keys: ['4'], description: 'Set priority: Low' },
-      { keys: ['s'], description: 'Move task to status (then press 1–5)', detail: 'Press s to start a status chord, then a number within 1.5 seconds: 1=Todo, 2=In Progress, 3=In Review, 4=Done, 5=Archived. Works with multi-selection.' },
-      { keys: ['s', '1'], description: 'Move to Todo' },
-      { keys: ['s', '2'], description: 'Move to In Progress' },
-      { keys: ['s', '3'], description: 'Move to In Review' },
-      { keys: ['s', '4'], description: 'Move to Done' },
-      { keys: ['s', '5'], description: 'Move to Archived' },
+      { keys: ['1'], description: 'Move to Todo', detail: 'Works on focused card, multi-selection, or opened task detail.' },
+      { keys: ['2'], description: 'Move to In Progress' },
+      { keys: ['3'], description: 'Move to In Review' },
+      { keys: ['4'], description: 'Move to Done' },
       { keys: ['r'], description: 'Toggle read/unread' },
       { keys: ['⌫'], description: 'Delete selected task(s)' }
     ]
@@ -99,8 +93,7 @@ const workflows: Workflow[] = [
     description: 'Quickly assign priority and status to multiple tasks.',
     steps: [
       { keys: ['j', 'k'], text: 'Navigate to a task' },
-      { keys: ['1-4'], text: 'Set priority (1=Urgent, 4=Low)' },
-      { keys: ['s', '2'], text: 'Move to In Progress' },
+      { keys: ['1-4'], text: 'Set status (1=Todo, 2=In Progress, 3=In Review, 4=Done)' },
       { keys: ['j'], text: 'Move to next task and repeat' }
     ]
   },
@@ -109,7 +102,7 @@ const workflows: Workflow[] = [
     description: 'Select multiple tasks and move them to a new status at once.',
     steps: [
       { keys: ['⇧', '↓'], text: 'Select tasks by holding Shift + Down' },
-      { keys: ['s', '3'], text: 'Move all selected to In Review' }
+      { keys: ['3'], text: 'Move all selected to In Review' }
     ]
   }
 ]
