@@ -646,21 +646,22 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'background-color 100ms ease'
   },
   // Matches the board TaskCard `.cardNotified` look: an orange (--priority-high)
-  // rounded outline that calls out tasks with unread notifications. We inset
-  // the item inside the list padding (8px on each side) so the outline has
-  // breathing room and doesn't touch the list edges.
+  // rounded outline with a subtle tinted background that calls out tasks with
+  // unread notifications. Extra vertical margin adds breathing room between
+  // consecutive notified items.
   itemTaskNotified: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 10,
     padding: '8px 14px',
-    margin: '2px 8px',
+    margin: '6px 8px',
     fontSize: 13,
     color: 'var(--text-primary)',
     cursor: 'pointer',
     borderRadius: 8,
     border: '1px solid var(--priority-high)',
     boxShadow: '0 0 0 1px var(--priority-high)',
+    backgroundColor: 'rgba(242, 153, 74, 0.08)',
     transition: 'background-color 100ms ease'
   },
   itemIcon: {
