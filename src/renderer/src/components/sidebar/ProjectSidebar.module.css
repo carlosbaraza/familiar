@@ -89,7 +89,7 @@
 }
 
 .projectItemKeyboardFocused {
-  background-color: var(--accent-subtle) !important;
+  background-color: rgba(88, 101, 242, 0.35) !important;
   outline: none !important;
 }
 
