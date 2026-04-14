@@ -108,11 +108,12 @@ export function SnippetSettings({ snippets, onChange }: SnippetSettingsProps): R
               value={snippet.title}
               onChange={(e) => handleChange(i, 'title', e.target.value)}
             />
-            <input
-              style={{ ...styles.input, flex: 2 }}
+            <textarea
+              style={{ ...styles.input, flex: 2, minHeight: 32, resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.4' }}
               placeholder="Command"
               value={snippet.command}
               onChange={(e) => handleChange(i, 'command', e.target.value)}
+              rows={Math.max(2, snippet.command.split('\n').length)}
             />
             <Tooltip
               placement="top"
