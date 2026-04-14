@@ -136,53 +136,57 @@ export function ProjectSidebar(): React.JSX.Element | null {
     return items
   }, [openProjects])
 
-  // When sidebarFocused becomes true, set the focus index to the active project
-  useEffect(() => {
-    if (sidebarFocused) {
-      const activeIdx = sidebarItems.findIndex((item) => item.path === activeProjectPath)
-      setFocusedSidebarIndex(activeIdx >= 0 ? activeIdx : 0)
-      // Focus the sidebar container so keystrokes aren't captured by inputs
-      sidebarRef.current?.focus()
-    }
-  }, [sidebarFocused, sidebarItems, activeProjectPath, setFocusedSidebarIndex])
-
-  // Scroll focused sidebar item into view
-  useEffect(() => {
-    if (sidebarFocused) {
-      const el = sidebarRef.current?.querySelector(`[data-sidebar-index="${focusedSidebarIndex}"]`)
-      if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ block: 'nearest' })
-      }
-    }
-  }, [sidebarFocused, focusedSidebarIndex])
-
-  // Ref to store the switch handler (defined after the early return)
+  // Use refs so the keyboard handler doesn't need to re-register on every index change
+  const sidebarItemsRef = useRef(sidebarItems)
+  sidebarItemsRef.current = sidebarItems
   const switchHandlerRef = useRef<(path: string, type: 'project' | 'worktree') => void>(undefined)
 
-  // Handle keyboard navigation in the sidebar
+  // When sidebarFocused becomes true, initialize and set up keyboard handler
   useEffect(() => {
     if (!sidebarFocused) return
 
+    // Set focus index to the active project
+    const items = sidebarItemsRef.current
+    const activeIdx = items.findIndex((item) => item.path === activeProjectPath)
+    setFocusedSidebarIndex(activeIdx >= 0 ? activeIdx : 0)
+
+    // Focus sidebar container so inputs lose focus
+    sidebarRef.current?.focus()
+
     const handleKeyDown = (e: KeyboardEvent): void => {
+      const currentItems = sidebarItemsRef.current
+      const idx = useUIStore.getState().focusedSidebarIndex
+
       switch (e.key) {
         case 'ArrowDown':
         case 'j': {
           e.preventDefault()
           e.stopPropagation()
-          setFocusedSidebarIndex(Math.min(focusedSidebarIndex + 1, sidebarItems.length - 1))
+          const next = Math.min(idx + 1, currentItems.length - 1)
+          setFocusedSidebarIndex(next)
+          // Scroll into view
+          const el = sidebarRef.current?.querySelector(`[data-sidebar-index="${next}"]`)
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ block: 'nearest' })
+          }
           break
         }
         case 'ArrowUp':
         case 'k': {
           e.preventDefault()
           e.stopPropagation()
-          setFocusedSidebarIndex(Math.max(focusedSidebarIndex - 1, 0))
+          const prev = Math.max(idx - 1, 0)
+          setFocusedSidebarIndex(prev)
+          const el = sidebarRef.current?.querySelector(`[data-sidebar-index="${prev}"]`)
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ block: 'nearest' })
+          }
           break
         }
         case 'Enter': {
           e.preventDefault()
           e.stopPropagation()
-          const item = sidebarItems[focusedSidebarIndex]
+          const item = currentItems[idx]
           if (item) {
             switchHandlerRef.current?.(item.path, item.type)
           }
@@ -198,9 +202,22 @@ export function ProjectSidebar(): React.JSX.Element | null {
       }
     }
 
+    // Clear sidebar focus when user clicks anywhere outside the sidebar
+    const handleMouseDown = (e: MouseEvent): void => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        setSidebarFocused(false)
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [sidebarFocused, focusedSidebarIndex, sidebarItems, setSidebarFocused, setFocusedSidebarIndex])
+    window.addEventListener('mousedown', handleMouseDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+      window.removeEventListener('mousedown', handleMouseDown)
+    }
+  // Only re-run when sidebarFocused transitions — everything else uses refs/getState
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidebarFocused])
 
   const handleRenameConfirm = useCallback(async (): Promise<void> => {
     if (!renameDialog) return
