@@ -38,7 +38,7 @@ export const AGENT_TYPE_ICONS: Record<AgentType, string> = {
 export const AGENT_TYPE_DEFAULT_COMMANDS: Record<AgentType, string> = {
   'claude-code':
     'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
-  codex: 'codex --full-auto',
+  codex: 'codex --yolo',
   other: ''
 }
 
