@@ -36,7 +36,7 @@
 
 .toggleButton:hover {
   color: var(--text-primary);
-  background-color: var(--bg-surface);
+  background-color: var(--overlay-hover);
 }
 
 .toggleLabel {
@@ -86,7 +86,7 @@
 }
 
 .projectItemKeyboardFocused {
-  background-color: var(--bg-surface);
+  background-color: var(--overlay-hover);
 }
 
 /* Project icon (first letter, colored circle) */
@@ -245,7 +245,7 @@
 
 .addButton:hover {
   color: var(--text-primary);
-  background-color: var(--bg-surface);
+  background-color: var(--overlay-hover);
 }
 
 /* Spinner for worktree deletion in progress */
