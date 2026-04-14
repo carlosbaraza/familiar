@@ -97,6 +97,8 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
     ref
   ) {
     const [title, setTitle] = useState(() => (draftKey ? localStorage.getItem(draftKey) ?? '' : ''))
+    const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+    const agentDropdownRef = useRef<HTMLDivElement>(null)
     const [enabledSnippetIndices, setEnabledSnippetIndices] = useState<Set<number>>(
       () => new Set(allSnippets.map((_, i) => i))
     )
@@ -131,6 +133,18 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
     useEffect(() => {
       setEnabledSnippetIndices(new Set(allSnippets.map((_, i) => i)))
     }, [allSnippets.length])
+
+    // Close agent dropdown on outside click
+    useEffect(() => {
+      if (!agentDropdownOpen) return
+      function handleClickOutside(e: MouseEvent): void {
+        if (agentDropdownRef.current && !agentDropdownRef.current.contains(e.target as Node)) {
+          setAgentDropdownOpen(false)
+        }
+      }
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [agentDropdownOpen])
 
     const toggleSnippet = useCallback((index: number) => {
       setEnabledSnippetIndices((prev) => {
@@ -376,23 +390,42 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
         )}
         <div className={styles.footer}>
           {agents !== undefined && agents.length > 0 && (
-            <div className={styles.agentSelect}>
-              <AgentIcon
-                agentType={agents.find((a) => a.id === activeAgentId)?.type ?? 'other'}
-                size={14}
-              />
-              <select
-                className={styles.agentSelectDropdown}
-                value={activeAgentId ?? ''}
-                onChange={(e) => onAgentChange?.(e.target.value)}
+            <div className={styles.agentSelect} ref={agentDropdownRef}>
+              <button
+                type="button"
+                className={styles.agentSelectButton}
+                onClick={() => setAgentDropdownOpen((v) => !v)}
                 aria-label="Select coding agent"
               >
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
+                <AgentIcon
+                  agentType={agents.find((a) => a.id === activeAgentId)?.type ?? 'other'}
+                  size={14}
+                />
+                <span className={styles.agentSelectLabel}>
+                  {agents.find((a) => a.id === activeAgentId)?.name ?? 'Select agent'}
+                </span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {agentDropdownOpen && (
+                <div className={styles.agentDropdownMenu}>
+                  {agents.map((agent) => (
+                    <button
+                      key={agent.id}
+                      type="button"
+                      className={`${styles.agentDropdownItem} ${agent.id === activeAgentId ? styles.agentDropdownItemActive : ''}`}
+                      onClick={() => {
+                        onAgentChange?.(agent.id)
+                        setAgentDropdownOpen(false)
+                      }}
+                    >
+                      <AgentIcon agentType={agent.type} size={14} />
+                      <span>{agent.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {agents !== undefined && agents.length === 0 && (
