@@ -55,7 +55,7 @@
 }
 
 .item:hover {
-  background-color: var(--bg-elevated);
+  background-color: var(--overlay-hover);
 }
 
 .itemSelected {
