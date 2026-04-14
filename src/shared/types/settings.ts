@@ -64,7 +64,13 @@ export interface AgentProfile {
   icon: string
   defaultCommand: string
   snippets: Snippet[]
+  /** Milliseconds to wait after the agent harness starts before sending the
+   * first snippet. Allows time for the TUI to initialize and enable bracketed
+   * paste. Defaults to DEFAULT_AGENT_STARTUP_DELAY_MS when unset. */
+  startupDelayMs?: number
 }
+
+export const DEFAULT_AGENT_STARTUP_DELAY_MS = 10000
 
 export interface WorktreeEnvVariable {
   /** Environment variable name (ALL_CAPS) */

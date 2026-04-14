@@ -10,7 +10,8 @@ import {
   AGENT_TYPE_LABELS,
   AGENT_TYPE_DEFAULT_COMMANDS,
   AGENT_TYPE_DEFAULT_SNIPPETS,
-  AGENT_TYPE_ICONS
+  AGENT_TYPE_ICONS,
+  DEFAULT_AGENT_STARTUP_DELAY_MS
 } from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
 import { generateAgentId } from '@shared/utils/id-generator'
@@ -162,6 +163,17 @@ export function SettingsPage(): React.JSX.Element {
     [settings, handleChange, dispatchAgentsUpdated]
   )
 
+  const handleUpdateAgent = useCallback(
+    (agentId: string, updates: Partial<AgentProfile>) => {
+      const agents = (settings.agents ?? []).map((a) =>
+        a.id === agentId ? { ...a, ...updates } : a
+      )
+      handleChange('agents', agents)
+      dispatchAgentsUpdated(agents, settings.activeAgentId)
+    },
+    [settings, handleChange, dispatchAgentsUpdated]
+  )
+
   const handleNewAgentTypeChange = useCallback((type: AgentType) => {
     setNewAgentType(type)
     setNewAgentName(AGENT_TYPE_LABELS[type])
@@ -262,64 +274,94 @@ export function SettingsPage(): React.JSX.Element {
                   padding: 'var(--space-3)',
                   marginBottom: 'var(--space-2)',
                   display: 'flex',
-                  alignItems: 'center',
+                  flexDirection: 'column',
                   gap: 'var(--space-2)'
                 }}
               >
-                <AgentIcon agentType={agent.type} size={20} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ ...styles.settingLabel, marginBottom: 2 }}>{agent.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <AgentIcon agentType={agent.type} size={20} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...styles.settingLabel, marginBottom: 2 }}>{agent.name}</div>
+                    <div
+                      style={{
+                        ...styles.settingDescription,
+                        fontSize: 11,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {agent.defaultCommand || 'No command configured'}
+                    </div>
+                  </div>
                   <div
+                    style={{
+                      display: 'flex',
+                      gap: 'var(--space-1)',
+                      alignItems: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    {agent.id === settings.activeAgentId ? (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--accent)',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        Active
+                      </span>
+                    ) : (
+                      <button
+                        style={{ ...styles.actionButton, fontSize: 11, padding: '2px 8px' }}
+                        onClick={() => handleSetActiveAgent(agent.id)}
+                      >
+                        Set Active
+                      </button>
+                    )}
+                    <button
+                      style={{
+                        ...styles.actionButton,
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        color: 'var(--priority-urgent)'
+                      }}
+                      onClick={() => handleDeleteAgent(agent.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', paddingTop: 'var(--space-1)', borderTop: '1px solid var(--border)' }}>
+                  <label
                     style={{
                       ...styles.settingDescription,
                       fontSize: 11,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      flexShrink: 0
                     }}
+                    htmlFor={`startup-delay-${agent.id}`}
                   >
-                    {agent.defaultCommand || 'No command configured'}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 'var(--space-1)',
-                    alignItems: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  {agent.id === settings.activeAgentId ? (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: 'var(--accent)',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}
-                    >
-                      Active
-                    </span>
-                  ) : (
-                    <button
-                      style={{ ...styles.actionButton, fontSize: 11, padding: '2px 8px' }}
-                      onClick={() => handleSetActiveAgent(agent.id)}
-                    >
-                      Set Active
-                    </button>
-                  )}
-                  <button
-                    style={{
-                      ...styles.actionButton,
-                      fontSize: 11,
-                      padding: '2px 8px',
-                      color: 'var(--priority-urgent)'
+                    Startup delay (ms)
+                  </label>
+                  <input
+                    id={`startup-delay-${agent.id}`}
+                    style={{ ...styles.textInput, width: 100, fontSize: 11, padding: '2px 6px' }}
+                    type="number"
+                    min={0}
+                    step={500}
+                    value={agent.startupDelayMs ?? DEFAULT_AGENT_STARTUP_DELAY_MS}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      const parsed = raw === '' ? undefined : Math.max(0, parseInt(raw, 10) || 0)
+                      handleUpdateAgent(agent.id, { startupDelayMs: parsed })
                     }}
-                    onClick={() => handleDeleteAgent(agent.id)}
-                  >
-                    Delete
-                  </button>
+                  />
+                  <span style={{ ...styles.settingDescription, fontSize: 11, flex: 1 }}>
+                    How long to wait after the harness starts before auto-run snippets fire.
+                  </span>
                 </div>
               </div>
             ))}

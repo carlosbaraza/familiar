@@ -19,6 +19,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { Task, TaskStatus, Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import type { AgentProfile } from '@shared/types/settings'
+import { DEFAULT_AGENT_STARTUP_DELAY_MS } from '@shared/types/settings'
 import { DEFAULT_COLUMNS } from '@shared/constants'
 import { filterTasks } from '@shared/utils/task-utils'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -413,11 +414,12 @@ export function KanbanBoard(): React.JSX.Element {
       if (enabledSnippets && enabledSnippets.length > 0) {
         const taskId = task.id
         const sessionName = `familiar-${taskId}`
+        // Per-agent startup delay: how long to wait after the harness starts
+        // before sending the first snippet. Configurable per agent in Settings.
+        const agent = agents.find((a) => a.id === activeAgentId)
+        const startupDelayMs = agent?.startupDelayMs ?? DEFAULT_AGENT_STARTUP_DELAY_MS
         window.api.warmupTmuxSession(taskId).then(async () => {
-          // Delay to let the agent harness (claude, codex, etc.) fully start up
-          // before sending the first snippet. TUI apps take a few seconds to
-          // render their input and enable bracketed paste mode.
-          await new Promise((r) => setTimeout(r, 10000))
+          await new Promise((r) => setTimeout(r, startupDelayMs))
           for (const snippet of enabledSnippets) {
             try {
               await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
@@ -428,7 +430,7 @@ export function KanbanBoard(): React.JSX.Element {
         }).catch(() => {})
       }
     },
-    [addTask, activeAgentId]
+    [addTask, activeAgentId, agents]
   )
 
   // Find which column a task belongs to (always uses real data, not virtual)
