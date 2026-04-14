@@ -8,6 +8,7 @@
   transition: width var(--transition-base);
   flex-shrink: 0;
   overflow: hidden;
+  outline: none;
 }
 
 .sidebarCollapsed {
