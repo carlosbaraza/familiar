@@ -89,7 +89,8 @@
 }
 
 .projectItemKeyboardFocused {
-  background-color: var(--overlay-hover);
+  background-color: var(--accent-subtle) !important;
+  outline: none !important;
 }
 
 /* Project icon (first letter, colored circle) */
