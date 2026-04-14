@@ -27,6 +27,7 @@ import {
 import { createTask } from '../../shared/utils/task-utils'
 import { generateActivityId } from '../../shared/utils/id-generator'
 import { buildSettingsSection } from './agents'
+import { BASE_AGENTS_MD } from '../../shared/prompts'
 import { resolveProjectRoot } from './open'
 
 describe('CLI commands (via file-ops)', () => {
@@ -486,6 +487,18 @@ describe('CLI commands (via file-ops)', () => {
       expect(section).toContain('`simplifyTaskTitles` is ON')
       expect(section).toContain('simplify the task title')
       expect(section).toContain('Active Settings')
+    })
+  })
+
+  describe('BASE_AGENTS_MD', () => {
+    it('instructs agents to mark tasks unread with notify before ending a turn', () => {
+      expect(BASE_AGENTS_MD).toContain('Before ending any turn, always send a task-scoped notification')
+      expect(BASE_AGENTS_MD).toContain(
+        'familiar notify --task $FAMILIAR_TASK_ID "Task updated" "Complete — all tests passing"'
+      )
+      expect(BASE_AGENTS_MD).toContain(
+        '| `familiar notify "<title>" "<body>"` | Send in-app notification; use `--task <id>` to mark a task unread |'
+      )
     })
   })
 })

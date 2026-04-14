@@ -401,6 +401,7 @@ Before completion, update document.md with a summary and any learnings. Keep the
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
+familiar notify --task $FAMILIAR_TASK_ID "Task updated" "Marked as unread"
 \\\`\\\`\\\`
 \`\`\`
 
@@ -594,19 +595,24 @@ Example:
 
 **Important:** Task status and agent status are independent. Only move the task to \`in-review\` if you are explicitly requesting human review. Setting \`--agent-status done\` does **not** automatically change the task's board column.
 
+**Before ending any turn, always send a task-scoped notification so the task is marked unread in Familiar.** Make \`familiar notify --task $FAMILIAR_TASK_ID ...\` your final Familiar CLI command before your final response.
+
 \`\`\`bash
 # On success — ready for human review
 familiar status $FAMILIAR_TASK_ID in-review
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
+familiar notify --task $FAMILIAR_TASK_ID "Task updated" "Complete — all tests passing"
 
 # On success — no review needed (e.g. chores, trivial fixes)
 familiar update $FAMILIAR_TASK_ID --agent-status done
 familiar log $FAMILIAR_TASK_ID "Complete — no review needed"
+familiar notify --task $FAMILIAR_TASK_ID "Task updated" "Complete — no review needed"
 
 # On failure
 familiar update $FAMILIAR_TASK_ID --agent-status error
 familiar log $FAMILIAR_TASK_ID "ERROR: description of what went wrong"
+familiar notify --task $FAMILIAR_TASK_ID "Task updated" "ERROR: description of what went wrong"
 \`\`\`
 
 ## CLI Reference
@@ -617,7 +623,7 @@ familiar log $FAMILIAR_TASK_ID "ERROR: description of what went wrong"
 | \`familiar update <id> --agent-status <s>\` | Set agent status: \`idle\`, \`running\`, \`done\`, \`error\` |
 | \`familiar update <id> --priority <p>\` | Set priority: \`urgent\`, \`high\`, \`medium\`, \`low\`, \`none\` |
 | \`familiar log <id> "<message>"\` | Append to activity log |
-| \`familiar notify "<title>" "<body>"\` | Send in-app notification |
+| \`familiar notify "<title>" "<body>"\` | Send in-app notification; use \`--task <id>\` to mark a task unread |
 | \`familiar add "<title>" [--priority p] [--status s]\` | Create a new task |
 | \`familiar list [--status s] [--json]\` | List tasks |
 | \`familiar setup [--copy]\` | Print tmux setup prompt for your AI agent |

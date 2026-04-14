@@ -5,7 +5,7 @@ import { generateNotificationId } from '../../shared/utils/id-generator'
 
 export function notifyCommand(): Command {
   return new Command('notify')
-    .description('Send an in-app notification to the Familiar UI')
+    .description('Send an in-app notification to the Familiar UI; task notifications mark tasks unread')
     .argument('<title>', 'Notification title')
     .argument('[body]', 'Notification body')
     .option('--task <taskId>', 'Associate notification with a task')
