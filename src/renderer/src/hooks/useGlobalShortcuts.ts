@@ -147,7 +147,8 @@ export function useGlobalShortcuts(): void {
         // Shift+Escape on board (nothing else open) → focus the sidebar
         // Ignore key repeats to prevent accidental sidebar focus when holding
         // Shift+Escape to close task detail
-        if (e.shiftKey && !e.repeat && !taskDetailOpen && !settingsOpen && sidebarVisible) {
+        // Don't steal focus from inputs (e.g. create-task input)
+        if (e.shiftKey && !e.repeat && !taskDetailOpen && !settingsOpen && sidebarVisible && !isInputFocused()) {
           e.preventDefault()
           setSidebarFocused(true)
           return
