@@ -1,27 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ProjectSidebar } from './ProjectSidebar'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import type { AppNotification } from '@shared/types'
 
 // Mock window.api
-vi.stubGlobal('window', {
-  api: {
-    setProjectRoot: vi.fn().mockResolvedValue(true),
-    readProjectState: vi.fn().mockResolvedValue(null),
-    isInitialized: vi.fn().mockResolvedValue(true),
-    openDirectory: vi.fn().mockResolvedValue(null),
-    workspaceAddProject: vi.fn().mockResolvedValue(undefined),
-    workspaceRemoveProject: vi.fn().mockResolvedValue(undefined),
-    workspaceSetActiveProject: vi.fn().mockResolvedValue(undefined),
-    workspaceGetOpenProjects: vi.fn().mockResolvedValue([]),
-    workspaceGetActiveProject: vi.fn().mockResolvedValue(null),
-    workspaceGetConfig: vi.fn().mockResolvedValue({ workspaces: [], lastWorkspaceId: null }),
-    listNotifications: vi.fn().mockResolvedValue([]),
-    listAllNotifications: vi.fn().mockResolvedValue([])
-  }
-})
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(window as any).api = {
+  setProjectRoot: vi.fn().mockResolvedValue(true),
+  readProjectState: vi.fn().mockResolvedValue(null),
+  isInitialized: vi.fn().mockResolvedValue(true),
+  openDirectory: vi.fn().mockResolvedValue(null),
+  workspaceAddProject: vi.fn().mockResolvedValue(undefined),
+  workspaceRemoveProject: vi.fn().mockResolvedValue(undefined),
+  workspaceSetActiveProject: vi.fn().mockResolvedValue(undefined),
+  workspaceGetOpenProjects: vi.fn().mockResolvedValue([]),
+  workspaceGetActiveProject: vi.fn().mockResolvedValue(null),
+  workspaceGetConfig: vi.fn().mockResolvedValue({ workspaces: [], lastWorkspaceId: null }),
+  listNotifications: vi.fn().mockResolvedValue([]),
+  listAllNotifications: vi.fn().mockResolvedValue([])
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -316,6 +316,91 @@ describe('ProjectSidebar', () => {
     expect(worktreeItem.textContent).toContain('2 unread')
     // Parent has 0 own unread, so only worktree shows "2 unread"
     expect(screen.getAllByText('2 unread').length).toBe(1)
+  })
+
+  describe('keyboard navigation', () => {
+    beforeEach(() => {
+      useWorkspaceStore.setState({
+        sidebarVisible: true,
+        openProjects: [
+          {
+            path: '/tmp/alpha',
+            name: 'alpha',
+            worktrees: [
+              { path: '/tmp/alpha-wt1', branch: 'feat', slug: 'wt1', isMain: false }
+            ]
+          },
+          { path: '/tmp/beta', name: 'beta' }
+        ],
+        activeProjectPath: '/tmp/alpha',
+        sidebarExpanded: true
+      })
+    })
+
+    it('highlights the active project when sidebar is focused', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      const alphaItem = screen.getByTestId('project-item-alpha')
+      expect(alphaItem.className).toContain('KeyboardFocused')
+    })
+
+    it('moves focus down with ArrowDown', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(1)
+    })
+
+    it('moves focus up with ArrowUp', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      // Move down twice first (alpha→wt1→beta)
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(2)
+      fireEvent.keyDown(window, { key: 'ArrowUp' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(1)
+    })
+
+    it('does not go below last item', () => {
+      // 3 items: alpha, wt1, beta
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      fireEvent.keyDown(window, { key: 'ArrowDown' }) // should stay at 2
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(2)
+    })
+
+    it('does not go above first item', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      fireEvent.keyDown(window, { key: 'ArrowUp' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(0)
+    })
+
+    it('Escape clears sidebar focus', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
+
+    it('supports vim keys j and k', () => {
+      useUIStore.setState({ sidebarFocused: true, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      fireEvent.keyDown(window, { key: 'j' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(1)
+      fireEvent.keyDown(window, { key: 'k' })
+      expect(useUIStore.getState().focusedSidebarIndex).toBe(0)
+    })
+
+    it('does not apply keyboard focus class when sidebar is not focused', () => {
+      useUIStore.setState({ sidebarFocused: false, focusedSidebarIndex: 0 })
+      render(<ProjectSidebar />)
+      const alphaItem = screen.getByTestId('project-item-alpha')
+      expect(alphaItem.className).not.toContain('KeyboardFocused')
+    })
   })
 
   it('does not show worktree badge when worktree has no unread', () => {

@@ -64,6 +64,16 @@ const shortcutGroups: ShortcutGroup[] = [
     ]
   },
   {
+    title: 'Sidebar Navigation',
+    shortcuts: [
+      { keys: ['⇧', 'Esc'], description: 'Focus sidebar', detail: 'From the board view (when no task detail or overlay is open), press Shift+Escape to move keyboard focus to the project sidebar. The currently active project is highlighted.' },
+      { keys: ['j', '↓'], description: 'Next project/worktree' },
+      { keys: ['k', '↑'], description: 'Previous project/worktree' },
+      { keys: ['Enter'], description: 'Switch to project', detail: 'Switches to the highlighted project or worktree and returns focus to the board.' },
+      { keys: ['Esc'], description: 'Return to board' }
+    ]
+  },
+  {
     title: 'Task Actions',
     shortcuts: [
       { keys: ['1'], description: 'Move to Todo', detail: 'Works on focused card, multi-selection, or opened task detail.' },

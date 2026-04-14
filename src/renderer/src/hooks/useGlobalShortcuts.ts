@@ -24,6 +24,9 @@ export function useGlobalShortcuts(): void {
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
   const toggleSidebarVisible = useWorkspaceStore((s) => s.toggleSidebarVisible)
+  const sidebarVisible = useWorkspaceStore((s) => s.sidebarVisible)
+  const setSidebarFocused = useUIStore((s) => s.setSidebarFocused)
+  const sidebarFocused = useUIStore((s) => s.sidebarFocused)
 
   const isInputFocused = useCallback((): boolean => {
     const target = document.activeElement as HTMLElement | null
@@ -140,6 +143,13 @@ export function useGlobalShortcuts(): void {
           closeTaskDetail()
           return
         }
+
+        // Shift+Escape on board (nothing else open) → focus the sidebar
+        if (e.shiftKey && !taskDetailOpen && !settingsOpen && sidebarVisible) {
+          e.preventDefault()
+          setSidebarFocused(true)
+          return
+        }
       }
     }
 
@@ -161,6 +171,9 @@ export function useGlobalShortcuts(): void {
     addTask,
     projectState,
     isInputFocused,
-    toggleSidebarVisible
+    toggleSidebarVisible,
+    sidebarVisible,
+    setSidebarFocused,
+    sidebarFocused
   ])
 }

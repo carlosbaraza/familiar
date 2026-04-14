@@ -62,6 +62,10 @@ interface UIState {
   focusedColumnIndex: number
   focusedTaskIndex: number
 
+  // Sidebar keyboard navigation
+  sidebarFocused: boolean
+  focusedSidebarIndex: number
+
   // Pending focus target when opening task detail
   pendingDetailFocus: 'terminal' | 'title' | null
 
@@ -98,6 +102,8 @@ interface UIState {
   setEditorPanelWidth: (width: number) => void
   setPendingDetailFocus: (target: 'terminal' | 'title' | null) => void
   clearPendingDetailFocus: () => void
+  setSidebarFocused: (focused: boolean) => void
+  setFocusedSidebarIndex: (index: number) => void
 
   // Per-project task state
   saveProjectTaskState: (projectPath: string) => void
@@ -165,6 +171,10 @@ export const useUIStore = create<UIState>((set) => ({
   // Board keyboard navigation (-1 means no card is focused, e.g. when input has focus)
   focusedColumnIndex: -1,
   focusedTaskIndex: -1,
+
+  // Sidebar keyboard navigation
+  sidebarFocused: false,
+  focusedSidebarIndex: 0,
 
   // Pending focus
   pendingDetailFocus: null,
@@ -268,6 +278,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   clearPendingDetailFocus: () =>
     set({ pendingDetailFocus: null }),
+
+  setSidebarFocused: (focused: boolean) =>
+    set({ sidebarFocused: focused }),
+
+  setFocusedSidebarIndex: (index: number) =>
+    set({ focusedSidebarIndex: index }),
 
   saveProjectTaskState: (projectPath: string) =>
     set((state) => {

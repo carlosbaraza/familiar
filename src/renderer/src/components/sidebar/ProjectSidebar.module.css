@@ -74,7 +74,7 @@
 }
 
 .projectItem:hover {
-  background-color: var(--bg-surface);
+  background-color: var(--overlay-hover);
 }
 
 .projectItemActive {
@@ -83,6 +83,10 @@
 
 .projectItemActive:hover {
   background-color: var(--accent-subtle);
+}
+
+.projectItemKeyboardFocused {
+  background-color: var(--bg-surface);
 }
 
 /* Project icon (first letter, colored circle) */
@@ -193,7 +197,7 @@
 }
 
 .worktreeItem:hover {
-  background-color: var(--bg-surface);
+  background-color: var(--overlay-hover);
 }
 
 .worktreeItem:hover .removeButton {

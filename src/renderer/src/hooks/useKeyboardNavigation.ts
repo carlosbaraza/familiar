@@ -25,7 +25,8 @@ export function useKeyboardNavigation({
     setFocusedTask,
     openTaskDetail,
     closeTaskDetail,
-    taskDetailOpen
+    taskDetailOpen,
+    sidebarFocused
   } = useUIStore()
 
   const { updateTask, deleteTask, deleteTasks, reorderTask, moveTasks } =
@@ -46,6 +47,9 @@ export function useKeyboardNavigation({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
+      // Don't intercept when sidebar has keyboard focus
+      if (sidebarFocused) return
+
       // Don't intercept when typing in inputs
       const target = e.target as HTMLElement
       if (
@@ -351,6 +355,7 @@ export function useKeyboardNavigation({
     notifications,
     markReadByTaskId,
     markReadByTaskIds,
-    markUnread
+    markUnread,
+    sidebarFocused
   ])
 }

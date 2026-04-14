@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -49,6 +49,12 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const workspaceUnreadCountForProject = useNotificationStore((s) => s.workspaceUnreadCountForProject)
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
+  const sidebarFocused = useUIStore((s) => s.sidebarFocused)
+  const focusedSidebarIndex = useUIStore((s) => s.focusedSidebarIndex)
+  const setSidebarFocused = useUIStore((s) => s.setSidebarFocused)
+  const setFocusedSidebarIndex = useUIStore((s) => s.setFocusedSidebarIndex)
+
+  const sidebarRef = useRef<HTMLDivElement>(null)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -117,6 +123,83 @@ export function ProjectSidebar(): React.JSX.Element | null {
       })
     }
   }, [createDialog])
+
+  // Build flat list of navigable sidebar items: projects and their worktrees
+  const sidebarItems = useMemo(() => {
+    const items: { path: string; type: 'project' | 'worktree' }[] = []
+    for (const project of openProjects.filter((p) => !p.isWorktree)) {
+      items.push({ path: project.path, type: 'project' })
+      for (const wt of project.worktrees || []) {
+        items.push({ path: wt.path, type: 'worktree' })
+      }
+    }
+    return items
+  }, [openProjects])
+
+  // When sidebarFocused becomes true, set the focus index to the active project
+  useEffect(() => {
+    if (sidebarFocused) {
+      const activeIdx = sidebarItems.findIndex((item) => item.path === activeProjectPath)
+      setFocusedSidebarIndex(activeIdx >= 0 ? activeIdx : 0)
+      sidebarRef.current?.focus()
+    }
+  }, [sidebarFocused, sidebarItems, activeProjectPath, setFocusedSidebarIndex])
+
+  // Scroll focused sidebar item into view
+  useEffect(() => {
+    if (sidebarFocused) {
+      const el = sidebarRef.current?.querySelector(`[data-sidebar-index="${focusedSidebarIndex}"]`)
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest' })
+      }
+    }
+  }, [sidebarFocused, focusedSidebarIndex])
+
+  // Ref to store the switch handler (defined after the early return)
+  const switchHandlerRef = useRef<(path: string, type: 'project' | 'worktree') => void>(undefined)
+
+  // Handle keyboard navigation in the sidebar
+  useEffect(() => {
+    if (!sidebarFocused) return
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'j': {
+          e.preventDefault()
+          e.stopPropagation()
+          setFocusedSidebarIndex(Math.min(focusedSidebarIndex + 1, sidebarItems.length - 1))
+          break
+        }
+        case 'ArrowUp':
+        case 'k': {
+          e.preventDefault()
+          e.stopPropagation()
+          setFocusedSidebarIndex(Math.max(focusedSidebarIndex - 1, 0))
+          break
+        }
+        case 'Enter': {
+          e.preventDefault()
+          e.stopPropagation()
+          const item = sidebarItems[focusedSidebarIndex]
+          if (item) {
+            switchHandlerRef.current?.(item.path, item.type)
+          }
+          setSidebarFocused(false)
+          break
+        }
+        case 'Escape': {
+          e.preventDefault()
+          e.stopPropagation()
+          setSidebarFocused(false)
+          break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [sidebarFocused, focusedSidebarIndex, sidebarItems, setSidebarFocused, setFocusedSidebarIndex])
 
   const handleRenameConfirm = useCallback(async (): Promise<void> => {
     if (!renameDialog) return
@@ -245,6 +328,15 @@ export function ProjectSidebar(): React.JSX.Element | null {
     handleOpenCreateDialog()
   }
 
+  // Set the switch handler ref for keyboard navigation
+  switchHandlerRef.current = (path: string, type: 'project' | 'worktree') => {
+    if (type === 'worktree') {
+      handleOpenWorktree(path)
+    } else {
+      handleSwitchProject(path)
+    }
+  }
+
   const handleOpenWorktree = async (worktreePath: string): Promise<void> => {
     // Ensure worktree is registered as a project (for DataService/FileWatcher)
     const isOpen = openProjects.some((p) => p.path === worktreePath)
@@ -369,8 +461,10 @@ export function ProjectSidebar(): React.JSX.Element | null {
 
   return (
     <div
+      ref={sidebarRef}
       className={`${styles.sidebar} ${sidebarExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed}`}
       data-testid="project-sidebar"
+      tabIndex={-1}
     >
       {/* Toggle button */}
       <button
@@ -391,22 +485,26 @@ export function ProjectSidebar(): React.JSX.Element | null {
 
       {/* Project list */}
       <div className={styles.projectList}>
-        {openProjects.filter((p) => !p.isWorktree).map((project) => {
+        {(() => {
+          let sidebarIdx = 0
+          return openProjects.filter((p) => !p.isWorktree).map((project) => {
           const isActive = project.path === activeProjectPath
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
           const unread = workspaceUnreadCountForProject(project.path)
           const worktrees = project.worktrees || []
+          const projectSidebarIdx = sidebarIdx++
 
           return (
             <div key={project.path}>
               {/* Main project item */}
               <div
-                className={`${styles.projectItem} ${isActive ? styles.projectItemActive : ''}`}
+                className={`${styles.projectItem} ${isActive ? styles.projectItemActive : ''} ${sidebarFocused && focusedSidebarIndex === projectSidebarIdx ? styles.projectItemKeyboardFocused : ''}`}
                 onClick={() => handleSwitchProject(project.path)}
                 onContextMenu={(e) => handleProjectContextMenu(e, project.path)}
                 title={project.path}
                 data-testid={`project-item-${project.name}`}
+                data-sidebar-index={projectSidebarIdx}
               >
                 <div className={styles.projectIconWrapper}>
                   <div
@@ -450,10 +548,12 @@ export function ProjectSidebar(): React.JSX.Element | null {
               {worktrees.map((wt) => {
                 const isWtActive = wt.path === activeProjectPath
                 const wtUnread = workspaceUnreadCountForProject(wt.path)
+                const wtSidebarIdx = sidebarIdx++
                 return (
                   <div
                     key={wt.path}
-                    className={`${styles.worktreeItem} ${isWtActive ? styles.projectItemActive : ''}`}
+                    className={`${styles.worktreeItem} ${isWtActive ? styles.projectItemActive : ''} ${sidebarFocused && focusedSidebarIndex === wtSidebarIdx ? styles.projectItemKeyboardFocused : ''}`}
+                    data-sidebar-index={wtSidebarIdx}
                     onClick={() => handleOpenWorktree(wt.path)}
                     onContextMenu={(e) => handleWorktreeContextMenu(e, wt.path, wt.slug)}
                     title={`${wt.branch}\n${wt.path}`}
@@ -508,7 +608,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
               })}
             </div>
           )
-        })}
+        })
+        })()}
       </div>
 
       {/* Add project button */}
