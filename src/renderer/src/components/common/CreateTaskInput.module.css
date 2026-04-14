@@ -305,19 +305,24 @@
   gap: 4px;
   margin-right: auto;
   color: var(--text-secondary);
+  position: relative;
+  z-index: 1;
 }
 
 .agentSelectDropdown {
+  -webkit-appearance: menulist;
+  appearance: menulist;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 11px;
   font-family: inherit;
-  padding: 2px 4px;
+  padding: 2px 16px 2px 4px;
   cursor: pointer;
   outline: none;
   max-width: 160px;
+  min-height: 22px;
 }
 
 .agentSelectDropdown:hover {
