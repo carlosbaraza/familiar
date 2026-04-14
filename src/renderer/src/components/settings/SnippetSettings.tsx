@@ -1,7 +1,34 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Tooltip } from '@renderer/components/common'
 import { IconPicker, LucideIconByName } from '@renderer/components/terminal/IconPicker'
 import type { Snippet } from '@shared/types'
+
+function AutoGrowTextarea({
+  maxRows = 10,
+  style,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { maxRows?: number }): React.JSX.Element {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 18
+    const maxHeight = lineHeight * maxRows + 16 // +16 for padding
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
+  }, [props.value, maxRows])
+
+  return (
+    <textarea
+      ref={ref}
+      style={{ ...style, resize: 'none', fontFamily: 'inherit', lineHeight: '1.4' }}
+      rows={1}
+      {...props}
+    />
+  )
+}
 
 interface SnippetSettingsProps {
   snippets: Snippet[]
@@ -108,12 +135,12 @@ export function SnippetSettings({ snippets, onChange }: SnippetSettingsProps): R
               value={snippet.title}
               onChange={(e) => handleChange(i, 'title', e.target.value)}
             />
-            <textarea
-              style={{ ...styles.input, flex: 2, minHeight: 32, resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.4' }}
+            <AutoGrowTextarea
+              style={{ ...styles.input, flex: 2 }}
               placeholder="Command"
               value={snippet.command}
               onChange={(e) => handleChange(i, 'command', e.target.value)}
-              rows={Math.max(2, snippet.command.split('\n').length)}
+              maxRows={10}
             />
             <Tooltip
               placement="top"
