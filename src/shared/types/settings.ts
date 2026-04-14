@@ -42,6 +42,21 @@ export const AGENT_TYPE_DEFAULT_COMMANDS: Record<AgentType, string> = {
   other: ''
 }
 
+export const FAMILIAR_AGENT_PROMPT =
+  'This task is running in an environment called Familiar. Run the CLI command `familiar agents` and follow the instructions carefully to use the system effectively.'
+
+export const AGENT_TYPE_DEFAULT_SNIPPETS: Record<AgentType, Snippet[]> = {
+  'claude-code': [
+    { title: 'Start', command: FAMILIAR_AGENT_PROMPT, pressEnter: true }
+  ],
+  codex: [
+    { title: 'Start', command: FAMILIAR_AGENT_PROMPT, pressEnter: true }
+  ],
+  other: [
+    { title: 'Start', command: FAMILIAR_AGENT_PROMPT, pressEnter: true }
+  ]
+}
+
 export interface AgentProfile {
   id: string
   type: AgentType

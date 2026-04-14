@@ -8,6 +8,7 @@ import {
   CODE_EDITOR_LABELS,
   AGENT_TYPE_LABELS,
   AGENT_TYPE_DEFAULT_COMMANDS,
+  AGENT_TYPE_DEFAULT_SNIPPETS,
   AGENT_TYPE_ICONS
 } from '@shared/types/settings'
 import { DEFAULT_LABELS } from '@shared/constants'
@@ -108,7 +109,7 @@ export function SettingsPage(): React.JSX.Element {
       name: newAgentName || AGENT_TYPE_LABELS[type],
       icon: type === 'other' ? newAgentIcon || 'terminal' : AGENT_TYPE_ICONS[type],
       defaultCommand: newAgentCommand || AGENT_TYPE_DEFAULT_COMMANDS[type],
-      snippets: []
+      snippets: AGENT_TYPE_DEFAULT_SNIPPETS[type] ?? []
     }
     const agents = [...(settings.agents ?? []), profile]
     const activeAgentId = settings.activeAgentId ?? profile.id

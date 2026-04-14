@@ -3,7 +3,8 @@ import type { AgentType, AgentProfile, ProjectSettings } from '@shared/types'
 import {
   AGENT_TYPE_LABELS,
   AGENT_TYPE_ICONS,
-  AGENT_TYPE_DEFAULT_COMMANDS
+  AGENT_TYPE_DEFAULT_COMMANDS,
+  AGENT_TYPE_DEFAULT_SNIPPETS
 } from '@shared/types/settings'
 import { generateAgentId } from '@shared/utils/id-generator'
 import { DOCTOR_PROMPT } from '@shared/prompts'
@@ -142,12 +143,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           name: AGENT_TYPE_LABELS[agent],
           icon: AGENT_TYPE_ICONS[agent],
           defaultCommand: AGENT_TYPE_DEFAULT_COMMANDS[agent],
-          snippets:
-            agent === 'claude-code'
-              ? (settings.snippets ?? [
-                  { title: 'Start', command: '/familiar-agent', pressEnter: true }
-                ])
-              : []
+          snippets: AGENT_TYPE_DEFAULT_SNIPPETS[agent]
         }
         const updated: ProjectSettings = {
           ...settings,
