@@ -414,8 +414,10 @@ export function KanbanBoard(): React.JSX.Element {
         const taskId = task.id
         const sessionName = `familiar-${taskId}`
         window.api.warmupTmuxSession(taskId).then(async () => {
-          // Small delay to let the default command (e.g. claude) start up
-          await new Promise((r) => setTimeout(r, 3000))
+          // Delay to let the agent harness (claude, codex, etc.) fully start up
+          // before sending the first snippet. TUI apps take a few seconds to
+          // render their input and enable bracketed paste mode.
+          await new Promise((r) => setTimeout(r, 10000))
           for (const snippet of enabledSnippets) {
             try {
               await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
