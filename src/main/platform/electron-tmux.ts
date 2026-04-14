@@ -199,14 +199,19 @@ export class ElectronTmuxManager implements ITmuxManager {
 
   async sendKeys(sessionName: string, keys: string, pressEnter = true): Promise<void> {
     // Send the text first. We intentionally do NOT include Enter in the same
-    // send-keys call because TUI apps (e.g. Codex) that enable bracketed paste
-    // mode will treat the Enter inside the paste block as a literal newline
-    // rather than as a submit keypress.
-    await this._exec(['send-keys', '-t', sessionName, keys])
+    // send-keys call because TUI apps (e.g. Codex, oh-my-posh prompt apps)
+    // that enable bracketed paste mode will treat the Enter inside the paste
+    // block as a literal newline rather than as a submit keypress.
+    //
+    // Use `-l` (literal) so tmux doesn't try to interpret words in the text
+    // as key names (e.g. a snippet text containing "Enter" as a literal word
+    // would otherwise be sent as the Enter key).
+    await this._exec(['send-keys', '-t', sessionName, '-l', keys])
     if (pressEnter) {
-      // Small delay so the paste block closes (if bracketed paste is active)
-      // before we deliver the Enter as its own key event.
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      // Wait long enough for the TUI app to finish processing the paste and
+      // exit bracketed-paste mode before delivering Enter as its own key.
+      // 150ms is conservative but reliable across TUIs (Codex, oh-my-posh, etc).
+      await new Promise((resolve) => setTimeout(resolve, 150))
       await this._exec(['send-keys', '-t', sessionName, 'Enter'])
     }
   }
