@@ -202,18 +202,17 @@ export function ProjectSidebar(): React.JSX.Element | null {
       }
     }
 
-    // Clear sidebar focus when user clicks anywhere outside the sidebar
-    const handleMouseDown = (e: MouseEvent): void => {
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        setSidebarFocused(false)
-      }
+    // Clear sidebar focus when the sidebar container loses DOM focus
+    const handleBlur = (): void => {
+      setSidebarFocused(false)
     }
 
+    const sidebarEl = sidebarRef.current
     window.addEventListener('keydown', handleKeyDown, true)
-    window.addEventListener('mousedown', handleMouseDown)
+    sidebarEl?.addEventListener('blur', handleBlur)
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true)
-      window.removeEventListener('mousedown', handleMouseDown)
+      sidebarEl?.removeEventListener('blur', handleBlur)
     }
   // Only re-run when sidebarFocused transitions — everything else uses refs/getState
   // eslint-disable-next-line react-hooks/exhaustive-deps
