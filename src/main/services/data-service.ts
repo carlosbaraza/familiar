@@ -1,7 +1,7 @@
 import { ElectronFileSystem } from '../platform/electron-file-system'
 import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../../shared/types'
 import { DEFAULT_SETTINGS } from '../../shared/types'
-import { AGENT_TYPE_LABELS, AGENT_TYPE_ICONS, type AgentProfile } from '../../shared/types/settings'
+import { AGENT_TYPE_LABELS, AGENT_TYPE_ICONS, FAMILIAR_AGENT_PROMPT, type AgentProfile } from '../../shared/types/settings'
 import { generateAgentId } from '../../shared/utils/id-generator'
 import {
   DATA_DIR,
@@ -451,6 +451,32 @@ export class DataService {
       }
       settings.agents = [profile]
       settings.activeAgentId = profile.id
+      await this.writeSettings(settings)
+    }
+
+    // Migrate: replace /familiar-agent snippets with universal agent prompt
+    let snippetsMigrated = false
+    if (settings.snippets) {
+      for (let i = 0; i < settings.snippets.length; i++) {
+        if (settings.snippets[i].command === '/familiar-agent') {
+          settings.snippets[i] = { ...settings.snippets[i], command: FAMILIAR_AGENT_PROMPT }
+          snippetsMigrated = true
+        }
+      }
+    }
+    if (settings.agents) {
+      for (const agent of settings.agents) {
+        if (agent.snippets) {
+          for (let i = 0; i < agent.snippets.length; i++) {
+            if (agent.snippets[i].command === '/familiar-agent') {
+              agent.snippets[i] = { ...agent.snippets[i], command: FAMILIAR_AGENT_PROMPT }
+              snippetsMigrated = true
+            }
+          }
+        }
+      }
+    }
+    if (snippetsMigrated) {
       await this.writeSettings(settings)
     }
 

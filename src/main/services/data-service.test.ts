@@ -489,6 +489,55 @@ describe('DataService', () => {
     })
   })
 
+  describe('readSettings snippet migration', () => {
+    it('replaces /familiar-agent with universal prompt in global snippets', async () => {
+      await service.initProject('Test')
+      await service.writeSettings({
+        snippets: [
+          { title: 'Start', command: '/familiar-agent', pressEnter: true }
+        ]
+      } as ProjectSettings)
+
+      const result = await service.readSettings()
+
+      expect(result.snippets![0].command).not.toBe('/familiar-agent')
+      expect(result.snippets![0].command).toContain('familiar agents')
+      expect(result.snippets![0].title).toBe('Start')
+    })
+
+    it('replaces /familiar-agent in agent profile snippets', async () => {
+      await service.initProject('Test')
+      await service.writeSettings({
+        agents: [{
+          id: 'agent_1', type: 'claude-code', name: 'Claude', icon: 'claude-code',
+          defaultCommand: 'claude', snippets: [
+            { title: 'Start', command: '/familiar-agent', pressEnter: true }
+          ]
+        }],
+        activeAgentId: 'agent_1'
+      } as ProjectSettings)
+
+      const result = await service.readSettings()
+
+      expect(result.agents![0].snippets[0].command).not.toBe('/familiar-agent')
+      expect(result.agents![0].snippets[0].command).toContain('familiar agents')
+    })
+
+    it('does not modify snippets that are already migrated', async () => {
+      await service.initProject('Test')
+      const prompt = 'This task is running in an environment called Familiar.'
+      await service.writeSettings({
+        snippets: [
+          { title: 'Start', command: prompt, pressEnter: true }
+        ]
+      } as ProjectSettings)
+
+      const result = await service.readSettings()
+
+      expect(result.snippets![0].command).toBe(prompt)
+    })
+  })
+
   describe('markNotificationsByTaskIds', () => {
     it('marks notifications for multiple taskIds in a single write', async () => {
       await service.initProject('Test')
