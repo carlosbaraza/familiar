@@ -141,8 +141,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
     if (sidebarFocused) {
       const activeIdx = sidebarItems.findIndex((item) => item.path === activeProjectPath)
       setFocusedSidebarIndex(activeIdx >= 0 ? activeIdx : 0)
-      // Blur whatever currently has focus so keystrokes aren't captured by inputs
-      ;(document.activeElement as HTMLElement)?.blur?.()
+      // Focus the sidebar container so keystrokes aren't captured by inputs
+      sidebarRef.current?.focus()
     }
   }, [sidebarFocused, sidebarItems, activeProjectPath, setFocusedSidebarIndex])
 
@@ -465,6 +465,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
       ref={sidebarRef}
       className={`${styles.sidebar} ${sidebarExpanded ? styles.sidebarExpanded : styles.sidebarCollapsed}`}
       data-testid="project-sidebar"
+      tabIndex={-1}
     >
       {/* Toggle button */}
       <button
