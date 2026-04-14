@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import type { ProjectSettings, AgentProfile } from '@shared/types'
 import type { CodeEditor, AgentType } from '@shared/types/settings'
 import {
@@ -23,26 +24,31 @@ const AUTOSAVE_DELAY_MS = 500
 
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
+  const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS)
   const isLoaded = useRef(false)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load settings on mount
+  // Load settings whenever the active project changes
   useEffect(() => {
+    isLoaded.current = false
+    let cancelled = false
     async function load(): Promise<void> {
       try {
         const s = await window.api.readSettings()
+        if (cancelled) return
         setSettings(s)
       } catch {
         // Use defaults
       }
-      isLoaded.current = true
+      if (!cancelled) isLoaded.current = true
     }
     load()
     return () => {
+      cancelled = true
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     }
-  }, [])
+  }, [activeProjectPath])
 
   const saveSettings = useCallback(async (current: ProjectSettings) => {
     try {

@@ -117,9 +117,16 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   useEffect(() => {
+    // Clear stale per-project state before loading the new project's settings
+    // so the quick-switcher never briefly shows agents from a different project.
+    setAgents([])
+    setActiveAgentId(undefined)
+
+    let cancelled = false
     async function loadSnippets(): Promise<void> {
       try {
         const settings = await window.api.readSettings()
+        if (cancelled) return
         const nextGlobal =
           settings.snippets && settings.snippets.length > 0 ? settings.snippets : DEFAULT_SNIPPETS
         setGlobalSnippets(nextGlobal)
@@ -162,10 +169,12 @@ export function KanbanBoard(): React.JSX.Element {
     window.addEventListener('snippets-updated', handleSnippetsUpdated)
     window.addEventListener('agents-updated', handleAgentsUpdated)
     return () => {
+      cancelled = true
       window.removeEventListener('snippets-updated', handleSnippetsUpdated)
       window.removeEventListener('agents-updated', handleAgentsUpdated)
     }
-  }, [resolveSnippets])
+    // Reload agents and snippets whenever the active project/worktree changes
+  }, [resolveSnippets, activeProjectPath])
 
   const handleAgentChange = useCallback(
     async (agentId: string) => {
