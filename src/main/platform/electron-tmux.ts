@@ -198,11 +198,17 @@ export class ElectronTmuxManager implements ITmuxManager {
   }
 
   async sendKeys(sessionName: string, keys: string, pressEnter = true): Promise<void> {
-    const args = ['send-keys', '-t', sessionName, keys]
+    // Send the text first. We intentionally do NOT include Enter in the same
+    // send-keys call because TUI apps (e.g. Codex) that enable bracketed paste
+    // mode will treat the Enter inside the paste block as a literal newline
+    // rather than as a submit keypress.
+    await this._exec(['send-keys', '-t', sessionName, keys])
     if (pressEnter) {
-      args.push('Enter')
+      // Small delay so the paste block closes (if bracketed paste is active)
+      // before we deliver the Enter as its own key event.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await this._exec(['send-keys', '-t', sessionName, 'Enter'])
     }
-    await this._exec(args)
   }
 
   async killSession(sessionName: string): Promise<void> {
