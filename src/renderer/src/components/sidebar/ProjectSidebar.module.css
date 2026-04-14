@@ -50,6 +50,7 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--space-1) 0;
+  outline: none;
 }
 
 .sidebarExpanded .projectList {
@@ -67,6 +68,7 @@
   cursor: pointer;
   transition: background-color var(--transition-fast);
   position: relative;
+  outline: none;
 }
 
 .sidebarExpanded .projectItem {
@@ -190,6 +192,7 @@
   cursor: pointer;
   transition: background-color var(--transition-fast);
   position: relative;
+  outline: none;
 }
 
 .sidebarExpanded .worktreeItem {
