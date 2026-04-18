@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
@@ -27,6 +27,10 @@ export function useGlobalShortcuts(): void {
   const sidebarVisible = useWorkspaceStore((s) => s.sidebarVisible)
   const setSidebarFocused = useUIStore((s) => s.setSidebarFocused)
   const sidebarFocused = useUIStore((s) => s.sidebarFocused)
+
+  // Guard: after closing task detail, prevent sidebar focus for a brief window
+  // so a follow-up Shift+Esc doesn't skip the board view
+  const taskDetailJustClosedRef = useRef<number>(0)
 
   const isInputFocused = useCallback((): boolean => {
     const target = document.activeElement as HTMLElement | null
@@ -141,14 +145,25 @@ export function useGlobalShortcuts(): void {
         if (taskDetailOpen) {
           e.preventDefault()
           closeTaskDetail()
+          taskDetailJustClosedRef.current = Date.now()
           return
         }
 
         // Shift+Escape on board (nothing else open) → focus the sidebar
-        // Ignore key repeats to prevent accidental sidebar focus when holding
-        // Shift+Escape to close task detail
-        // Don't steal focus from inputs (e.g. create-task input)
-        if (e.shiftKey && !e.repeat && !taskDetailOpen && !settingsOpen && sidebarVisible && !isInputFocused()) {
+        // Guards:
+        //  - ignore key repeats (holding Shift+Esc to close task detail)
+        //  - ignore for 400ms after closing task detail (fast double-press)
+        //  - don't steal focus from inputs (e.g. create-task input)
+        const recentlyClosedDetail = Date.now() - taskDetailJustClosedRef.current < 400
+        if (
+          e.shiftKey &&
+          !e.repeat &&
+          !recentlyClosedDetail &&
+          !taskDetailOpen &&
+          !settingsOpen &&
+          sidebarVisible &&
+          !isInputFocused()
+        ) {
           e.preventDefault()
           setSidebarFocused(true)
           return
