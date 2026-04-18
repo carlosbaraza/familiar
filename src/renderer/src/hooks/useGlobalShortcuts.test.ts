@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useGlobalShortcuts } from './useGlobalShortcuts'
 import type { TaskStatus } from '@shared/types'
 
@@ -265,5 +266,122 @@ describe('useGlobalShortcuts', () => {
     expect(useUIStore.getState().settingsOpen).toBe(false)
     // Task detail should still be open
     expect(useUIStore.getState().taskDetailOpen).toBe(true)
+  })
+
+  // --- Sidebar focus via Shift+Escape ---
+
+  describe('Shift+Escape sidebar focus', () => {
+    beforeEach(() => {
+      // Make sidebar "visible" so the shortcut is allowed to fire
+      useWorkspaceStore.setState({ sidebarVisible: true })
+      useUIStore.setState({ sidebarFocused: false })
+    })
+
+    it('Shift+Esc on the board focuses the sidebar', () => {
+      useUIStore.setState({ taskDetailOpen: false, settingsOpen: false })
+      renderHook(() => useGlobalShortcuts())
+
+      act(() => fireKey('Escape', { shiftKey: true }))
+
+      expect(useUIStore.getState().sidebarFocused).toBe(true)
+    })
+
+    it('Shift+Esc from task detail closes detail but does NOT focus sidebar', () => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      act(() => fireKey('Escape', { shiftKey: true }))
+
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
+
+    // This is the real-world bug: TaskDetail.tsx has its own document-level
+    // Escape handler that closes the detail before useGlobalShortcuts runs.
+    // With stale closures, useGlobalShortcuts would see taskDetailOpen=true
+    // in its React-captured state but false in the store, and fall through
+    // to the sidebar-focus branch.
+    it('Shift+Esc does NOT focus sidebar when another handler closes detail first', () => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      // Simulate TaskDetail's document-level handler: closes detail on Escape.
+      // Document handlers fire BEFORE window handlers in the bubble phase.
+      const simulateTaskDetailHandler = (e: KeyboardEvent): void => {
+        if (e.key === 'Escape') {
+          useUIStore.getState().closeTaskDetail()
+        }
+      }
+      document.addEventListener('keydown', simulateTaskDetailHandler)
+
+      try {
+        act(() => fireKey('Escape', { shiftKey: true }))
+      } finally {
+        document.removeEventListener('keydown', simulateTaskDetailHandler)
+      }
+
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      // The critical assertion: sidebar should NOT be focused
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
+
+    it('Shift+Esc key repeat does not focus sidebar', () => {
+      useUIStore.setState({ taskDetailOpen: false, sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      act(() => fireKey('Escape', { shiftKey: true, repeat: true }))
+
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
+
+    it('Shift+Esc does not focus sidebar within 400ms after closing detail', () => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      // First press: closes task detail
+      act(() => fireKey('Escape', { shiftKey: true }))
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+
+      // Second press 100ms later: should NOT focus sidebar (cooldown)
+      act(() => {
+        vi.advanceTimersByTime(100)
+      })
+      act(() => fireKey('Escape', { shiftKey: true }))
+
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
+
+    it('Shift+Esc focuses sidebar after 400ms cooldown has elapsed', () => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      // Close detail
+      act(() => fireKey('Escape', { shiftKey: true }))
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+
+      // Wait past the cooldown
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      // Now Shift+Esc should focus the sidebar
+      act(() => fireKey('Escape', { shiftKey: true }))
+      expect(useUIStore.getState().sidebarFocused).toBe(true)
+    })
+
+    it('Shift+Esc does not focus sidebar when input is focused', () => {
+      useUIStore.setState({ taskDetailOpen: false, sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      const input = document.createElement('input')
+      document.body.appendChild(input)
+      input.focus()
+
+      act(() => fireKey('Escape', { shiftKey: true }))
+
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+      document.body.removeChild(input)
+    })
   })
 })
