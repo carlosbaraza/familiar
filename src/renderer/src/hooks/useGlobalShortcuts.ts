@@ -142,12 +142,9 @@ export function useGlobalShortcuts(): void {
           closeSettings()
           return
         }
-        // Read the LATEST state from the store, since other handlers (e.g.
-        // TaskDetail's document-level Escape handler) may have just closed
-        // the task detail within this same event.
+        // Read live state from the store
         const currentState = useUIStore.getState()
         const detailOpenNow = currentState.taskDetailOpen
-        const settingsOpenNow = currentState.settingsOpen
 
         if (detailOpenNow) {
           e.preventDefault()
@@ -155,40 +152,54 @@ export function useGlobalShortcuts(): void {
           taskDetailJustClosedRef.current = Date.now()
           return
         }
-
-        // If task detail was just closed (by any handler) on this event,
-        // consume the event so the board becomes the current view — don't
-        // let it fall through to sidebar focus.
-        if (taskDetailOpen && !detailOpenNow) {
-          e.preventDefault()
-          taskDetailJustClosedRef.current = Date.now()
-          return
-        }
-
-        // Shift+Escape on board (nothing else open) → focus the sidebar
-        // Guards:
-        //  - ignore key repeats (holding Shift+Esc to close task detail)
-        //  - ignore for 400ms after closing task detail (fast double-press)
-        //  - don't steal focus from inputs (e.g. create-task input)
-        const recentlyClosedDetail = Date.now() - taskDetailJustClosedRef.current < 400
-        if (
-          e.shiftKey &&
-          !e.repeat &&
-          !recentlyClosedDetail &&
-          !detailOpenNow &&
-          !settingsOpenNow &&
-          sidebarVisible &&
-          !isInputFocused()
-        ) {
-          e.preventDefault()
-          setSidebarFocused(true)
-          return
-        }
       }
     }
 
+    // Capture-phase handler: runs BEFORE any other handlers (TaskDetail,
+    // useKeyboardNavigation) so we can track the state BEFORE they mutate it.
+    // This lets us distinguish "Shift+Esc to close task detail" from
+    // "Shift+Esc to focus sidebar" reliably.
+    const handleCapture = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      if (!e.shiftKey) return
+
+      const state = useUIStore.getState()
+      const workspace = useWorkspaceStore.getState()
+
+      // If any overlay/view is open, this Shift+Esc is for closing it — NOT
+      // for focusing the sidebar. Let the other handlers close it.
+      if (
+        state.taskDetailOpen ||
+        state.settingsOpen ||
+        state.commandPaletteOpen ||
+        state.shortcutsModalOpen
+      ) {
+        taskDetailJustClosedRef.current = Date.now()
+        return
+      }
+
+      // Guards for focusing sidebar:
+      //  - ignore key repeats
+      //  - ignore within 400ms of a close (extra safety)
+      //  - don't steal focus from inputs
+      //  - sidebar must be visible
+      const recentlyClosedDetail = Date.now() - taskDetailJustClosedRef.current < 400
+      if (e.repeat) return
+      if (recentlyClosedDetail) return
+      if (!workspace.sidebarVisible) return
+      if (isInputFocused()) return
+
+      e.preventDefault()
+      e.stopPropagation()
+      setSidebarFocused(true)
+    }
+
+    window.addEventListener('keydown', handleCapture, true)
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleCapture, true)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [
     toggleCommandPalette,
     toggleSidebar,

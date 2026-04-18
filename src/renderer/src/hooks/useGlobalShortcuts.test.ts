@@ -383,5 +383,34 @@ describe('useGlobalShortcuts', () => {
       expect(useUIStore.getState().sidebarFocused).toBe(false)
       document.body.removeChild(input)
     })
+
+    // Capture-phase test: even with multiple concurrent handlers running during
+    // the same event, the capture handler sees taskDetailOpen=true at event
+    // start and refuses to focus the sidebar.
+    it('Shift+Esc capture phase prevents sidebar focus with multiple concurrent handlers', () => {
+      useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1', sidebarFocused: false })
+      renderHook(() => useGlobalShortcuts())
+
+      // Simulate multiple document/window handlers that may fire during the event
+      const closeDetailHandler = (e: KeyboardEvent): void => {
+        if (e.key === 'Escape') useUIStore.getState().closeTaskDetail()
+      }
+      const noopHandler = (_e: KeyboardEvent): void => {}
+
+      document.addEventListener('keydown', closeDetailHandler)
+      document.addEventListener('keydown', noopHandler)
+      window.addEventListener('keydown', noopHandler)
+
+      try {
+        act(() => fireKey('Escape', { shiftKey: true }))
+      } finally {
+        document.removeEventListener('keydown', closeDetailHandler)
+        document.removeEventListener('keydown', noopHandler)
+        window.removeEventListener('keydown', noopHandler)
+      }
+
+      expect(useUIStore.getState().taskDetailOpen).toBe(false)
+      expect(useUIStore.getState().sidebarFocused).toBe(false)
+    })
   })
 })
