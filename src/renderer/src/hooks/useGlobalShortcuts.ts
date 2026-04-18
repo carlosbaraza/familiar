@@ -142,9 +142,25 @@ export function useGlobalShortcuts(): void {
           closeSettings()
           return
         }
-        if (taskDetailOpen) {
+        // Read the LATEST state from the store, since other handlers (e.g.
+        // TaskDetail's document-level Escape handler) may have just closed
+        // the task detail within this same event.
+        const currentState = useUIStore.getState()
+        const detailOpenNow = currentState.taskDetailOpen
+        const settingsOpenNow = currentState.settingsOpen
+
+        if (detailOpenNow) {
           e.preventDefault()
           closeTaskDetail()
+          taskDetailJustClosedRef.current = Date.now()
+          return
+        }
+
+        // If task detail was just closed (by any handler) on this event,
+        // consume the event so the board becomes the current view — don't
+        // let it fall through to sidebar focus.
+        if (taskDetailOpen && !detailOpenNow) {
+          e.preventDefault()
           taskDetailJustClosedRef.current = Date.now()
           return
         }
@@ -159,8 +175,8 @@ export function useGlobalShortcuts(): void {
           e.shiftKey &&
           !e.repeat &&
           !recentlyClosedDetail &&
-          !taskDetailOpen &&
-          !settingsOpen &&
+          !detailOpenNow &&
+          !settingsOpenNow &&
           sidebarVisible &&
           !isInputFocused()
         ) {
