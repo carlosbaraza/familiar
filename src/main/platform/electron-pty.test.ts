@@ -122,11 +122,18 @@ describe('getShellEnv CLAUDECODE removal', () => {
 })
 
 describe('getShellEnv UTF-8 locale', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('should set LANG and LC_ALL to en_US.UTF-8 when not already set', async () => {
-    delete process.env.LANG
-    delete process.env.LC_ALL
+    // Stub to empty-string so `if (!env.LANG)` takes the default branch —
+    // `delete process.env.LANG` was unreliable in vitest's worker pool.
+    vi.stubEnv('LANG', '')
+    vi.stubEnv('LC_ALL', '')
 
     const pty = await import('node-pty')
+    ;(pty.spawn as ReturnType<typeof vi.fn>).mockClear()
     const mockPty = {
       onData: vi.fn(),
       onExit: vi.fn(),
@@ -149,8 +156,8 @@ describe('getShellEnv UTF-8 locale', () => {
   })
 
   it('should preserve existing LANG and LC_ALL if already set', async () => {
-    process.env.LANG = 'de_DE.UTF-8'
-    process.env.LC_ALL = 'de_DE.UTF-8'
+    vi.stubEnv('LANG', 'de_DE.UTF-8')
+    vi.stubEnv('LC_ALL', 'de_DE.UTF-8')
 
     const pty = await import('node-pty')
     ;(pty.spawn as ReturnType<typeof vi.fn>).mockClear()
@@ -173,10 +180,6 @@ describe('getShellEnv UTF-8 locale', () => {
     const spawnEnv = spawnCall[2]?.env as Record<string, string>
     expect(spawnEnv.LANG).toBe('de_DE.UTF-8')
     expect(spawnEnv.LC_ALL).toBe('de_DE.UTF-8')
-
-    // Cleanup
-    delete process.env.LANG
-    delete process.env.LC_ALL
   })
 })
 
