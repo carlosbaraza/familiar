@@ -108,6 +108,12 @@ export class ElectronTmuxManager implements ITmuxManager {
     // before .zshrc is sourced.
     args.push('-e', 'DISABLE_AUTO_UPDATE=true')
 
+    // Tell bash to exclude space-prefixed commands from history so the
+    // warmup `clear` + agent command (both sent with a leading space) don't
+    // pollute the user's shell history. zsh users need `setopt HIST_IGNORE_SPACE`
+    // in their .zshrc for the same behavior (no env-var equivalent exists).
+    args.push('-e', 'HISTCONTROL=ignorespace:ignoredups')
+
     if (env) {
       for (const [key, value] of Object.entries(env)) {
         args.push('-e', `${key}=${value}`)
@@ -134,16 +140,26 @@ export class ElectronTmuxManager implements ITmuxManager {
 
   /**
    * Wait for the shell to finish initializing (e.g. oh-my-zsh, .zshrc),
-   * then export env vars into the running shell and run a command.
+   * then run the initial command in the already-running shell.
    * Designed to be called fire-and-forget after the PTY is already attached.
    *
    * IMPORTANT: We do NOT send Ctrl-C to dismiss prompts — doing so interrupts
    * .zshrc/.bashrc sourcing (especially oh-my-zsh), leaving the shell in an
    * uninitialized state with no PATH, no prompt theme, etc.
+   *
+   * FAMILIAR_* env vars are NOT re-exported here: they're already injected into
+   * the shell's environment via `tmux new-session -e` in createSession(). The
+   * `env` parameter is kept for API compatibility and to allow tests/callers
+   * to assert on it, but its values are not sent to the shell.
+   *
+   * Commands are sent with a leading space so that shells with history-ignore-
+   * space enabled (bash via HISTCONTROL=ignorespace — set by createSession —
+   * or zsh via `setopt HIST_IGNORE_SPACE` in .zshrc) do not record them and
+   * pollute the user's shell history.
    */
   async warmupSession(
     sessionName: string,
-    env?: Record<string, string>,
+    _env?: Record<string, string>,
     command?: string
   ): Promise<void> {
     // Prevent duplicate concurrent warmups — both tmux:warmup IPC handler
@@ -162,20 +178,12 @@ export class ElectronTmuxManager implements ITmuxManager {
       await this._execTmux(['send-keys', '-t', sessionName, 'C-c'])
       await this._delay(500)
 
-      // Export env vars into the running shell (env vars were already set via
-      // tmux new-session -e, but re-export ensures they're in the shell process)
-      if (env) {
-        for (const [key, value] of Object.entries(env)) {
-          await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
-        }
-      }
+      // Clear the screen (leading space hides from history — see method docs)
+      await this._exec(['send-keys', '-t', sessionName, ' clear', 'Enter'])
 
-      // Clear the screen
-      await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
-
-      // Run the initial command if provided
+      // Run the initial command if provided (leading space hides from history)
       if (command) {
-        await this._exec(['send-keys', '-t', sessionName, command, 'Enter'])
+        await this._exec(['send-keys', '-t', sessionName, ` ${command}`, 'Enter'])
       }
     } finally {
       this._warmingUp.delete(sessionName)
