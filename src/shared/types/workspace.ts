@@ -1,6 +1,6 @@
 /**
- * Per-workspace theme preferences. When set, these override the global
- * theme stored in ~/.familiar/settings.json for this workspace.
+ * Theme preferences. Stored globally in ~/.familiar/settings.json — the
+ * same theme applies to every workspace and single-project window.
  */
 export interface WorkspaceTheme {
   themeMode: 'system' | 'light' | 'dark'
@@ -14,9 +14,9 @@ export interface Workspace {
   projectPaths: string[] // Ordered list of project folder paths
   lastOpenedAt: string // ISO date
   createdAt: string // ISO date
-  /** Per-workspace theme — persisted alongside the workspace so each
-   * workspace can have its own theme preference. Falls back to global
-   * settings when unset. */
+  /** @deprecated Theme is now stored globally in ~/.familiar/settings.json.
+   * Field retained on the type only to support the one-time migration that
+   * copies the most-recently-opened workspace's theme to global settings. */
   theme?: WorkspaceTheme
 }
 

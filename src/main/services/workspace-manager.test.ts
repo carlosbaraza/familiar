@@ -297,8 +297,8 @@ describe('WorkspaceManager', () => {
     })
   })
 
-  describe('effective theme (workspace-aware)', () => {
-    it('returns global defaults when no workspace is active and no settings file', () => {
+  describe('effective theme (global)', () => {
+    it('returns defaults when no settings file exists', () => {
       const wm = new WorkspaceManager()
       const theme = wm.readEffectiveTheme()
       expect(theme.themeMode).toBe('system')
@@ -306,8 +306,7 @@ describe('WorkspaceManager', () => {
       expect(theme.lightTheme).toBe('familiar-light')
     })
 
-    it('reads theme from global settings when no workspace is active', () => {
-      // Seed global settings directly on disk
+    it('reads theme from global settings', () => {
       fs.writeFileSync(
         GLOBAL_SETTINGS_FILE,
         JSON.stringify({
@@ -324,21 +323,7 @@ describe('WorkspaceManager', () => {
       expect(theme.lightTheme).toBe('solarized-light')
     })
 
-    it('writes to global settings when no workspace is active', () => {
-      const wm = new WorkspaceManager()
-      wm.writeEffectiveTheme({
-        themeMode: 'light',
-        darkTheme: 'familiar-dark',
-        lightTheme: 'nord-light'
-      })
-
-      const raw = fs.readFileSync(GLOBAL_SETTINGS_FILE, 'utf-8')
-      const global = JSON.parse(raw)
-      expect(global.themeMode).toBe('light')
-      expect(global.lightTheme).toBe('nord-light')
-    })
-
-    it('writes theme onto the active workspace, not global settings', () => {
+    it('writes to global settings regardless of active workspace', () => {
       const wm = new WorkspaceManager()
       const ws = wm.createWorkspace('Scoped', ['/tmp/a'])
       wm.setActiveWorkspaceId(ws.id)
@@ -349,61 +334,19 @@ describe('WorkspaceManager', () => {
         lightTheme: 'familiar-light'
       })
 
-      // Workspace got the theme
-      const config = wm.loadWorkspaceConfig()
-      const updated = config.workspaces.find((w) => w.id === ws.id)
-      expect(updated?.theme?.themeMode).toBe('dark')
-      expect(updated?.theme?.darkTheme).toBe('dracula')
+      // Global settings got the theme
+      const raw = fs.readFileSync(GLOBAL_SETTINGS_FILE, 'utf-8')
+      const global = JSON.parse(raw)
+      expect(global.themeMode).toBe('dark')
+      expect(global.darkTheme).toBe('dracula')
 
-      // Global settings untouched
-      expect(fs.existsSync(GLOBAL_SETTINGS_FILE)).toBe(false)
-    })
-
-    it('reads from active workspace when it has a theme set', () => {
-      const wm = new WorkspaceManager()
-      const ws = wm.createWorkspace('Scoped', ['/tmp/a'])
-      // Manually put a theme on the workspace
-      wm.updateWorkspace(ws.id, {
-        theme: {
-          themeMode: 'light',
-          darkTheme: 'familiar-dark',
-          lightTheme: 'solarized-light'
-        }
-      })
-      wm.setActiveWorkspaceId(ws.id)
-
-      const theme = wm.readEffectiveTheme()
-      expect(theme.themeMode).toBe('light')
-      expect(theme.lightTheme).toBe('solarized-light')
-    })
-
-    it('seeds the active workspace theme from global settings on first read', () => {
-      // Set up: global settings exist with a custom theme, active workspace has no theme yet
-      fs.writeFileSync(
-        GLOBAL_SETTINGS_FILE,
-        JSON.stringify({
-          themeMode: 'dark',
-          darkTheme: 'dracula',
-          lightTheme: 'familiar-light'
-        })
-      )
-      const wm = new WorkspaceManager()
-      const ws = wm.createWorkspace('Scoped', ['/tmp/a'])
-      wm.setActiveWorkspaceId(ws.id)
-
-      // First read should seed the workspace from global
-      const theme = wm.readEffectiveTheme()
-      expect(theme.themeMode).toBe('dark')
-      expect(theme.darkTheme).toBe('dracula')
-
-      // And the workspace should now carry the theme for future reads
+      // No per-workspace theme stored
       const config = wm.loadWorkspaceConfig()
       const stored = config.workspaces.find((w) => w.id === ws.id)
-      expect(stored?.theme?.themeMode).toBe('dark')
-      expect(stored?.theme?.darkTheme).toBe('dracula')
+      expect(stored?.theme).toBeUndefined()
     })
 
-    it('different workspaces can carry different themes', () => {
+    it('returns the same theme across different active workspaces', () => {
       const wm = new WorkspaceManager()
       const a = wm.createWorkspace('A', ['/tmp/a'])
       const b = wm.createWorkspace('B', ['/tmp/b'])
@@ -416,23 +359,14 @@ describe('WorkspaceManager', () => {
       })
 
       wm.setActiveWorkspaceId(b.id)
-      wm.writeEffectiveTheme({
-        themeMode: 'light',
-        darkTheme: 'familiar-dark',
-        lightTheme: 'solarized-light'
-      })
-
-      // Switching back to A should return A's theme
-      wm.setActiveWorkspaceId(a.id)
       expect(wm.readEffectiveTheme().themeMode).toBe('dark')
       expect(wm.readEffectiveTheme().darkTheme).toBe('dracula')
 
-      wm.setActiveWorkspaceId(b.id)
-      expect(wm.readEffectiveTheme().themeMode).toBe('light')
-      expect(wm.readEffectiveTheme().lightTheme).toBe('solarized-light')
+      wm.setActiveWorkspaceId(a.id)
+      expect(wm.readEffectiveTheme().themeMode).toBe('dark')
     })
 
-    it('falls back to global when activeWorkspaceId points to a missing workspace', () => {
+    it('reads global theme even when activeWorkspaceId points to a missing workspace', () => {
       fs.writeFileSync(
         GLOBAL_SETTINGS_FILE,
         JSON.stringify({
@@ -447,6 +381,126 @@ describe('WorkspaceManager', () => {
       const theme = wm.readEffectiveTheme()
       expect(theme.themeMode).toBe('dark')
       expect(theme.darkTheme).toBe('dracula')
+    })
+  })
+
+  describe('workspace-theme → global migration', () => {
+    it('adopts the most-recently-opened workspace theme into global settings on first read', () => {
+      fs.writeFileSync(
+        WORKSPACES_FILE,
+        JSON.stringify({
+          workspaces: [
+            {
+              id: 'ws_old',
+              name: 'Old',
+              projectPaths: ['/tmp/old'],
+              lastOpenedAt: '2026-01-01T00:00:00.000Z',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              theme: {
+                themeMode: 'light',
+                darkTheme: 'familiar-dark',
+                lightTheme: 'familiar-light'
+              }
+            },
+            {
+              id: 'ws_new',
+              name: 'New',
+              projectPaths: ['/tmp/new'],
+              lastOpenedAt: '2026-04-20T00:00:00.000Z',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              theme: {
+                themeMode: 'dark',
+                darkTheme: 'dracula',
+                lightTheme: 'solarized-light'
+              }
+            }
+          ],
+          lastWorkspaceId: 'ws_new'
+        })
+      )
+
+      const wm = new WorkspaceManager()
+      const theme = wm.readEffectiveTheme()
+      // Most-recent workspace wins
+      expect(theme.themeMode).toBe('dark')
+      expect(theme.darkTheme).toBe('dracula')
+      expect(theme.lightTheme).toBe('solarized-light')
+
+      // Global settings file created
+      expect(fs.existsSync(GLOBAL_SETTINGS_FILE)).toBe(true)
+
+      // All workspace theme fields stripped
+      const config = wm.loadWorkspaceConfig()
+      for (const w of config.workspaces) {
+        expect(w.theme).toBeUndefined()
+      }
+    })
+
+    it('workspace theme supersedes a stale global settings file', () => {
+      // Pre-existing global file holds stale defaults; the user's real
+      // preference lives on the workspace (that's where writes were going
+      // before this refactor). Migration must promote the workspace value
+      // so the user does not lose their actual theme choice.
+      fs.writeFileSync(
+        GLOBAL_SETTINGS_FILE,
+        JSON.stringify({
+          themeMode: 'system',
+          darkTheme: 'familiar-dark',
+          lightTheme: 'familiar-light'
+        })
+      )
+      fs.writeFileSync(
+        WORKSPACES_FILE,
+        JSON.stringify({
+          workspaces: [
+            {
+              id: 'ws_1',
+              name: 'W',
+              projectPaths: ['/tmp/w'],
+              lastOpenedAt: '2026-04-20T00:00:00.000Z',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              theme: {
+                themeMode: 'dark',
+                darkTheme: 'dracula',
+                lightTheme: 'solarized-light'
+              }
+            }
+          ],
+          lastWorkspaceId: 'ws_1'
+        })
+      )
+
+      const wm = new WorkspaceManager()
+      const theme = wm.readEffectiveTheme()
+      expect(theme.themeMode).toBe('dark')
+      expect(theme.darkTheme).toBe('dracula')
+      expect(theme.lightTheme).toBe('solarized-light')
+
+      const config = wm.loadWorkspaceConfig()
+      expect(config.workspaces[0].theme).toBeUndefined()
+    })
+
+    it('is a noop when no workspace carries a theme', () => {
+      fs.writeFileSync(
+        WORKSPACES_FILE,
+        JSON.stringify({
+          workspaces: [
+            {
+              id: 'ws_1',
+              name: 'W',
+              projectPaths: ['/tmp/w'],
+              lastOpenedAt: '2026-04-20T00:00:00.000Z',
+              createdAt: '2026-01-01T00:00:00.000Z'
+            }
+          ],
+          lastWorkspaceId: 'ws_1'
+        })
+      )
+
+      const wm = new WorkspaceManager()
+      wm.readEffectiveTheme()
+      // No global settings file created — defaults remain in-memory only
+      expect(fs.existsSync(GLOBAL_SETTINGS_FILE)).toBe(false)
     })
   })
 

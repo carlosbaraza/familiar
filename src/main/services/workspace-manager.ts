@@ -54,6 +54,10 @@ export class WorkspaceManager {
   // ─── Global Settings ─────────────────────────────────────────────
 
   readGlobalSettings(): GlobalSettings {
+    // One-time migration lands any per-workspace theme into global before
+    // we read the file, so existing users' theme choices are preserved.
+    this.migrateWorkspaceThemesToGlobal()
+
     try {
       if (fs.existsSync(GLOBAL_SETTINGS_FILE)) {
         const raw = fs.readFileSync(GLOBAL_SETTINGS_FILE, 'utf-8')
@@ -64,7 +68,7 @@ export class WorkspaceManager {
     }
 
     // Migration: if no global settings file exists, try to seed from the
-    // active project's per-project settings (one-time migration).
+    // active project's per-project settings (older layout).
     const migrated = this.migrateThemeFromProjectSettings()
     if (migrated) return migrated
 
@@ -99,6 +103,51 @@ export class WorkspaceManager {
     }
   }
 
+  /**
+   * One-time migration: older builds stored theme preferences per workspace.
+   * If any workspace still has a `theme` field, adopt the most-recently-opened
+   * workspace's theme as the new global theme and strip `theme` from every
+   * workspace so we stop writing there.
+   *
+   * The per-workspace theme was the last thing the user wrote to (the old
+   * UI always wrote there when a workspace was active), so it supersedes
+   * any value already in the global file — which would otherwise be stale
+   * defaults or an older pre-workspace preference.
+   *
+   * Idempotent: after the first run every workspace has no theme field and
+   * the function becomes a noop.
+   */
+  private migrateWorkspaceThemesToGlobal(): void {
+    let config: WorkspaceConfig
+    try {
+      if (!fs.existsSync(WORKSPACES_FILE)) return
+      const raw = fs.readFileSync(WORKSPACES_FILE, 'utf-8')
+      config = JSON.parse(raw) as WorkspaceConfig
+    } catch {
+      return
+    }
+
+    const themed = config.workspaces.filter((w) => w.theme)
+    if (themed.length === 0) return
+
+    const mostRecent = themed.reduce((a, b) =>
+      new Date(b.lastOpenedAt).getTime() > new Date(a.lastOpenedAt).getTime() ? b : a
+    )
+
+    if (mostRecent.theme) {
+      this.writeGlobalSettings({
+        themeMode: mostRecent.theme.themeMode,
+        darkTheme: mostRecent.theme.darkTheme,
+        lightTheme: mostRecent.theme.lightTheme
+      })
+    }
+
+    for (const w of config.workspaces) {
+      delete w.theme
+    }
+    this.saveWorkspaceConfig(config)
+  }
+
   writeGlobalSettings(settings: GlobalSettings): void {
     if (!fs.existsSync(GLOBAL_CONFIG_DIR)) {
       fs.mkdirSync(GLOBAL_CONFIG_DIR, { recursive: true })
@@ -108,56 +157,21 @@ export class WorkspaceManager {
     fs.renameSync(tmpFile, GLOBAL_SETTINGS_FILE)
   }
 
-  // ─── Effective (workspace-aware) Theme ───────────────────────────
+  // ─── Theme ───────────────────────────────────────────────────────
   //
-  // Theme preference can live on a Workspace (workspaces.json) or in the
-  // global settings (~/.familiar/settings.json). When a workspace is
-  // active we prefer its theme so each workspace can have its own; when
-  // none is active (single-project mode) we fall back to global.
+  // Theme is global — one preference applies to every workspace and
+  // single-project window, persisted in ~/.familiar/settings.json.
 
-  /**
-   * Read the effective theme for the currently-active context. Prefers the
-   * active workspace's theme if set; otherwise reads global settings.
-   * On first read for a workspace that has no theme yet, seeds it from
-   * global settings so existing users don't lose their preference.
-   */
   readEffectiveTheme(): WorkspaceTheme {
     const global = this.readGlobalSettings()
-    const globalTheme: WorkspaceTheme = {
+    return {
       themeMode: global.themeMode ?? DEFAULT_GLOBAL_SETTINGS.themeMode!,
       darkTheme: global.darkTheme ?? DEFAULT_GLOBAL_SETTINGS.darkTheme!,
       lightTheme: global.lightTheme ?? DEFAULT_GLOBAL_SETTINGS.lightTheme!
     }
-
-    if (!this.activeWorkspaceId) return globalTheme
-
-    const config = this.loadWorkspaceConfig()
-    const workspace = config.workspaces.find((w) => w.id === this.activeWorkspaceId)
-    if (!workspace) return globalTheme
-
-    if (workspace.theme) return workspace.theme
-
-    // One-time seed: copy the current global theme onto the workspace so
-    // subsequent writes land on the workspace and survive across restarts.
-    workspace.theme = globalTheme
-    this.saveWorkspaceConfig(config)
-    return globalTheme
   }
 
-  /**
-   * Persist a theme preference. If a workspace is active, writes to that
-   * workspace. Otherwise writes to global settings (single-project mode).
-   */
   writeEffectiveTheme(theme: WorkspaceTheme): void {
-    if (this.activeWorkspaceId) {
-      const config = this.loadWorkspaceConfig()
-      const workspace = config.workspaces.find((w) => w.id === this.activeWorkspaceId)
-      if (workspace) {
-        workspace.theme = theme
-        this.saveWorkspaceConfig(config)
-        return
-      }
-    }
     this.writeGlobalSettings(theme)
   }
 

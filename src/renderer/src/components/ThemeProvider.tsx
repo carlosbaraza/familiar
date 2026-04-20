@@ -36,8 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Persist theme preferences to the active workspace (or global settings
-  // as a fallback when no workspace is active). Guard: skip writes until
+  // Persist theme preferences to global settings. Guard: skip writes until
   // the initial load from disk has completed, otherwise React's first
   // commit would overwrite stored preferences with the store defaults.
   const hasLoadedRef = useRef(false)

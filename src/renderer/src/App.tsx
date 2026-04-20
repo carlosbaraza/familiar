@@ -38,11 +38,9 @@ function App(): React.JSX.Element {
     loadOpenProjects()
   }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
-  // Load theme preferences. Prefers the active workspace's theme (stored in
-  // ~/.familiar/workspaces.json) so each workspace can have its own theme;
-  // falls back to global settings (~/.familiar/settings.json) when no
-  // workspace is active. Reloads when the active workspace changes.
-  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? null)
+  // Load theme preferences from global settings (~/.familiar/settings.json).
+  // Theme is shared across every workspace and single-project window, so
+  // this only needs to run once on mount.
   useEffect(() => {
     window.api
       .readWorkspaceTheme()
@@ -55,7 +53,7 @@ function App(): React.JSX.Element {
       .catch(() => {
         /* use defaults */
       })
-  }, [activeWorkspaceId])
+  }, [])
 
   // When switching to an uninitialized project, open onboarding.
   // When switching to an initialized project, close onboarding.
