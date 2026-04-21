@@ -38,10 +38,15 @@ function App(): React.JSX.Element {
     loadOpenProjects()
   }, [loadProjectState, loadNotifications, loadWorkspaceNotifications, loadOpenProjects])
 
-  // Load theme preferences from global settings (~/.familiar/settings.json).
-  // Theme is shared across every workspace and single-project window, so
-  // this only needs to run once on mount.
+  // Theme: load from disk once on mount, then persist whenever the store
+  // changes. Both halves live in the same effect so the "have I loaded yet?"
+  // flag is closed over — that sidesteps React StrictMode's simulated
+  // mount/unmount/remount, which resets useRef initial values and caused the
+  // store defaults (themeMode='system') to be written over the user's saved
+  // preference before the first disk read returned.
   useEffect(() => {
+    let hasLoaded = false
+
     window.api
       .readWorkspaceTheme()
       .then((theme) => {
@@ -49,10 +54,33 @@ function App(): React.JSX.Element {
         store.setThemeMode(theme.themeMode)
         store.setDarkTheme(theme.darkTheme)
         store.setLightTheme(theme.lightTheme)
+        hasLoaded = true
       })
       .catch(() => {
-        /* use defaults */
+        // Fall back to defaults; nothing to persist.
       })
+
+    const unsubscribe = useUIStore.subscribe((state, prev) => {
+      if (!hasLoaded) return
+      if (
+        state.themeMode === prev.themeMode &&
+        state.darkTheme === prev.darkTheme &&
+        state.lightTheme === prev.lightTheme
+      ) {
+        return
+      }
+      window.api
+        .writeWorkspaceTheme({
+          themeMode: state.themeMode,
+          darkTheme: state.darkTheme,
+          lightTheme: state.lightTheme
+        })
+        .catch(() => {
+          // Persistence is best-effort.
+        })
+    })
+
+    return () => unsubscribe()
   }, [])
 
   // When switching to an uninitialized project, open onboarding.

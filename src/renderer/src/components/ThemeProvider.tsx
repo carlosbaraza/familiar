@@ -5,7 +5,10 @@ import { applyTheme, resolveThemeId } from '@renderer/lib/theme'
 /**
  * Listens to theme state changes and applies the resolved theme to the DOM.
  * Also listens for OS color scheme changes when mode is 'system'.
- * Persists theme preferences to settings.json.
+ *
+ * Persistence lives in App.tsx so that the one-time initial load from disk
+ * and subsequent saves share a single sequencing point — see the theme
+ * effect there for the rationale.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const themeMode = useUIStore((s) => s.themeMode)
@@ -35,29 +38,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
-
-  // Persist theme preferences to global settings. Guard: skip writes until
-  // the initial load from disk has completed, otherwise React's first
-  // commit would overwrite stored preferences with the store defaults.
-  const hasLoadedRef = useRef(false)
-  useEffect(() => {
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true
-      return // Skip first run (defaults, before settings load)
-    }
-    const save = async (): Promise<void> => {
-      try {
-        await window.api.writeWorkspaceTheme({
-          themeMode,
-          darkTheme,
-          lightTheme
-        })
-      } catch {
-        // Settings save is best-effort
-      }
-    }
-    save()
-  }, [themeMode, darkTheme, lightTheme])
 
   return <>{children}</>
 }
