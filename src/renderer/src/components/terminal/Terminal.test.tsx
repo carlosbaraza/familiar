@@ -67,7 +67,7 @@ const mockApi = {
   ptyWrite: vi.fn().mockResolvedValue(undefined),
   ptyResize: vi.fn().mockResolvedValue(undefined),
   clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/image.png'),
-  clipboardReadNativeImage: vi.fn().mockResolvedValue('/tmp/native-image.png'),
+  clipboardHasImage: vi.fn().mockResolvedValue(true),
   openExternal: vi.fn().mockResolvedValue(undefined)
 }
 
@@ -314,40 +314,7 @@ describe('Terminal', () => {
       return inner
     }
 
-    it('pastes file paths for files copied from Finder', async () => {
-      const { container } = render(<Terminal sessionId="test-session" />)
-      const containerRef = getContainerRef(container)
-
-      const pasteEvent = createPasteEvent({
-        files: [
-          { path: '/Users/test/image.png', name: 'image.png', type: 'image/png' }
-        ]
-      })
-
-      containerRef.dispatchEvent(pasteEvent)
-
-      expect(pasteEvent.defaultPrevented).toBe(true)
-      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/image.png')
-    })
-
-    it('pastes multiple file paths joined with spaces', async () => {
-      const { container } = render(<Terminal sessionId="test-session" />)
-      const containerRef = getContainerRef(container)
-
-      const pasteEvent = createPasteEvent({
-        files: [
-          { path: '/Users/test/a.png', name: 'a.png', type: 'image/png' },
-          { path: '/Users/test/b.jpg', name: 'b.jpg', type: 'image/jpeg' }
-        ]
-      })
-
-      containerRef.dispatchEvent(pasteEvent)
-
-      expect(pasteEvent.defaultPrevented).toBe(true)
-      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/a.png /Users/test/b.jpg')
-    })
-
-    it('saves clipboard images and pastes the temp path', async () => {
+    it('sends Ctrl+V when an image item is in the clipboard so Claude Code attaches it', () => {
       const { container } = render(<Terminal sessionId="test-session" />)
       const containerRef = getContainerRef(container)
 
@@ -360,13 +327,62 @@ describe('Terminal', () => {
       containerRef.dispatchEvent(pasteEvent)
 
       expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '\x16')
+      // We no longer write a temp file for terminal paste — Claude Code reads
+      // the image straight from NSPasteboard on Ctrl+V.
+      expect(mockApi.clipboardSaveImage).not.toHaveBeenCalled()
+    })
 
-      // Wait for async operations (blob.arrayBuffer + IPC)
-      await vi.waitFor(() => {
-        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
+    it('sends Ctrl+V for Finder-copied image files instead of writing the path', () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
+
+      // Finder copy exposes BOTH a file with a path AND an image item.
+      // We should prefer the image-paste path so Claude Code attaches it.
+      const pasteEvent = createPasteEvent({
+        files: [{ path: '/Users/test/image.png', name: 'image.png', type: 'image/png' }],
+        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
       })
 
-      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/tmp/image.png')
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '\x16')
+    })
+
+    it('pastes file paths for non-image files copied from Finder', () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const pasteEvent = createPasteEvent({
+        files: [
+          { path: '/Users/test/report.pdf', name: 'report.pdf', type: 'application/pdf' }
+        ]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/report.pdf')
+    })
+
+    it('pastes multiple non-image file paths joined with spaces', () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const pasteEvent = createPasteEvent({
+        files: [
+          { path: '/Users/test/a.pdf', name: 'a.pdf', type: 'application/pdf' },
+          { path: '/Users/test/b.txt', name: 'b.txt', type: 'text/plain' }
+        ]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/a.pdf /Users/test/b.txt')
     })
 
     it('lets xterm handle text-only paste (no preventDefault)', () => {
@@ -381,38 +397,15 @@ describe('Terminal', () => {
       expect(pasteEvent.defaultPrevented).toBe(false)
       // Should NOT write to PTY directly (xterm does it via onData)
       expect(mockApi.ptyWrite).not.toHaveBeenCalled()
-      expect(mockApi.clipboardSaveImage).not.toHaveBeenCalled()
+      expect(mockApi.clipboardHasImage).not.toHaveBeenCalled()
     })
 
-    it('falls through to image check when files have no path', async () => {
-      const { container } = render(<Terminal sessionId="test-session" />)
-      const containerRef = getContainerRef(container)
-
-      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
-
-      // File with no .path (like a clipboard screenshot) + image item
-      const pasteEvent = createPasteEvent({
-        files: [{ name: 'screenshot.png', type: 'image/png' }],
-        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
-      })
-
-      containerRef.dispatchEvent(pasteEvent)
-
-      expect(pasteEvent.defaultPrevented).toBe(true)
-
-      await vi.waitFor(() => {
-        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
-      })
-      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/tmp/image.png')
-    })
-
-    it('uses native clipboard fallback when paste has no text and no image items', async () => {
+    it('uses native clipboard fallback and sends Ctrl+V when paste has no text and no image items', async () => {
       const { container } = render(<Terminal sessionId="test-session" />)
       const containerRef = getContainerRef(container)
 
       // Paste event with no text, no files, and no image items
-      // (simulates a clipboard source like CleanShot that puts image data
-      //  in a format the paste event does not expose as kind: 'file')
+      // (simulates screenshot tools that only put image data on NSPasteboard)
       const pasteEvent = createPasteEvent({})
 
       containerRef.dispatchEvent(pasteEvent)
@@ -420,9 +413,9 @@ describe('Terminal', () => {
       expect(pasteEvent.defaultPrevented).toBe(true)
 
       await vi.waitFor(() => {
-        expect(mockApi.clipboardReadNativeImage).toHaveBeenCalledOnce()
+        expect(mockApi.clipboardHasImage).toHaveBeenCalledOnce()
       })
-      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/tmp/native-image.png')
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '\x16')
     })
 
     it('does not call native fallback when paste has text', () => {
@@ -435,11 +428,11 @@ describe('Terminal', () => {
 
       // Text-only paste: let xterm handle it
       expect(pasteEvent.defaultPrevented).toBe(false)
-      expect(mockApi.clipboardReadNativeImage).not.toHaveBeenCalled()
+      expect(mockApi.clipboardHasImage).not.toHaveBeenCalled()
     })
 
-    it('handles native clipboard fallback returning null (no image)', async () => {
-      mockApi.clipboardReadNativeImage.mockResolvedValueOnce(null)
+    it('does nothing when native clipboard has no image', async () => {
+      mockApi.clipboardHasImage.mockResolvedValueOnce(false)
 
       const { container } = render(<Terminal sessionId="test-session" />)
       const containerRef = getContainerRef(container)
@@ -449,33 +442,31 @@ describe('Terminal', () => {
       containerRef.dispatchEvent(pasteEvent)
 
       await vi.waitFor(() => {
-        expect(mockApi.clipboardReadNativeImage).toHaveBeenCalledOnce()
+        expect(mockApi.clipboardHasImage).toHaveBeenCalledOnce()
       })
 
       // No image found — nothing to paste
       expect(mockApi.ptyWrite).not.toHaveBeenCalled()
     })
 
-    it('handles clipboardSaveImage failure gracefully', async () => {
+    it('handles clipboardHasImage failure gracefully', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      mockApi.clipboardSaveImage.mockRejectedValueOnce(new Error('write failed'))
+      mockApi.clipboardHasImage.mockRejectedValueOnce(new Error('clipboard read failed'))
 
       const { container } = render(<Terminal sessionId="test-session" />)
       const containerRef = getContainerRef(container)
 
-      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
-      const pasteEvent = createPasteEvent({
-        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
-      })
+      const pasteEvent = createPasteEvent({})
 
       containerRef.dispatchEvent(pasteEvent)
 
       await vi.waitFor(() => {
-        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
+        expect(mockApi.clipboardHasImage).toHaveBeenCalledOnce()
       })
 
-      // Should not crash — error is logged
+      // Should not crash — error is logged, nothing written to PTY
       expect(consoleSpy).toHaveBeenCalled()
+      expect(mockApi.ptyWrite).not.toHaveBeenCalled()
       consoleSpy.mockRestore()
     })
   })

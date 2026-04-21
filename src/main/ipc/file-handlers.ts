@@ -48,15 +48,11 @@ export function registerFileHandlers(
     }
   )
 
-  // Read image directly from the native clipboard (fallback when paste event lacks image items)
-  ipcMain.handle('clipboard:read-native-image', async (): Promise<string | null> => {
-    const image = clipboard.readImage()
-    if (image.isEmpty()) return null
-    const buffer = image.toPNG()
-    const fileName = `clipboard-${Date.now()}.png`
-    const filePath = join(app.getPath('temp'), fileName)
-    await writeFile(filePath, buffer)
-    return filePath
+  // Check whether the native clipboard currently holds image data.
+  // Used as a fallback when the paste event lacks image items (e.g. some
+  // screenshot tools) to decide whether to trigger Claude Code's image paste.
+  ipcMain.handle('clipboard:has-image', async (): Promise<boolean> => {
+    return !clipboard.readImage().isEmpty()
   })
 
   ipcMain.handle('project:get-root', async () => dataService.getProjectRoot())

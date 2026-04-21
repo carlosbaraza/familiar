@@ -49,7 +49,7 @@ declare global {
       // Clipboard
       clipboardSaveImage(arrayBuffer: ArrayBuffer, mimeType: string): Promise<string>
       clipboardSaveFile(arrayBuffer: ArrayBuffer, fileName: string): Promise<string>
-      clipboardReadNativeImage(): Promise<string | null>
+      clipboardHasImage(): Promise<boolean>
 
       // PTY operations
       ptyCreate(taskId: string, paneId: string, cwd: string, copySessionFrom?: string, overrideCommand?: string): Promise<string>

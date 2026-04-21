@@ -128,26 +128,37 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
     })
 
     // Intercept paste in capture phase (before xterm.js processes it).
-    // When clipboard contains files or image data, paste the file path instead
-    // of raw content. This enables Claude Code and CLI tools to receive usable paths.
+    //
+    // Image paste: Claude Code binds Ctrl+V (0x16) to "paste image from clipboard"
+    // and inserts an [Image #N] chip. Browser Cmd+V never reaches the PTY, so when
+    // the clipboard holds image data we synthesize Ctrl+V — the image is already
+    // on NSPasteboard where Claude Code can read it.
+    //
+    // Non-image file paste (e.g. a .pdf copied from Finder): fall back to writing
+    // the path as text so the user can reference it in their prompt.
     const handlePaste = async (e: ClipboardEvent): Promise<void> => {
       const clipData = e.clipboardData
       if (!clipData) return
 
-      // Diagnostic: log clipboard content types so we can debug paste issues
-      const types = clipData.types ?? []
-      const fileCount = clipData.files?.length ?? 0
-      const itemCount = clipData.items?.length ?? 0
-      const itemDetails = clipData.items
-        ? Array.from({ length: clipData.items.length }, (_, i) => {
-            const it = clipData.items[i]
-            return `${it.kind}:${it.type}`
-          })
-        : []
-      const target = (e.target as HTMLElement)?.tagName ?? 'unknown'
-      console.debug(`[paste] target=${target} types=${types} files=${fileCount} items=[${itemDetails}]`)
+      const CTRL_V = '\x16'
 
-      // Case 1: Files with paths (e.g. copied from Finder)
+      // Case 1: Image data present in paste items (screenshots, web browser image copy,
+      // Finder-copied image files). Trigger Claude Code's native image paste.
+      const items = clipData.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            e.preventDefault()
+            e.stopImmediatePropagation()
+            window.api.ptyWrite(sessionIdRef.current, CTRL_V)
+            return
+          }
+        }
+      }
+
+      // Case 2: Files from Finder without image data (e.g. .pdf, .txt).
+      // Paste the paths so the user can reference them in the prompt.
       const files = clipData.files
       if (files && files.length > 0) {
         const paths: string[] = []
@@ -158,60 +169,29 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
         if (paths.length > 0) {
           e.preventDefault()
           e.stopImmediatePropagation()
-          console.debug(`[paste] case 1: file paths → ${paths.join(' ')}`)
           window.api.ptyWrite(sessionIdRef.current, paths.join(' '))
           return
         }
       }
 
-      // Case 2: Image data in clipboard (e.g. screenshot from clipboard manager)
-      // No file path available — save to temp file, then paste that path.
-      const items = clipData.items
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i]
-          if (item.kind === 'file' && item.type.startsWith('image/')) {
-            const blob = item.getAsFile()
-            if (blob) {
-              e.preventDefault()
-              e.stopImmediatePropagation()
-              try {
-                const arrayBuffer = await blob.arrayBuffer()
-                const savedPath = await window.api.clipboardSaveImage(arrayBuffer, item.type)
-                console.debug(`[paste] case 2: image saved → ${savedPath}`)
-                window.api.ptyWrite(sessionIdRef.current, savedPath)
-              } catch (err) {
-                console.error('[paste] Failed to save clipboard image:', err)
-              }
-              return
-            }
-          }
-        }
-      }
-      // Case 3: Native clipboard fallback — the paste event may lack image items
-      // (e.g. CleanShot screenshots, some macOS clipboard sources). Use Electron's
-      // native clipboard.readImage() as a last resort before falling through to text.
+      // Case 3: Paste event exposed no files/items and no text (e.g. some screenshot
+      // tools leave only image data on NSPasteboard). Check the native clipboard
+      // and, if it has image data, trigger Claude Code's image paste.
       const plainText = clipData.getData('text/plain')
       if (!plainText) {
         e.preventDefault()
         e.stopImmediatePropagation()
         try {
-          const savedPath = await window.api.clipboardReadNativeImage()
-          if (savedPath) {
-            console.debug(`[paste] case 3: native clipboard image → ${savedPath}`)
-            window.api.ptyWrite(sessionIdRef.current, savedPath)
-            return
+          if (await window.api.clipboardHasImage()) {
+            window.api.ptyWrite(sessionIdRef.current, CTRL_V)
           }
         } catch (err) {
-          console.error('[paste] Failed to read native clipboard image:', err)
+          console.error('[paste] Failed to check native clipboard image:', err)
         }
-        // No image found and no text — nothing to paste
-        console.debug('[paste] case 3: no native image found, nothing to paste')
         return
       }
 
-      // Text-only paste: let xterm.js handle it normally
-      console.debug('[paste] fallthrough: text-only, letting xterm handle')
+      // Text-only paste: let xterm.js handle it normally.
     }
     containerRef.current.addEventListener('paste', handlePaste, { capture: true })
 
