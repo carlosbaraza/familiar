@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { WorkspaceManager } from '../services/workspace-manager'
 import { DataService } from '../services/data-service'
 import { ElectronPtyManager } from '../platform/electron-pty'
-import type { Workspace, Task, GlobalSettings } from '../../shared/types'
+import type { Workspace, Task, GlobalSettings, WorkspaceTheme } from '../../shared/types'
 
 export function registerWorkspaceHandlers(
   workspaceManager: WorkspaceManager,
@@ -91,6 +91,16 @@ export function registerWorkspaceHandlers(
 
   ipcMain.handle('workspace:set-active-workspace-id', async (_, workspaceId: string): Promise<void> => {
     workspaceManager.setActiveWorkspaceId(workspaceId)
+  })
+
+  // ─── Workspace Theme ────────────────────────────────────────────
+
+  ipcMain.handle('workspace-theme:read', async (): Promise<WorkspaceTheme> => {
+    return workspaceManager.readEffectiveTheme()
+  })
+
+  ipcMain.handle('workspace-theme:write', async (_, theme: WorkspaceTheme): Promise<void> => {
+    workspaceManager.writeEffectiveTheme(theme)
   })
 
   // ─── Global Settings (stored in ~/.familiar/settings.json) ──────
