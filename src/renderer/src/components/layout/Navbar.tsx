@@ -24,7 +24,25 @@ export function Navbar(): React.JSX.Element {
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [folderName, setFolderName] = useState<string | null>(null)
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
-  const [emoji] = useState(pickRandomEmoji)
+  const [emoji, setEmoji] = useState(pickRandomEmoji)
+  const [easterEgg, setEasterEgg] = useState(false)
+  const easterEggTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const triggerEasterEgg = useCallback(() => {
+    if (easterEgg) return
+    setEasterEgg(true)
+    if (easterEggTimeoutRef.current) clearTimeout(easterEggTimeoutRef.current)
+    easterEggTimeoutRef.current = setTimeout(() => {
+      setEasterEgg(false)
+      setEmoji(pickRandomEmoji())
+    }, 2600)
+  }, [easterEgg])
+
+  useEffect(() => {
+    return () => {
+      if (easterEggTimeoutRef.current) clearTimeout(easterEggTimeoutRef.current)
+    }
+  }, [])
 
   // Derive project name from workspace store's activeProjectPath
   const workspaceProjectName = activeProjectPath
@@ -156,9 +174,16 @@ export function Navbar(): React.JSX.Element {
 
   return (
     <nav className={styles.navbar}>
-      <span className={styles.navbarEmoji} aria-hidden="true" data-testid="navbar-emoji">
+      <button
+        type="button"
+        className={`${styles.navbarEmoji} ${easterEgg ? styles.navbarEmojiGlitch : ''}`}
+        onClick={triggerEasterEgg}
+        title="Jack in"
+        aria-label="Easter egg"
+        data-testid="navbar-emoji"
+      >
         {emoji}
-      </span>
+      </button>
       <span className={styles.projectName}>{projectName}</span>
 
       <div className={styles.navGroup}>
@@ -435,6 +460,32 @@ export function Navbar(): React.JSX.Element {
           document.body
         )}
       </div>
+
+      {easterEgg && createPortal(
+        <div
+          className={styles.cyberpunkOverlay}
+          onClick={() => {
+            if (easterEggTimeoutRef.current) clearTimeout(easterEggTimeoutRef.current)
+            setEasterEgg(false)
+            setEmoji(pickRandomEmoji())
+          }}
+          data-testid="cyberpunk-overlay"
+        >
+          <div className={styles.cyberpunkGrid} aria-hidden="true" />
+          <div className={styles.cyberpunkScanlines} aria-hidden="true" />
+          <div className={styles.cyberpunkVignette} aria-hidden="true" />
+          <div className={styles.cyberpunkContent}>
+            <div className={styles.cyberpunkTopText} data-text="//: SYSTEM_OVERRIDE">
+              //: SYSTEM_OVERRIDE
+            </div>
+            <div className={styles.cyberpunkEmoji}>{emoji}</div>
+            <div className={styles.cyberpunkBottomText} data-text="FAMILIAR.v0xDEAD // JACK_IN">
+              FAMILIAR.v0xDEAD // JACK_IN
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </nav>
   )
 }

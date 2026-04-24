@@ -368,4 +368,43 @@ describe('Navbar', () => {
     expect(emojiEl).toBeTruthy()
     expect(emojiEl.textContent?.trim().length).toBeGreaterThan(0)
   })
+
+  it('shows the cyberpunk easter egg overlay when the emoji is clicked', async () => {
+    await renderNavbarAndWait()
+    expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
+
+    fireEvent.click(screen.getByTestId('navbar-emoji'))
+    expect(screen.getByTestId('cyberpunk-overlay')).toBeTruthy()
+    expect(screen.getByText('//: SYSTEM_OVERRIDE')).toBeTruthy()
+  })
+
+  it('dismisses the cyberpunk overlay when clicked', async () => {
+    await renderNavbarAndWait()
+    fireEvent.click(screen.getByTestId('navbar-emoji'))
+    const overlay = screen.getByTestId('cyberpunk-overlay')
+    expect(overlay).toBeTruthy()
+
+    fireEvent.click(overlay)
+    expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
+  })
+
+  it('auto-dismisses the cyberpunk overlay after the animation', async () => {
+    vi.useFakeTimers()
+    try {
+      const result = render(<Navbar />)
+      await act(async () => {
+        await Promise.resolve()
+      })
+      fireEvent.click(screen.getByTestId('navbar-emoji'))
+      expect(screen.getByTestId('cyberpunk-overlay')).toBeTruthy()
+
+      act(() => {
+        vi.advanceTimersByTime(2700)
+      })
+      expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
+      result.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

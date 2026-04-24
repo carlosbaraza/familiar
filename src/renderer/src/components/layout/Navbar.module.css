@@ -45,6 +45,223 @@
   line-height: 1;
   -webkit-app-region: no-drag;
   user-select: none;
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.navbarEmoji:hover {
+  transform: scale(1.25) rotate(-8deg);
+  filter: drop-shadow(0 0 6px rgba(255, 0, 170, 0.7))
+    drop-shadow(0 0 10px rgba(0, 225, 255, 0.5));
+}
+
+.navbarEmojiGlitch {
+  animation: navbarEmojiGlitch 0.12s steps(2) infinite;
+}
+
+@keyframes navbarEmojiGlitch {
+  0% { transform: translate(0, 0); filter: none; }
+  25% { transform: translate(1px, -1px); filter: hue-rotate(120deg) saturate(2); }
+  50% { transform: translate(-1px, 1px); filter: hue-rotate(-120deg) saturate(2); }
+  75% { transform: translate(1px, 1px); filter: hue-rotate(200deg) saturate(2); }
+  100% { transform: translate(0, 0); filter: none; }
+}
+
+/* ==========================================================================
+   Cyberpunk easter egg — full-screen overlay triggered by clicking the emoji
+   ========================================================================== */
+
+.cyberpunkOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) + 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(ellipse at center, rgba(30, 0, 50, 0.85) 0%, rgba(0, 0, 0, 0.97) 75%);
+  -webkit-app-region: no-drag;
+  animation: cyberpunkFade 2.6s ease forwards;
+}
+
+@keyframes cyberpunkFade {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.cyberpunkGrid {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 70%;
+  background:
+    linear-gradient(transparent 98%, rgba(255, 0, 170, 0.55) 98%),
+    linear-gradient(90deg, transparent 98%, rgba(0, 225, 255, 0.55) 98%);
+  background-size: 70px 70px;
+  transform: perspective(500px) rotateX(62deg);
+  transform-origin: center top;
+  pointer-events: none;
+  animation: cyberpunkGridMove 1.4s linear infinite;
+  mask-image: linear-gradient(to top, black 20%, transparent 95%);
+}
+
+@keyframes cyberpunkGridMove {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 70px, 70px 0; }
+}
+
+.cyberpunkScanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 225, 255, 0.06) 0px,
+    rgba(0, 225, 255, 0.06) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: screen;
+  animation: cyberpunkScan 0.18s linear infinite;
+}
+
+@keyframes cyberpunkScan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(3px); }
+}
+
+.cyberpunkVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgba(0, 0, 0, 0.6) 85%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+}
+
+.cyberpunkContent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.cyberpunkEmoji {
+  font-size: 160px;
+  line-height: 1;
+  filter:
+    drop-shadow(0 0 14px rgba(0, 225, 255, 0.85))
+    drop-shadow(0 0 28px rgba(255, 0, 170, 0.7));
+  animation:
+    cyberpunkEmojiEntrance 1s cubic-bezier(0.2, 0.9, 0.3, 1) both,
+    cyberpunkEmojiFloat 2.2s ease-in-out 1s infinite;
+}
+
+@keyframes cyberpunkEmojiEntrance {
+  0% { transform: scale(0.15) rotate(-220deg); opacity: 0; }
+  55% { transform: scale(1.45) rotate(12deg); opacity: 1; }
+  75% { transform: scale(0.95) rotate(-4deg); }
+  100% { transform: scale(1.1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes cyberpunkEmojiFloat {
+  0%, 100% { transform: scale(1.1) translateY(0); }
+  50% { transform: scale(1.15) translateY(-6px); }
+}
+
+.cyberpunkTopText,
+.cyberpunkBottomText {
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  position: relative;
+  animation: cyberpunkFlicker 0.15s steps(2) infinite;
+}
+
+.cyberpunkTopText {
+  font-size: clamp(20px, 3vw, 32px);
+  color: #00e1ff;
+  text-shadow:
+    0 0 6px #00e1ff,
+    0 0 14px rgba(0, 225, 255, 0.7),
+    2px 0 0 #ff00aa,
+    -2px 0 0 #ff00aa;
+}
+
+.cyberpunkBottomText {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: #ff00aa;
+  text-shadow:
+    0 0 6px #ff00aa,
+    0 0 14px rgba(255, 0, 170, 0.7),
+    2px 0 0 #00e1ff,
+    -2px 0 0 #00e1ff;
+}
+
+.cyberpunkTopText::before,
+.cyberpunkTopText::after,
+.cyberpunkBottomText::before,
+.cyberpunkBottomText::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cyberpunkTopText::before,
+.cyberpunkBottomText::before {
+  color: #ff00aa;
+  transform: translate(-2px, 0);
+  clip-path: polygon(0 0, 100% 0, 100% 48%, 0 48%);
+  animation: cyberpunkGlitchTop 2.4s steps(1) infinite;
+  mix-blend-mode: screen;
+}
+
+.cyberpunkTopText::after,
+.cyberpunkBottomText::after {
+  color: #00e1ff;
+  transform: translate(2px, 0);
+  clip-path: polygon(0 52%, 100% 52%, 100% 100%, 0 100%);
+  animation: cyberpunkGlitchBottom 2.4s steps(1) infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes cyberpunkGlitchTop {
+  0%, 92%, 100% { transform: translate(-2px, 0); }
+  8% { transform: translate(-6px, -1px); }
+  16% { transform: translate(4px, 1px); }
+  24% { transform: translate(-3px, 0); }
+}
+
+@keyframes cyberpunkGlitchBottom {
+  0%, 92%, 100% { transform: translate(2px, 0); }
+  10% { transform: translate(6px, 1px); }
+  18% { transform: translate(-4px, -1px); }
+  26% { transform: translate(3px, 0); }
+}
+
+@keyframes cyberpunkFlicker {
+  0%, 100% { opacity: 1; }
+  47% { opacity: 1; }
+  48% { opacity: 0.35; }
+  49% { opacity: 1; }
+  50% { opacity: 0.85; }
 }
 
 .navButton {
