@@ -9,11 +9,22 @@ import { APP_NAME } from '@shared/constants'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
+const NAVBAR_EMOJIS = [
+  '🦄', '🐙', '🦊', '🐉', '🌵', '🍄', '🌈', '⚡️', '🚀', '🛸',
+  '🎲', '🎨', '🧙', '🧪', '🔮', '🪐', '🌙', '☄️', '🦋', '🐢',
+  '🦖', '🐳', '🦉', '🍀', '🔥', '✨', '💎', '🎸', '🥑', '🍩'
+]
+
+function pickRandomEmoji(): string {
+  return NAVBAR_EMOJIS[Math.floor(Math.random() * NAVBAR_EMOJIS.length)]
+}
+
 export function Navbar(): React.JSX.Element {
   const projectState = useTaskStore((s) => s.projectState)
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [folderName, setFolderName] = useState<string | null>(null)
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
+  const [emoji] = useState(pickRandomEmoji)
 
   // Derive project name from workspace store's activeProjectPath
   const workspaceProjectName = activeProjectPath
@@ -145,6 +156,9 @@ export function Navbar(): React.JSX.Element {
 
   return (
     <nav className={styles.navbar}>
+      <span className={styles.navbarEmoji} aria-hidden="true" data-testid="navbar-emoji">
+        {emoji}
+      </span>
       <span className={styles.projectName}>{projectName}</span>
 
       <div className={styles.navGroup}>

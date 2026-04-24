@@ -359,4 +359,13 @@ describe('Navbar', () => {
     await renderNavbarAndWait()
     expect(screen.getByTestId('mock-agent-swap')).toBeTruthy()
   })
+
+  // --- Random emoji ---
+
+  it('renders a non-empty random emoji in the navbar', async () => {
+    await renderNavbarAndWait()
+    const emojiEl = screen.getByTestId('navbar-emoji')
+    expect(emojiEl).toBeTruthy()
+    expect(emojiEl.textContent?.trim().length).toBeGreaterThan(0)
+  })
 })

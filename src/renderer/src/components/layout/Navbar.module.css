@@ -40,6 +40,13 @@
   -webkit-app-region: no-drag;
 }
 
+.navbarEmoji {
+  font-size: var(--font-size-md);
+  line-height: 1;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
 .navButton {
   position: relative;
   display: flex;
