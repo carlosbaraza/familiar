@@ -202,6 +202,16 @@ describe('Navbar', () => {
     })
   })
 
+  // --- New task button ---
+
+  it('opens create task modal when new task button clicked', async () => {
+    await renderNavbarAndWait()
+
+    const newTaskBtn = screen.getByTestId('new-task-nav')
+    fireEvent.click(newTaskBtn)
+    expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+  })
+
   // --- Settings button ---
 
   it('opens settings when settings button clicked', async () => {

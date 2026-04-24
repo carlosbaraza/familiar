@@ -46,6 +46,7 @@ export function Navbar(): React.JSX.Element {
   const openSettings = useUIStore((s) => s.openSettings)
   const closeSettings = useUIStore((s) => s.closeSettings)
   const openShortcutsModal = useUIStore((s) => s.openShortcutsModal)
+  const openCreateTaskModal = useUIStore((s) => s.openCreateTaskModal)
   const themeMode = useUIStore((s) => s.themeMode)
   const cycleThemeMode = useUIStore((s) => s.cycleThemeMode)
 
@@ -148,6 +149,20 @@ export function Navbar(): React.JSX.Element {
       <span className={styles.projectName}>{projectName}</span>
 
       <div className={styles.navGroup}>
+        {/* Create new task */}
+        <button
+          className={styles.navButton}
+          onClick={openCreateTaskModal}
+          title="New task (⌘N)"
+          data-testid="new-task-nav"
+        >
+          {/* Plus icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+
         {/* Toggle project sidebar */}
         <button
           className={`${styles.navButton} ${sidebarVisible ? styles.navButtonActive : ''}`}
