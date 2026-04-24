@@ -80,9 +80,10 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
 
     // Custom key event handler for keys that need special treatment
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      // Let Shift+Escape bubble up to the app (not consumed by xterm)
-      // so users can close the task detail view from the terminal
-      if (e.key === 'Escape' && e.shiftKey) return false
+      // Let Shift+Escape and § bubble up to the app (not consumed by xterm)
+      // so users can close the task detail view from the terminal.
+      // § is a one-hand alias for Shift+Escape.
+      if ((e.key === 'Escape' && e.shiftKey) || e.key === '§') return false
 
       // Shift+Enter: xterm.js 6.0 doesn't support the kitty keyboard protocol,
       // so it sends plain \r for both Enter and Shift+Enter. Intercept Shift+Enter

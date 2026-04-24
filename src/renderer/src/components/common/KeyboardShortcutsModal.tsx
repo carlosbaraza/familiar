@@ -33,7 +33,8 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['⌘', ','], description: 'Open settings' },
       { keys: ['?'], description: 'Show keyboard shortcuts' },
       { keys: ['Esc'], description: 'Close current panel', detail: 'Layered dismiss: closes the topmost panel (shortcuts modal, command palette, settings, or task detail). In task detail view, first clears selection, then closes the view.' },
-      { keys: ['⇧', 'Esc'], description: 'Force close (works in terminals)', detail: 'When the terminal has focus, plain Escape is captured by the terminal. Use Shift+Escape to close the task detail view from within a terminal session.' }
+      { keys: ['⇧', 'Esc'], description: 'Force close (works in terminals)', detail: 'When the terminal has focus, plain Escape is captured by the terminal. Use Shift+Escape to close the task detail view from within a terminal session. The § key is a one-hand alias for Shift+Escape.' },
+      { keys: ['§'], description: 'Alias for Shift+Escape', detail: 'The § key behaves identically to Shift+Escape everywhere — closing overlays, closing the task detail from the terminal, or focusing the sidebar from the board.' }
     ]
   },
   {

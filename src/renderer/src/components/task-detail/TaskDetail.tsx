@@ -28,12 +28,13 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
     }
   }, [taskId, visible, hasUnreadNotifications, markReadByTaskId])
 
-  // Close on Escape or Shift+Escape — only when visible
-  // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
+  // Close on Escape, Shift+Escape, or § — only when visible
+  // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code.
+  // § is a one-hand alias for Shift+Escape.
   useEffect(() => {
     if (!visible) return
     function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key !== 'Escape') return
+      if (e.key !== 'Escape' && e.key !== '§') return
       // Skip if a higher-priority overlay is open on top of the task detail
       // (command palette, settings, shortcuts modal). Those overlays own the
       // Escape key and should be closed first by their own handlers.

@@ -246,6 +246,49 @@ describe('useGlobalShortcuts', () => {
     document.body.removeChild(input)
   })
 
+  // --- § alias for Shift+Escape ---
+
+  it('§ closes task detail (alias for Shift+Escape)', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1' })
+    renderHook(() => useGlobalShortcuts())
+
+    act(() => fireKey('§'))
+
+    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+  })
+
+  it('§ closes task detail even when input is focused', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_1' })
+    renderHook(() => useGlobalShortcuts())
+
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    input.focus()
+
+    act(() => fireKey('§'))
+
+    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+    document.body.removeChild(input)
+  })
+
+  it('§ closes the command palette', () => {
+    useUIStore.setState({ commandPaletteOpen: true })
+    renderHook(() => useGlobalShortcuts())
+
+    act(() => fireKey('§'))
+
+    expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+  })
+
+  it('§ closes settings before task detail', () => {
+    useUIStore.setState({ settingsOpen: true, taskDetailOpen: true, activeTaskId: 'tsk_1' })
+    renderHook(() => useGlobalShortcuts())
+
+    act(() => fireKey('§'))
+    expect(useUIStore.getState().settingsOpen).toBe(false)
+    expect(useUIStore.getState().taskDetailOpen).toBe(true)
+  })
+
   // --- Priority of Escape closures ---
 
   it('Escape closes command palette before settings', () => {
@@ -282,6 +325,15 @@ describe('useGlobalShortcuts', () => {
       renderHook(() => useGlobalShortcuts())
 
       act(() => fireKey('Escape', { shiftKey: true }))
+
+      expect(useUIStore.getState().sidebarFocused).toBe(true)
+    })
+
+    it('§ on the board focuses the sidebar (alias for Shift+Esc)', () => {
+      useUIStore.setState({ taskDetailOpen: false, settingsOpen: false })
+      renderHook(() => useGlobalShortcuts())
+
+      act(() => fireKey('§'))
 
       expect(useUIStore.getState().sidebarFocused).toBe(true)
     })

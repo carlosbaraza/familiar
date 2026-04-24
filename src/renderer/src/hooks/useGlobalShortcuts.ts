@@ -116,9 +116,10 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Escape or Shift+Escape — close whatever's open (detail, palette, etc.)
-      // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
-      if (e.key === 'Escape') {
+      // Escape, Shift+Escape, or § — close whatever's open (detail, palette, etc.)
+      // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code.
+      // § is a one-hand alias for Shift+Escape.
+      if (e.key === 'Escape' || e.key === '§') {
         // The command palette owns Escape even when its own search input is
         // focused — otherwise the user can't close the palette from the search.
         // Check this BEFORE the input-focus bail-out below.
@@ -129,8 +130,8 @@ export function useGlobalShortcuts(): void {
         }
 
         // Don't handle if typing in inputs (let other handlers deal with it)
-        // Exception: Shift+Escape always closes (it's the explicit "close task view" shortcut)
-        if (!e.shiftKey && isInputFocused()) return
+        // Exception: Shift+Escape and § always close (explicit "close task view" shortcuts)
+        if (e.key === 'Escape' && !e.shiftKey && isInputFocused()) return
 
         if (shortcutsModalOpen) {
           e.preventDefault()
@@ -158,10 +159,11 @@ export function useGlobalShortcuts(): void {
     // Capture-phase handler: runs BEFORE any other handlers (TaskDetail,
     // useKeyboardNavigation) so we can track the state BEFORE they mutate it.
     // This lets us distinguish "Shift+Esc to close task detail" from
-    // "Shift+Esc to focus sidebar" reliably.
+    // "Shift+Esc to focus sidebar" reliably. § is treated as an alias for Shift+Esc.
     const handleCapture = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') return
-      if (!e.shiftKey) return
+      const isShiftEsc = e.key === 'Escape' && e.shiftKey
+      const isSectionSign = e.key === '§'
+      if (!isShiftEsc && !isSectionSign) return
 
       const state = useUIStore.getState()
       const workspace = useWorkspaceStore.getState()

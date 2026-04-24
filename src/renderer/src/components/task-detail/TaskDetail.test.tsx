@@ -81,6 +81,13 @@ describe('TaskDetail', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('calls onClose on § key when visible (alias for Shift+Escape)', () => {
+    render(<TaskDetail taskId="tsk_test01" visible={true} onClose={onClose} />)
+
+    fireEvent.keyDown(document, { key: '§' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('does not call onClose on Escape key when not visible', () => {
     render(<TaskDetail taskId="tsk_test01" visible={false} onClose={onClose} />)
 

@@ -181,6 +181,8 @@ describe('Terminal', () => {
     expect(handler({ key: 'Escape', shiftKey: true })).toBe(false)
     // Regular Escape should return true (handled by xterm)
     expect(handler({ key: 'Escape', shiftKey: false })).toBe(true)
+    // § should return false (alias for Shift+Escape)
+    expect(handler({ key: '§', shiftKey: false })).toBe(false)
     // Other keys should return true
     expect(handler({ key: 'a', shiftKey: false })).toBe(true)
   })
