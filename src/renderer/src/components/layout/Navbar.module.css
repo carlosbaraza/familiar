@@ -38,37 +38,27 @@
   color: var(--text-primary);
   white-space: nowrap;
   -webkit-app-region: no-drag;
-}
-
-.navbarEmoji {
-  font-size: var(--font-size-md);
-  line-height: 1;
-  -webkit-app-region: no-drag;
-  user-select: none;
   background: transparent;
   border: none;
-  padding: 0 2px;
+  padding: 2px 4px;
   cursor: pointer;
-  color: inherit;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  font-family: inherit;
+  transition: color var(--transition-base), text-shadow var(--transition-base);
 }
 
-.navbarEmoji:hover {
-  transform: scale(1.25) rotate(-8deg);
-  filter: drop-shadow(0 0 6px rgba(255, 0, 170, 0.7))
-    drop-shadow(0 0 10px rgba(0, 225, 255, 0.5));
+.projectName:hover {
+  color: #ff00aa;
+  text-shadow: 0 0 6px rgba(255, 0, 170, 0.6), 0 0 12px rgba(0, 225, 255, 0.4);
 }
 
-.navbarEmojiGlitch {
-  animation: navbarEmojiGlitch 0.12s steps(2) infinite;
+.projectNameGlitch {
+  animation: projectNameGlitch 0.12s steps(2) infinite;
 }
 
-@keyframes navbarEmojiGlitch {
-  0% { transform: translate(0, 0); filter: none; }
-  25% { transform: translate(1px, -1px); filter: hue-rotate(120deg) saturate(2); }
-  50% { transform: translate(-1px, 1px); filter: hue-rotate(-120deg) saturate(2); }
-  75% { transform: translate(1px, 1px); filter: hue-rotate(200deg) saturate(2); }
-  100% { transform: translate(0, 0); filter: none; }
+@keyframes projectNameGlitch {
+  0% { transform: translate(0, 0); color: #00e1ff; }
+  50% { transform: translate(1px, -1px); color: #ff00aa; }
+  100% { transform: translate(-1px, 1px); color: #00e1ff; }
 }
 
 /* ==========================================================================
@@ -186,10 +176,11 @@
 }
 
 .cyberpunkTopText,
-.cyberpunkBottomText {
+.cyberpunkLine,
+.cyberpunkHandle {
   font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   position: relative;
   animation: cyberpunkFlicker 0.15s steps(2) infinite;
 }
@@ -204,28 +195,73 @@
     -2px 0 0 #ff00aa;
 }
 
-.cyberpunkBottomText {
-  font-size: clamp(12px, 1.4vw, 16px);
+.cyberpunkLine {
+  font-size: clamp(14px, 1.8vw, 20px);
+  color: #f8f8f2;
+  max-width: 92vw;
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.7),
+    2px 0 0 #ff00aa,
+    -2px 0 0 #00e1ff;
+}
+
+.cyberpunkHandle {
+  font-size: clamp(16px, 2.2vw, 24px);
   color: #ff00aa;
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 0, 170, 0.5);
+  border-radius: 4px;
+  background: rgba(255, 0, 170, 0.08);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
   text-shadow:
     0 0 6px #ff00aa,
     0 0 14px rgba(255, 0, 170, 0.7),
     2px 0 0 #00e1ff,
     -2px 0 0 #00e1ff;
+  -webkit-app-region: no-drag;
+}
+
+.cyberpunkHandle:hover {
+  transform: scale(1.08) rotate(-1deg);
+  background: rgba(255, 0, 170, 0.18);
+}
+
+.cyberpunkHint {
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: rgba(0, 225, 255, 0.55);
+  margin-top: 4px;
+  text-transform: lowercase;
+  animation: cyberpunkFlicker 0.2s steps(2) infinite;
 }
 
 .cyberpunkTopText::before,
 .cyberpunkTopText::after,
-.cyberpunkBottomText::before,
-.cyberpunkBottomText::after {
+.cyberpunkLine::before,
+.cyberpunkLine::after,
+.cyberpunkHandle::before,
+.cyberpunkHandle::after {
   content: attr(data-text);
   position: absolute;
   inset: 0;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cyberpunkHandle::before,
+.cyberpunkHandle::after {
+  inset: 6px 14px;
 }
 
 .cyberpunkTopText::before,
-.cyberpunkBottomText::before {
+.cyberpunkLine::before,
+.cyberpunkHandle::before {
   color: #ff00aa;
   transform: translate(-2px, 0);
   clip-path: polygon(0 0, 100% 0, 100% 48%, 0 48%);
@@ -234,7 +270,8 @@
 }
 
 .cyberpunkTopText::after,
-.cyberpunkBottomText::after {
+.cyberpunkLine::after,
+.cyberpunkHandle::after {
   color: #00e1ff;
   transform: translate(2px, 0);
   clip-path: polygon(0 52%, 100% 52%, 100% 100%, 0 100%);

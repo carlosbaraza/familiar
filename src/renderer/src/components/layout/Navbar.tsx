@@ -9,14 +9,27 @@ import { APP_NAME } from '@shared/constants'
 import { AgentSwapWidget } from './AgentSwapWidget'
 import styles from './Navbar.module.css'
 
-const NAVBAR_EMOJIS = [
+const EASTER_EGG_EMOJIS = [
   '🦄', '🐙', '🦊', '🐉', '🌵', '🍄', '🌈', '⚡️', '🚀', '🛸',
   '🎲', '🎨', '🧙', '🧪', '🔮', '🪐', '🌙', '☄️', '🦋', '🐢',
   '🦖', '🐳', '🦉', '🍀', '🔥', '✨', '💎', '🎸', '🥑', '🍩'
 ]
 
-function pickRandomEmoji(): string {
-  return NAVBAR_EMOJIS[Math.floor(Math.random() * NAVBAR_EMOJIS.length)]
+const EASTER_EGG_LINES = [
+  'ERROR 0xC0FFEE: TOO MUCH FUN DETECTED',
+  'KERNEL_PANIC // VIBE_CHECK_FAILED',
+  'sudo rm -rf /bugs  // (denied)',
+  '404: SERIOUSNESS NOT FOUND',
+  'git commit -m "idk it works"',
+  'TODO: fix later (haha no)',
+  'CTRL+ALT+YEET // accepted',
+  'CONGRATS — YOU FOUND THE SECRET',
+  'STACK OVERFLOW: TOO MANY COOL IDEAS',
+  'DEPLOYING VIBES TO PRODUCTION...'
+]
+
+function pickRandom<T>(list: readonly T[]): T {
+  return list[Math.floor(Math.random() * list.length)]
 }
 
 export function Navbar(): React.JSX.Element {
@@ -24,18 +37,25 @@ export function Navbar(): React.JSX.Element {
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
   const [folderName, setFolderName] = useState<string | null>(null)
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
-  const [emoji, setEmoji] = useState(pickRandomEmoji)
-  const [easterEgg, setEasterEgg] = useState(false)
+  const [easterEgg, setEasterEgg] = useState<{ emoji: string; line: string } | null>(null)
   const easterEggTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const closeEasterEgg = useCallback(() => {
+    if (easterEggTimeoutRef.current) {
+      clearTimeout(easterEggTimeoutRef.current)
+      easterEggTimeoutRef.current = null
+    }
+    setEasterEgg(null)
+  }, [])
 
   const triggerEasterEgg = useCallback(() => {
     if (easterEgg) return
-    setEasterEgg(true)
+    setEasterEgg({ emoji: pickRandom(EASTER_EGG_EMOJIS), line: pickRandom(EASTER_EGG_LINES) })
     if (easterEggTimeoutRef.current) clearTimeout(easterEggTimeoutRef.current)
     easterEggTimeoutRef.current = setTimeout(() => {
-      setEasterEgg(false)
-      setEmoji(pickRandomEmoji())
-    }, 2600)
+      setEasterEgg(null)
+      easterEggTimeoutRef.current = null
+    }, 2800)
   }, [easterEgg])
 
   useEffect(() => {
@@ -176,15 +196,13 @@ export function Navbar(): React.JSX.Element {
     <nav className={styles.navbar}>
       <button
         type="button"
-        className={`${styles.navbarEmoji} ${easterEgg ? styles.navbarEmojiGlitch : ''}`}
+        className={`${styles.projectName} ${easterEgg ? styles.projectNameGlitch : ''}`}
         onClick={triggerEasterEgg}
-        title="Jack in"
-        aria-label="Easter egg"
-        data-testid="navbar-emoji"
+        title="🤫"
+        data-testid="project-name"
       >
-        {emoji}
+        {projectName}
       </button>
-      <span className={styles.projectName}>{projectName}</span>
 
       <div className={styles.navGroup}>
         {/* Toggle project sidebar */}
@@ -464,24 +482,34 @@ export function Navbar(): React.JSX.Element {
       {easterEgg && createPortal(
         <div
           className={styles.cyberpunkOverlay}
-          onClick={() => {
-            if (easterEggTimeoutRef.current) clearTimeout(easterEggTimeoutRef.current)
-            setEasterEgg(false)
-            setEmoji(pickRandomEmoji())
-          }}
+          onClick={closeEasterEgg}
           data-testid="cyberpunk-overlay"
         >
           <div className={styles.cyberpunkGrid} aria-hidden="true" />
           <div className={styles.cyberpunkScanlines} aria-hidden="true" />
           <div className={styles.cyberpunkVignette} aria-hidden="true" />
           <div className={styles.cyberpunkContent}>
-            <div className={styles.cyberpunkTopText} data-text="//: SYSTEM_OVERRIDE">
-              //: SYSTEM_OVERRIDE
+            <div className={styles.cyberpunkTopText} data-text="//: YOU FOUND A SECRET">
+              //: YOU FOUND A SECRET
             </div>
-            <div className={styles.cyberpunkEmoji}>{emoji}</div>
-            <div className={styles.cyberpunkBottomText} data-text="FAMILIAR.v0xDEAD // JACK_IN">
-              FAMILIAR.v0xDEAD // JACK_IN
+            <div className={styles.cyberpunkEmoji}>{easterEgg.emoji}</div>
+            <div className={styles.cyberpunkLine} data-text={easterEgg.line}>
+              {easterEgg.line}
             </div>
+            <a
+              className={styles.cyberpunkHandle}
+              href="https://twitter.com/carlosbaraza"
+              data-text="@carlosbaraza"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.api.openExternal('https://twitter.com/carlosbaraza')
+                closeEasterEgg()
+              }}
+            >
+              @carlosbaraza
+            </a>
+            <div className={styles.cyberpunkHint}>click anywhere to escape the matrix</div>
           </div>
         </div>,
         document.body

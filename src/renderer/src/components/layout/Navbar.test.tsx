@@ -19,6 +19,7 @@ vi.mock('@renderer/lib/format-time', () => ({
 // Mock window.api
 const mockGetProjectRoot = vi.fn()
 const mockOpenPath = vi.fn()
+const mockOpenExternal = vi.fn()
 const mockOpenInEditor = vi.fn()
 const mockReadSettings = vi.fn()
 const mockListNotifications = vi.fn()
@@ -30,6 +31,7 @@ const mockClearNotifications = vi.fn()
 ;(window as any).api = {
   getProjectRoot: mockGetProjectRoot,
   openPath: mockOpenPath,
+  openExternal: mockOpenExternal,
   openInEditor: mockOpenInEditor,
   readSettings: mockReadSettings,
   listNotifications: mockListNotifications,
@@ -55,6 +57,7 @@ describe('Navbar', () => {
     mockGetProjectRoot.mockResolvedValue('/Users/test/my-project')
     mockReadSettings.mockResolvedValue({})
     mockOpenInEditor.mockResolvedValue('')
+    mockOpenExternal.mockResolvedValue(undefined)
     mockListNotifications.mockResolvedValue([])
     mockMarkNotificationRead.mockResolvedValue(undefined)
     mockMarkNotificationsByTaskRead.mockResolvedValue(undefined)
@@ -360,31 +363,37 @@ describe('Navbar', () => {
     expect(screen.getByTestId('mock-agent-swap')).toBeTruthy()
   })
 
-  // --- Random emoji ---
+  // --- Cyberpunk easter egg ---
 
-  it('renders a non-empty random emoji in the navbar', async () => {
-    await renderNavbarAndWait()
-    const emojiEl = screen.getByTestId('navbar-emoji')
-    expect(emojiEl).toBeTruthy()
-    expect(emojiEl.textContent?.trim().length).toBeGreaterThan(0)
-  })
-
-  it('shows the cyberpunk easter egg overlay when the emoji is clicked', async () => {
+  it('does not render the cyberpunk overlay initially', async () => {
     await renderNavbarAndWait()
     expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
-
-    fireEvent.click(screen.getByTestId('navbar-emoji'))
-    expect(screen.getByTestId('cyberpunk-overlay')).toBeTruthy()
-    expect(screen.getByText('//: SYSTEM_OVERRIDE')).toBeTruthy()
   })
 
-  it('dismisses the cyberpunk overlay when clicked', async () => {
+  it('shows the cyberpunk easter egg when the project name is clicked', async () => {
     await renderNavbarAndWait()
-    fireEvent.click(screen.getByTestId('navbar-emoji'))
+    fireEvent.click(screen.getByTestId('project-name'))
+
     const overlay = screen.getByTestId('cyberpunk-overlay')
     expect(overlay).toBeTruthy()
+    expect(screen.getByText('//: YOU FOUND A SECRET')).toBeTruthy()
+    expect(screen.getByText('@carlosbaraza')).toBeTruthy()
+  })
 
+  it('dismisses the cyberpunk overlay when the overlay is clicked', async () => {
+    await renderNavbarAndWait()
+    fireEvent.click(screen.getByTestId('project-name'))
+    const overlay = screen.getByTestId('cyberpunk-overlay')
     fireEvent.click(overlay)
+    expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
+  })
+
+  it('opens the twitter handle externally when clicked', async () => {
+    await renderNavbarAndWait()
+    fireEvent.click(screen.getByTestId('project-name'))
+
+    fireEvent.click(screen.getByText('@carlosbaraza'))
+    expect(mockOpenExternal).toHaveBeenCalledWith('https://twitter.com/carlosbaraza')
     expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
   })
 
@@ -395,11 +404,11 @@ describe('Navbar', () => {
       await act(async () => {
         await Promise.resolve()
       })
-      fireEvent.click(screen.getByTestId('navbar-emoji'))
+      fireEvent.click(screen.getByTestId('project-name'))
       expect(screen.getByTestId('cyberpunk-overlay')).toBeTruthy()
 
       act(() => {
-        vi.advanceTimersByTime(2700)
+        vi.advanceTimersByTime(2900)
       })
       expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
       result.unmount()
