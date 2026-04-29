@@ -403,6 +403,51 @@ describe('ProjectSidebar', () => {
     })
   })
 
+  it('badge counts distinct sessions, not raw notifications, when one task has many unread', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: false
+    })
+    useNotificationStore.setState({
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_y' })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    // 4 raw unread but only 2 distinct sessions → badge shows "2"
+    expect(screen.getByTestId('badge-alpha').textContent).toBe('2')
+  })
+
+  it('expanded label shows session count, not raw notification count', () => {
+    useWorkspaceStore.setState({
+      sidebarVisible: true,
+      openProjects: [
+        { path: '/tmp/alpha', name: 'alpha' }
+      ],
+      activeProjectPath: '/tmp/alpha',
+      sidebarExpanded: true
+    })
+    useNotificationStore.setState({
+      workspaceNotifications: [
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' }),
+        makeNotification({ read: false, projectPath: '/tmp/alpha', taskId: 'tsk_x' })
+      ]
+    })
+
+    render(<ProjectSidebar />)
+    // 3 raw unread for the same session → "1 unread"
+    expect(screen.getByText('1 unread')).toBeTruthy()
+  })
+
   it('does not show worktree badge when worktree has no unread', () => {
     useWorkspaceStore.setState({
       sidebarVisible: true,

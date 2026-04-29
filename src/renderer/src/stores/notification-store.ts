@@ -107,9 +107,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   workspaceUnreadCountForProject: (projectPath: string) => {
-    return get().workspaceNotifications.filter(
-      (n) => !n.read && n.projectPath === projectPath
-    ).length
+    const seenTaskIds = new Set<string>()
+    let standaloneCount = 0
+    for (const n of get().workspaceNotifications) {
+      if (n.read || n.projectPath !== projectPath) continue
+      if (n.taskId) {
+        seenTaskIds.add(n.taskId)
+      } else {
+        standaloneCount++
+      }
+    }
+    return seenTaskIds.size + standaloneCount
   },
 
   markUnread: async (taskId: string, taskTitle: string) => {

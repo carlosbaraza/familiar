@@ -216,6 +216,91 @@ describe('useNotificationStore', () => {
     })
   })
 
+  describe('workspaceUnreadCountForProject', () => {
+    function makeWs(overrides: Partial<AppNotification & { projectPath?: string }> = {}) {
+      return {
+        ...makeNotification(overrides),
+        projectPath: overrides.projectPath
+      }
+    }
+
+    it('counts distinct sessions (taskIds) with unread, not raw notifications', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n2', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n3', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n4', taskId: 'tsk_b', read: false, projectPath: '/p/alpha' })
+        ]
+      })
+
+      // 4 raw unread, but only 2 distinct sessions → 2
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(2)
+    })
+
+    it('does not count sessions whose unread notifications are all read', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: true, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n2', taskId: 'tsk_a', read: true, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n3', taskId: 'tsk_b', read: false, projectPath: '/p/alpha' })
+        ]
+      })
+
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(1)
+    })
+
+    it('counts a session as 1 if it has any unread notification, regardless of read ones', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: true, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n2', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n3', taskId: 'tsk_a', read: true, projectPath: '/p/alpha' })
+        ]
+      })
+
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(1)
+    })
+
+    it('counts standalone (no taskId) unread notifications individually', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: undefined, read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n2', taskId: undefined, read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n3', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n4', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' })
+        ]
+      })
+
+      // 2 standalone + 1 distinct task = 3
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(3)
+    })
+
+    it('only counts notifications for the requested project', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }),
+          makeWs({ id: 'n2', taskId: 'tsk_b', read: false, projectPath: '/p/beta' }),
+          makeWs({ id: 'n3', taskId: 'tsk_b', read: false, projectPath: '/p/beta' })
+        ]
+      })
+
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(1)
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/beta')).toBe(1)
+    })
+
+    it('returns 0 when no unread notifications match the project', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: true, projectPath: '/p/alpha' })
+        ]
+      })
+
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(0)
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/missing')).toBe(0)
+    })
+  })
+
   describe('markUnread', () => {
     it('creates an unread notification for the task and adds it to the store', async () => {
       mockApi.appendNotification.mockResolvedValue(undefined)
