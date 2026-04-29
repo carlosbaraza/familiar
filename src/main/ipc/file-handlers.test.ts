@@ -38,6 +38,7 @@ vi.mock('../../shared/utils/id-generator', () => ({
 
 describe('file-handlers task:move-to-worktree', () => {
   let handlers: Record<string, Function>
+  let mockTmuxManager: any
 
   const mockDataService = {
     getProjectRoot: vi.fn().mockReturnValue('/projects/source'),
@@ -88,10 +89,22 @@ describe('file-handlers task:move-to-worktree', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     handlers = {}
+    mockTmuxManager = {
+      hasSession: vi.fn().mockResolvedValue(true),
+      killSession: vi.fn().mockResolvedValue(undefined),
+      listSessions: vi.fn(),
+      createSession: vi.fn(),
+      setEnvironment: vi.fn(),
+      attachSession: vi.fn(),
+      detachSession: vi.fn(),
+      getSessionName: vi.fn(),
+      sendKeys: vi.fn(),
+      warmupSession: vi.fn()
+    }
     ;(ipcMain.handle as any).mockImplementation((channel: string, handler: Function) => {
       handlers[channel] = handler
     })
-    registerFileHandlers(mockDataService, () => mockFileWatcher)
+    registerFileHandlers(mockDataService, () => mockFileWatcher, mockTmuxManager)
   })
 
   it('registers the task:move-to-worktree handler', () => {
@@ -227,10 +240,116 @@ describe('file-handlers task:move-to-worktree', () => {
     expect(result).toEqual({ movedCount: 0 })
     expect(cp).not.toHaveBeenCalled()
   })
+
+  it('kills the tmux session on move so stale FAMILIAR_* env vars are cleared', async () => {
+    const task = makeTask({ id: 'tsk_move_me' })
+    const sourceState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(sourceState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['task:move-to-worktree'](
+      {},
+      ['tsk_move_me'],
+      '/projects/target',
+      'move'
+    )
+
+    expect(mockTmuxManager.hasSession).toHaveBeenCalledWith('familiar-tsk_move_me')
+    expect(mockTmuxManager.killSession).toHaveBeenCalledWith('familiar-tsk_move_me')
+  })
+
+  it('does not kill the tmux session on copy (original task stays in source project)', async () => {
+    const task = makeTask({ id: 'tsk_original' })
+    const sourceState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(sourceState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['task:move-to-worktree'](
+      {},
+      ['tsk_original'],
+      '/projects/target',
+      'copy'
+    )
+
+    expect(mockTmuxManager.killSession).not.toHaveBeenCalled()
+  })
+
+  it('skips killSession when the tmux session does not exist', async () => {
+    const task = makeTask({ id: 'tsk_no_session' })
+    const sourceState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(sourceState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    mockTmuxManager.hasSession.mockResolvedValue(false)
+
+    await handlers['task:move-to-worktree'](
+      {},
+      ['tsk_no_session'],
+      '/projects/target',
+      'move'
+    )
+
+    expect(mockTmuxManager.hasSession).toHaveBeenCalledWith('familiar-tsk_no_session')
+    expect(mockTmuxManager.killSession).not.toHaveBeenCalled()
+  })
+
+  it('swallows killSession errors so a flaky tmux does not fail the move', async () => {
+    const task = makeTask({ id: 'tsk_flaky' })
+    const sourceState = makeState([task])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(sourceState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    mockTmuxManager.killSession.mockRejectedValueOnce(new Error('tmux is busy'))
+
+    const result = await handlers['task:move-to-worktree'](
+      {},
+      ['tsk_flaky'],
+      '/projects/target',
+      'move'
+    )
+
+    // Move still reports success — we don't roll back file moves on tmux errors.
+    expect(result).toEqual({ movedCount: 1 })
+  })
+
+  it('kills tmux sessions for every task in a multi-task move', async () => {
+    const task1 = makeTask({ id: 'tsk_1' })
+    const task2 = makeTask({ id: 'tsk_2' })
+    const sourceState = makeState([task1, task2])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(sourceState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['task:move-to-worktree'](
+      {},
+      ['tsk_1', 'tsk_2'],
+      '/projects/target',
+      'move'
+    )
+
+    expect(mockTmuxManager.killSession).toHaveBeenCalledWith('familiar-tsk_1')
+    expect(mockTmuxManager.killSession).toHaveBeenCalledWith('familiar-tsk_2')
+    expect(mockTmuxManager.killSession).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('file-handlers worktree:migrate-tasks', () => {
   let handlers: Record<string, Function>
+  let mockTmuxManager: any
 
   const mockDataService = {
     getProjectRoot: vi.fn().mockReturnValue('/projects/source'),
@@ -279,10 +398,22 @@ describe('file-handlers worktree:migrate-tasks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     handlers = {}
+    mockTmuxManager = {
+      hasSession: vi.fn().mockResolvedValue(true),
+      killSession: vi.fn().mockResolvedValue(undefined),
+      listSessions: vi.fn(),
+      createSession: vi.fn(),
+      setEnvironment: vi.fn(),
+      attachSession: vi.fn(),
+      detachSession: vi.fn(),
+      getSessionName: vi.fn(),
+      sendKeys: vi.fn(),
+      warmupSession: vi.fn()
+    }
     ;(ipcMain.handle as any).mockImplementation((channel: string, handler: Function) => {
       handlers[channel] = handler
     })
-    registerFileHandlers(mockDataService, () => null)
+    registerFileHandlers(mockDataService, () => null, mockTmuxManager)
   })
 
   it('registers the worktree:migrate-tasks handler', () => {
@@ -487,5 +618,40 @@ describe('file-handlers worktree:migrate-tasks', () => {
     const writtenState: ProjectState = JSON.parse(stateWrite[1])
     const todoTask = writtenState.tasks.find((t) => t.id === 'tsk_todo')
     expect(todoTask?.sortOrder).toBe(0) // unchanged
+  })
+
+  it('kills the tmux session for each migrated task so stale env vars are cleared', async () => {
+    const task1 = makeTask({ id: 'tsk_a' })
+    const task2 = makeTask({ id: 'tsk_b' })
+    const worktreeState = makeState([task1, task2])
+    const targetState = makeState([])
+
+    ;(fs.readFileSync as any)
+      .mockReturnValueOnce(JSON.stringify(worktreeState))
+      .mockReturnValueOnce(JSON.stringify(targetState))
+
+    await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(mockTmuxManager.killSession).toHaveBeenCalledWith('familiar-tsk_a')
+    expect(mockTmuxManager.killSession).toHaveBeenCalledWith('familiar-tsk_b')
+  })
+
+  it('does not kill tmux sessions when there is nothing to migrate', async () => {
+    const worktreeState = makeState([])
+    ;(fs.readFileSync as any).mockReturnValueOnce(JSON.stringify(worktreeState))
+
+    await handlers['worktree:migrate-tasks'](
+      {},
+      '/projects/worktree',
+      '/projects/main',
+      'my-feature'
+    )
+
+    expect(mockTmuxManager.killSession).not.toHaveBeenCalled()
   })
 })

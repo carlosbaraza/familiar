@@ -131,7 +131,7 @@ function createWindow(): void {
   // Register IPC handlers
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager, dataService)
-  registerFileHandlers(dataService, () => workspaceManager.getFileWatcher())
+  registerFileHandlers(dataService, () => workspaceManager.getFileWatcher(), tmuxManager)
   registerNotificationHandlers(dataService, workspaceManager)
   registerWindowHandlers(
     mainWindow,

@@ -6,7 +6,29 @@ import type { FileWatcher } from '../services/file-watcher'
 import { generateTaskId } from '../../shared/utils/id-generator'
 import { DATA_DIR, TASKS_DIR, STATE_FILE } from '../../shared/constants'
 import type { ProjectState, Task } from '../../shared/types'
+import type { ITmuxManager } from '../../shared/platform/tmux'
 import fs from 'fs'
+
+/**
+ * Kill the per-task tmux session so the next attach creates a fresh one
+ * with the correct cwd and FAMILIAR_* env vars. Used when a task's data
+ * files move to a different project/worktree — the running shell still
+ * has the OLD env vars baked in, and `set-environment` only affects
+ * future windows/panes.
+ */
+async function killTaskTmuxSession(
+  tmuxManager: ITmuxManager,
+  taskId: string
+): Promise<void> {
+  try {
+    const sessionName = `familiar-${taskId}`
+    if (await tmuxManager.hasSession(sessionName)) {
+      await tmuxManager.killSession(sessionName)
+    }
+  } catch {
+    // Session may already be dead or tmux unavailable — that's fine.
+  }
+}
 
 /**
  * Wrap a write operation so the file watcher ignores self-triggered changes.
@@ -24,7 +46,8 @@ function withSelfTriggered<T>(
 
 export function registerFileHandlers(
   dataService: DataService,
-  getFileWatcher: () => FileWatcher | null
+  getFileWatcher: () => FileWatcher | null,
+  tmuxManager: ITmuxManager
 ): void {
   // Save raw image bytes from clipboard to a temp file, return the path
   ipcMain.handle(
@@ -147,6 +170,7 @@ export function registerFileHandlers(
       }
 
       let movedCount = 0
+      const movedTaskIds: string[] = []
 
       for (const taskId of taskIds) {
         const sourceTask = sourceState.tasks.find((t) => t.id === taskId)
@@ -204,6 +228,8 @@ export function registerFileHandlers(
 
           // Remove source task directory
           await rm(sourceTaskDir, { recursive: true, force: true })
+
+          movedTaskIds.push(taskId)
         }
 
         movedCount++
@@ -217,6 +243,15 @@ export function registerFileHandlers(
         )
       }
       fs.writeFileSync(targetStatePath, JSON.stringify(targetState, null, 2))
+
+      // For moved tasks, kill the existing tmux session so the next attach
+      // creates a fresh one with the new project root in the FAMILIAR_* env
+      // vars and shell cwd. Without this, the running shell keeps the OLD
+      // env baked in via `tmux new-session -e` (set-environment only affects
+      // future windows/panes).
+      for (const taskId of movedTaskIds) {
+        await killTaskTmuxSession(tmuxManager, taskId)
+      }
 
       return { movedCount }
     }
@@ -327,6 +362,13 @@ export function registerFileHandlers(
 
       // Write updated target state
       fs.writeFileSync(targetStatePath, JSON.stringify(targetState, null, 2))
+
+      // Kill each migrated task's tmux session so the next attach creates a
+      // fresh one rooted at the target project. Without this, the running
+      // shell keeps the worktree's old FAMILIAR_PROJECT_ROOT baked in.
+      for (const task of tasksToMigrate) {
+        await killTaskTmuxSession(tmuxManager, task.id)
+      }
 
       return { migratedCount }
     }
