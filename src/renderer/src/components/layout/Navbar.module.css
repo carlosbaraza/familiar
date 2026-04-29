@@ -32,6 +32,28 @@
   margin-left: auto;
 }
 
+.navEmoji {
+  -webkit-app-region: no-drag;
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  margin-right: 2px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform var(--transition-base), filter var(--transition-base);
+}
+
+.navEmoji:hover {
+  transform: scale(1.2) rotate(-8deg);
+  filter: drop-shadow(0 0 6px rgba(255, 0, 170, 0.5));
+}
+
+.navEmoji:active {
+  transform: scale(0.95);
+}
+
 .projectName {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);

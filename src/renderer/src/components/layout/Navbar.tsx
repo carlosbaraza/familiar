@@ -39,6 +39,17 @@ export function Navbar(): React.JSX.Element {
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
   const [easterEgg, setEasterEgg] = useState<{ emoji: string; line: string } | null>(null)
   const easterEggTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [navEmoji, setNavEmoji] = useState<string>(() => pickRandom(EASTER_EGG_EMOJIS))
+
+  const randomizeNavEmoji = useCallback(() => {
+    setNavEmoji((current) => {
+      // Avoid landing on the same emoji twice in a row when possible
+      if (EASTER_EGG_EMOJIS.length <= 1) return current
+      let next = pickRandom(EASTER_EGG_EMOJIS)
+      while (next === current) next = pickRandom(EASTER_EGG_EMOJIS)
+      return next
+    })
+  }, [])
 
   const closeEasterEgg = useCallback(() => {
     if (easterEggTimeoutRef.current) {
@@ -194,6 +205,17 @@ export function Navbar(): React.JSX.Element {
 
   return (
     <nav className={styles.navbar}>
+      <button
+        type="button"
+        className={styles.navEmoji}
+        onClick={randomizeNavEmoji}
+        title="Click for a new emoji"
+        aria-label="Random emoji — click to change"
+        data-testid="nav-emoji"
+      >
+        {navEmoji}
+      </button>
+
       <button
         type="button"
         className={`${styles.projectName} ${easterEgg ? styles.projectNameGlitch : ''}`}

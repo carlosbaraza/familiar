@@ -363,6 +363,39 @@ describe('Navbar', () => {
     expect(screen.getByTestId('mock-agent-swap')).toBeTruthy()
   })
 
+  // --- Nav emoji ---
+
+  it('renders a visible emoji in the navbar', async () => {
+    await renderNavbarAndWait()
+    const emoji = screen.getByTestId('nav-emoji')
+    expect(emoji).toBeTruthy()
+    expect(emoji.textContent?.length).toBeGreaterThan(0)
+  })
+
+  it('changes the emoji when clicked', async () => {
+    // Force the random sequence so click produces a different emoji
+    const spy = vi.spyOn(Math, 'random')
+    spy.mockReturnValueOnce(0) // initial mount
+    spy.mockReturnValueOnce(0) // first click attempt — same as current (loop continues)
+    spy.mockReturnValueOnce(0.5) // loop-resolved different emoji
+    try {
+      await renderNavbarAndWait()
+      const emoji = screen.getByTestId('nav-emoji')
+      const before = emoji.textContent
+      fireEvent.click(emoji)
+      const after = screen.getByTestId('nav-emoji').textContent
+      expect(after).not.toBe(before)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('clicking the nav emoji does NOT trigger the cyberpunk overlay', async () => {
+    await renderNavbarAndWait()
+    fireEvent.click(screen.getByTestId('nav-emoji'))
+    expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
+  })
+
   // --- Cyberpunk easter egg ---
 
   it('does not render the cyberpunk overlay initially', async () => {
