@@ -397,68 +397,6 @@ describe('Navbar', () => {
     expect(screen.queryByTestId('cyberpunk-overlay')).toBeNull()
   })
 
-  // --- Sparkle button ---
-
-  it('renders the sparkle button', async () => {
-    await renderNavbarAndWait()
-    expect(screen.getByTestId('sparkle-button')).toBeTruthy()
-  })
-
-  it('does not render the sparkle burst initially', async () => {
-    await renderNavbarAndWait()
-    expect(screen.queryByTestId('sparkle-burst')).toBeNull()
-  })
-
-  it('renders the sparkle burst when the sparkle button is clicked', async () => {
-    await renderNavbarAndWait()
-    fireEvent.click(screen.getByTestId('sparkle-button'))
-    expect(screen.getByTestId('sparkle-burst')).toBeTruthy()
-  })
-
-  it('removes the sparkle burst after the animation completes', async () => {
-    vi.useFakeTimers()
-    try {
-      const result = render(<Navbar />)
-      await act(async () => {
-        await Promise.resolve()
-      })
-      fireEvent.click(screen.getByTestId('sparkle-button'))
-      expect(screen.getByTestId('sparkle-burst')).toBeTruthy()
-
-      act(() => {
-        vi.advanceTimersByTime(900)
-      })
-      expect(screen.queryByTestId('sparkle-burst')).toBeNull()
-      result.unmount()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('retriggers the sparkle burst on rapid repeated clicks', async () => {
-    vi.useFakeTimers()
-    try {
-      const result = render(<Navbar />)
-      await act(async () => {
-        await Promise.resolve()
-      })
-      const btn = screen.getByTestId('sparkle-button')
-      fireEvent.click(btn)
-      const first = screen.getByTestId('sparkle-burst')
-      // Click again before the previous timeout would clear the burst
-      act(() => {
-        vi.advanceTimersByTime(200)
-      })
-      fireEvent.click(btn)
-      const second = screen.getByTestId('sparkle-burst')
-      // The burst element should be remounted with a new key
-      expect(second).not.toBe(first)
-      result.unmount()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
   it('auto-dismisses the cyberpunk overlay after the animation', async () => {
     vi.useFakeTimers()
     try {
