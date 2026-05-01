@@ -317,6 +317,139 @@
   -webkit-app-region: no-drag;
 }
 
+/* ==========================================================================
+   Sparkle button — particle burst on click
+   ========================================================================== */
+
+.sparkleButton {
+  overflow: visible;
+}
+
+.sparkleIcon {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.25s ease, color 0.25s ease;
+}
+
+.sparkleButton:hover .sparkleIcon {
+  color: #c084fc;
+  filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.55));
+  transform: rotate(15deg) scale(1.08);
+}
+
+.sparkleBursting .sparkleIcon {
+  animation: sparkleSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  color: #f0abfc;
+  filter: drop-shadow(0 0 6px rgba(240, 171, 252, 0.85))
+    drop-shadow(0 0 14px rgba(34, 211, 238, 0.55));
+}
+
+@keyframes sparkleSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  35% {
+    transform: rotate(180deg) scale(1.45);
+  }
+  60% {
+    transform: rotate(280deg) scale(0.85);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.sparkleBurst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.sparkleParticle {
+  position: absolute;
+  left: calc(50% - 3px);
+  top: calc(50% - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: sparkleParticleFly 0.75s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+  animation-delay: var(--sparkle-delay, 0ms);
+  --sparkle-angle: 0deg;
+  --sparkle-distance: 24px;
+}
+
+.sparkleParticleA {
+  background: radial-gradient(circle, #ffffff 0%, #f0abfc 70%);
+  box-shadow: 0 0 6px #f0abfc, 0 0 12px rgba(240, 171, 252, 0.6);
+}
+
+.sparkleParticleB {
+  background: radial-gradient(circle, #ffffff 0%, #22d3ee 70%);
+  box-shadow: 0 0 6px #22d3ee, 0 0 12px rgba(34, 211, 238, 0.6);
+}
+
+.sparkleParticleC {
+  background: radial-gradient(circle, #ffffff 0%, #fde047 70%);
+  box-shadow: 0 0 6px #fde047, 0 0 12px rgba(253, 224, 71, 0.6);
+}
+
+@keyframes sparkleParticleFly {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--sparkle-angle)) translateX(0) scale(0.4);
+  }
+  18% {
+    opacity: 1;
+    transform: rotate(var(--sparkle-angle)) translateX(4px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--sparkle-angle)) translateX(var(--sparkle-distance)) scale(0.2);
+  }
+}
+
+.sparkleRing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 171, 252, 0.9);
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: sparkleRingExpand 0.55s cubic-bezier(0.16, 0.84, 0.44, 1) both;
+}
+
+@keyframes sparkleRingExpand {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+    border-width: 3px;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(7);
+    border-width: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkleBursting .sparkleIcon,
+  .sparkleParticle,
+  .sparkleRing {
+    animation: none;
+  }
+  .sparkleParticle,
+  .sparkleRing {
+    opacity: 0;
+  }
+}
+
 .navButton:hover {
   color: var(--text-primary);
   background-color: var(--bg-surface);

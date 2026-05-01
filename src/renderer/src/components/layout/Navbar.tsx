@@ -39,6 +39,23 @@ export function Navbar(): React.JSX.Element {
   const [projectRoot, setProjectRoot] = useState<string | null>(null)
   const [easterEgg, setEasterEgg] = useState<{ emoji: string; line: string } | null>(null)
   const easterEggTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [sparkleBurstId, setSparkleBurstId] = useState(0)
+  const sparkleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const triggerSparkle = useCallback(() => {
+    setSparkleBurstId((id) => id + 1)
+    if (sparkleTimeoutRef.current) clearTimeout(sparkleTimeoutRef.current)
+    sparkleTimeoutRef.current = setTimeout(() => {
+      setSparkleBurstId(0)
+      sparkleTimeoutRef.current = null
+    }, 800)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (sparkleTimeoutRef.current) clearTimeout(sparkleTimeoutRef.current)
+    }
+  }, [])
 
   const closeEasterEgg = useCallback(() => {
     if (easterEggTimeoutRef.current) {
@@ -266,6 +283,66 @@ export function Navbar(): React.JSX.Element {
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
+        </button>
+
+        {/* Sparkle button — fun click animation */}
+        <button
+          className={`${styles.navButton} ${styles.sparkleButton} ${sparkleBurstId > 0 ? styles.sparkleBursting : ''}`}
+          onClick={triggerSparkle}
+          title="Sparkle ✦"
+          data-testid="sparkle-button"
+        >
+          <svg
+            className={styles.sparkleIcon}
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.582a.5.5 0 0 1 0 .962L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+            <path d="M20 3v4" />
+            <path d="M22 5h-4" />
+            <path d="M4 17v2" />
+            <path d="M5 18H3" />
+          </svg>
+          {sparkleBurstId > 0 && (
+            <span
+              key={sparkleBurstId}
+              className={styles.sparkleBurst}
+              aria-hidden="true"
+              data-testid="sparkle-burst"
+            >
+              {Array.from({ length: 12 }).map((_, i) => {
+                const angle = (360 / 12) * i
+                const distance = 22 + (i % 3) * 4
+                const colorClass =
+                  i % 3 === 0
+                    ? styles.sparkleParticleA
+                    : i % 3 === 1
+                      ? styles.sparkleParticleB
+                      : styles.sparkleParticleC
+                return (
+                  <span
+                    key={i}
+                    className={`${styles.sparkleParticle} ${colorClass}`}
+                    style={
+                      {
+                        '--sparkle-angle': `${angle}deg`,
+                        '--sparkle-distance': `${distance}px`,
+                        '--sparkle-delay': `${(i % 4) * 20}ms`
+                      } as React.CSSProperties
+                    }
+                  />
+                )
+              })}
+              <span className={styles.sparkleRing} />
+            </span>
+          )}
         </button>
 
       </div>
