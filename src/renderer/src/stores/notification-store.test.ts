@@ -289,6 +289,33 @@ describe('useNotificationStore', () => {
       expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/beta')).toBe(1)
     })
 
+    it('skips orphan notifications (taskVisible=false) so the count matches what is on the board', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          // Visible task — counts
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' }) as any,
+          // Orphan: task was deleted/archived — must not count
+          { ...makeWs({ id: 'n2', taskId: 'tsk_gone', read: false, projectPath: '/p/alpha' }), taskVisible: false },
+          // Orphan with two notifications — still must not count, even once
+          { ...makeWs({ id: 'n3', taskId: 'tsk_gone', read: false, projectPath: '/p/alpha' }), taskVisible: false }
+        ]
+      })
+
+      // Only tsk_a is visible → 1
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(1)
+    })
+
+    it('treats notifications without taskVisible field as visible (backward compatibility)', () => {
+      useNotificationStore.setState({
+        workspaceNotifications: [
+          // No taskVisible field at all (older payload)
+          makeWs({ id: 'n1', taskId: 'tsk_a', read: false, projectPath: '/p/alpha' })
+        ]
+      })
+
+      expect(useNotificationStore.getState().workspaceUnreadCountForProject('/p/alpha')).toBe(1)
+    })
+
     it('returns 0 when no unread notifications match the project', () => {
       useNotificationStore.setState({
         workspaceNotifications: [

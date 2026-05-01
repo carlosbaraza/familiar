@@ -71,7 +71,7 @@ declare global {
       // Notifications
       sendNotification(title: string, body: string): Promise<void>
       listNotifications(): Promise<AppNotification[]>
-      listAllNotifications(): Promise<(AppNotification & { projectPath: string })[]>
+      listAllNotifications(): Promise<(AppNotification & { projectPath: string; taskVisible: boolean })[]>
       markNotificationRead(id: string): Promise<void>
       markNotificationsByTaskRead(taskId: string): Promise<void>
       markNotificationsByTaskIds(taskIds: string[]): Promise<void>

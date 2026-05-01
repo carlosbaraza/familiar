@@ -2,8 +2,16 @@ import { create } from 'zustand'
 import type { AppNotification } from '@shared/types'
 import { generateNotificationId } from '@shared/utils/id-generator'
 
-/** Notification with optional project source for workspace-wide views */
-export type WorkspaceNotification = AppNotification & { projectPath?: string }
+/**
+ * Notification with optional project source for workspace-wide views.
+ * `taskVisible` is false when the notification's task has been deleted or
+ * archived — such notifications must not contribute to sidebar counts
+ * because the user has no corresponding card to act on.
+ */
+export type WorkspaceNotification = AppNotification & {
+  projectPath?: string
+  taskVisible?: boolean
+}
 
 interface NotificationState {
   /** Notifications for the active project (used by task cards, etc.) */
@@ -111,6 +119,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     let standaloneCount = 0
     for (const n of get().workspaceNotifications) {
       if (n.read || n.projectPath !== projectPath) continue
+      // Skip orphans: notifications whose task is deleted or archived. The
+      // backend tags these with taskVisible=false. Older payloads without
+      // the field are treated as visible to stay backward compatible.
+      if (n.taskVisible === false) continue
       if (n.taskId) {
         seenTaskIds.add(n.taskId)
       } else {

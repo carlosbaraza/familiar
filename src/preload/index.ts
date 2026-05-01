@@ -95,7 +95,7 @@ const api = {
     ipcRenderer.invoke('notification:send', title, body),
   listNotifications: (): Promise<AppNotification[]> =>
     ipcRenderer.invoke('notification:list'),
-  listAllNotifications: (): Promise<(AppNotification & { projectPath: string })[]> =>
+  listAllNotifications: (): Promise<(AppNotification & { projectPath: string; taskVisible: boolean })[]> =>
     ipcRenderer.invoke('notification:list-all'),
   markNotificationRead: (id: string): Promise<void> =>
     ipcRenderer.invoke('notification:mark-read', id),
