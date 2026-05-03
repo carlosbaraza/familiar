@@ -278,28 +278,31 @@ export function SettingsPage(): React.JSX.Element {
                   gap: 'var(--space-2)'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
                   <AgentIcon agentType={agent.type} size={20} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...styles.settingLabel, marginBottom: 2 }}>{agent.name}</div>
-                    <div
-                      style={{
-                        ...styles.settingDescription,
-                        fontSize: 11,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {agent.defaultCommand || 'No command configured'}
-                    </div>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                    <input
+                      style={{ ...styles.textInput, fontSize: 13, padding: '4px 8px', fontWeight: 600 }}
+                      type="text"
+                      value={agent.name}
+                      onChange={(e) => handleUpdateAgent(agent.id, { name: e.target.value })}
+                      placeholder="Agent name"
+                    />
+                    <input
+                      style={{ ...styles.textInput, fontSize: 11, padding: '4px 8px', fontFamily: 'var(--font-mono, monospace)' }}
+                      type="text"
+                      value={agent.defaultCommand}
+                      onChange={(e) => handleUpdateAgent(agent.id, { defaultCommand: e.target.value })}
+                      placeholder="Default command"
+                    />
                   </div>
                   <div
                     style={{
                       display: 'flex',
                       gap: 'var(--space-1)',
                       alignItems: 'center',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      paddingTop: 4
                     }}
                   >
                     {agent.id === settings.activeAgentId ? (
