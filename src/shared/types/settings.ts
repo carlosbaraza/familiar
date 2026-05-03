@@ -38,7 +38,12 @@ export const AGENT_TYPE_ICONS: Record<AgentType, string> = {
 export const AGENT_TYPE_DEFAULT_COMMANDS: Record<AgentType, string> = {
   'claude-code':
     'claude --allow-dangerously-skip-permissions --permission-mode bypassPermissions --resume $FAMILIAR_TASK_ID',
-  codex: 'codex --dangerously-bypass-approvals-and-sandbox',
+  // Codex doesn't support `--session-id` at launch, so we use a wrapper that
+  // resumes the captured session ID (saved by the SessionStart hook) if one
+  // exists, otherwise starts a fresh session. The hook installation is handled
+  // by the health check (see fixCodexHooks).
+  codex:
+    'F="$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/codex-session.txt"; if [ -f "$F" ]; then codex resume "$(cat "$F")"; else codex --dangerously-bypass-approvals-and-sandbox; fi',
   other: ''
 }
 

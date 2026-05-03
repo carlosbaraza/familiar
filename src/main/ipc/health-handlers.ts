@@ -105,6 +105,145 @@ export function checkSkillInstalled(projectRoot: string): boolean {
   return existsSync(skillPath)
 }
 
+/**
+ * Check whether the Codex SessionStart hook is installed in the project
+ * AND the codex_hooks feature flag is enabled in ~/.codex/config.toml.
+ *
+ * The session-start hook captures Codex's auto-generated session UUID and
+ * writes it to .familiar/tasks/<taskId>/codex-session.txt so that subsequent
+ * agent launches can resume the same session via `codex resume <uuid>`.
+ */
+export function checkCodexHooksConfigured(projectRoot: string): boolean {
+  const hooksJson = join(projectRoot, '.codex', 'hooks.json')
+  const hookScript = join(projectRoot, '.codex', 'hooks', 'session-start.sh')
+
+  if (!existsSync(hooksJson)) return false
+  if (!existsSync(hookScript)) return false
+
+  try {
+    const stat = statSync(hookScript)
+    if (!(stat.mode & 0o100)) return false
+  } catch {
+    return false
+  }
+
+  // Verify the project hooks.json registers the SessionStart hook
+  try {
+    const parsed = JSON.parse(readFileSync(hooksJson, 'utf-8'))
+    if (!parsed.hooks?.SessionStart) return false
+  } catch {
+    return false
+  }
+
+  // Verify ~/.codex/config.toml has the codex_hooks feature flag enabled
+  const codexConfig = join(homedir(), '.codex', 'config.toml')
+  if (!existsSync(codexConfig)) return false
+  try {
+    const config = readFileSync(codexConfig, 'utf-8')
+    // Look for `codex_hooks = true` under [features] (or via dotted key)
+    const featuresEnabled = /^\s*codex_hooks\s*=\s*true\s*$/m.test(config)
+      || /^\s*features\.codex_hooks\s*=\s*true\s*$/m.test(config)
+    if (!featuresEnabled) return false
+  } catch {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Install the Codex SessionStart hook into the project's `.codex/` directory
+ * and ensure the codex_hooks feature flag is enabled in ~/.codex/config.toml.
+ */
+export function fixCodexHooks(projectRoot: string): void {
+  const codexDir = join(projectRoot, '.codex')
+  const hooksDir = join(codexDir, 'hooks')
+  const hooksJsonPath = join(codexDir, 'hooks.json')
+  const hookScriptPath = join(hooksDir, 'session-start.sh')
+
+  if (!existsSync(hooksDir)) {
+    mkdirSync(hooksDir, { recursive: true })
+  }
+
+  // Write/merge .codex/hooks.json
+  let hooksJson: { hooks?: Record<string, unknown> } = {}
+  if (existsSync(hooksJsonPath)) {
+    try {
+      hooksJson = JSON.parse(readFileSync(hooksJsonPath, 'utf-8'))
+    } catch {
+      // Start fresh if corrupted
+    }
+  }
+  if (!hooksJson.hooks) hooksJson.hooks = {}
+  ;(hooksJson.hooks as Record<string, unknown>).SessionStart = [
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: '"$(git rev-parse --show-toplevel 2>/dev/null || pwd)"/.codex/hooks/session-start.sh',
+          timeout: 5
+        }
+      ]
+    }
+  ]
+  writeFileSync(hooksJsonPath, JSON.stringify(hooksJson, null, 2) + '\n')
+
+  // Write the session-start hook script.
+  // Codex provides session metadata (including session_id) on stdin as JSON.
+  // We extract session_id and write it to the task's codex-session.txt so
+  // future launches can use `codex resume <uuid>`.
+  writeFileSync(
+    hookScriptPath,
+    `#!/bin/bash
+# Familiar Codex SessionStart hook — captures Codex's session_id so future
+# agent launches can resume the same session for this Familiar task.
+set -e
+input="$(cat)"
+if [ -n "$FAMILIAR_TASK_ID" ] && [ -n "$FAMILIAR_PROJECT_ROOT" ]; then
+  task_dir="$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID"
+  if [ -d "$task_dir" ]; then
+    # Extract session_id using a portable approach (no jq dependency).
+    session_id=$(printf '%s' "$input" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' | head -1)
+    if [ -n "$session_id" ]; then
+      printf '%s' "$session_id" > "$task_dir/codex-session.txt"
+    fi
+  fi
+fi
+exit 0
+`
+  )
+  chmodSync(hookScriptPath, 0o755)
+
+  // Ensure ~/.codex/config.toml has codex_hooks = true under [features]
+  const codexHomeDir = join(homedir(), '.codex')
+  const codexConfigPath = join(codexHomeDir, 'config.toml')
+  if (!existsSync(codexHomeDir)) {
+    mkdirSync(codexHomeDir, { recursive: true })
+  }
+
+  let configContents = ''
+  if (existsSync(codexConfigPath)) {
+    configContents = readFileSync(codexConfigPath, 'utf-8')
+  }
+
+  const alreadyEnabled =
+    /^\s*codex_hooks\s*=\s*true\s*$/m.test(configContents) ||
+    /^\s*features\.codex_hooks\s*=\s*true\s*$/m.test(configContents)
+  if (!alreadyEnabled) {
+    if (/^\s*\[features\]\s*$/m.test(configContents)) {
+      // Append under existing [features] section
+      configContents = configContents.replace(
+        /^\s*\[features\]\s*$/m,
+        '[features]\ncodex_hooks = true'
+      )
+    } else {
+      const trailing = configContents.endsWith('\n') || configContents.length === 0 ? '' : '\n'
+      configContents += `${trailing}\n[features]\ncodex_hooks = true\n`
+    }
+    writeFileSync(codexConfigPath, configContents)
+  }
+}
+
 export function fixHooks(projectRoot: string): void {
   const claudeDir = join(projectRoot, '.claude')
   const hooksDir = join(claudeDir, 'hooks')
@@ -398,6 +537,21 @@ export function registerHealthHandlers(
       }
     }
 
+    // Agent-specific checks (codex)
+    if (agentTypes.has('codex')) {
+      const codexHooksReady = checkCodexHooksConfigured(projectRoot)
+      if (!codexHooksReady) {
+        issues.push({
+          id: 'codex-hooks-not-configured',
+          severity: 'warning',
+          title: 'Codex session hook not configured',
+          description:
+            'The Codex SessionStart hook is needed to capture session IDs so tasks can resume the same conversation.',
+          fixable: true
+        })
+      }
+    }
+
     return {
       issues,
       cliAvailable,
@@ -424,6 +578,10 @@ export function registerHealthHandlers(
 
           case 'skill-not-installed':
             fixSkill(projectRoot)
+            return { success: true }
+
+          case 'codex-hooks-not-configured':
+            fixCodexHooks(projectRoot)
             return { success: true }
 
           case 'cli-not-installed':
@@ -480,6 +638,16 @@ export function registerHealthHandlers(
         }
       }
 
+      const hasCodexAgent = agents.some((a) => a.type === 'codex')
+      if (hasCodexAgent && !checkCodexHooksConfigured(projectRoot)) {
+        try {
+          fixCodexHooks(projectRoot)
+          fixed.push('codex-hooks-not-configured')
+        } catch {
+          failed.push('codex-hooks-not-configured')
+        }
+      }
+
       return { fixed, failed }
     }
   )
@@ -510,6 +678,9 @@ export function registerHealthHandlers(
             return { success: true }
           case 'skill-not-installed':
             fixSkill(projectRoot)
+            return { success: true }
+          case 'codex-hooks-not-configured':
+            fixCodexHooks(projectRoot)
             return { success: true }
           default:
             return { success: false, error: `Unknown issue: ${issueId}` }
