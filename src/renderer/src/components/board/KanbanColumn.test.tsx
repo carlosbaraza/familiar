@@ -17,7 +17,8 @@ vi.mock('@dnd-kit/sortable', () => ({
 // Mock window.api
 ;(window as any).api = {
   readTaskDocument: vi.fn().mockResolvedValue(''),
-  clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/clipboard-123.png')
+  clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/clipboard-123.png'),
+  clipboardSaveFile: vi.fn().mockResolvedValue('/tmp/clipboard-file.bin')
 }
 
 const defaultProps = {
@@ -230,6 +231,76 @@ describe('KanbanColumn — image paste', () => {
     // Wait for async paste handler
     await vi.waitFor(() => {
       expect((window as any).api.clipboardSaveImage).toHaveBeenCalled()
+    })
+  })
+
+  it('shows pending thumbnails for all images when multiple are pasted at once', async () => {
+    ;(window as any).api.clipboardSaveImage = vi
+      .fn()
+      .mockResolvedValueOnce('/tmp/clipboard-1.png')
+      .mockResolvedValueOnce('/tmp/clipboard-2.png')
+      .mockResolvedValueOnce('/tmp/clipboard-3.png')
+
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+
+    const file1 = new File(['fake-1'], 'a.png', { type: 'image/png' })
+    const file2 = new File(['fake-2'], 'b.png', { type: 'image/png' })
+    const file3 = new File(['fake-3'], 'c.png', { type: 'image/png' })
+
+    const items = [
+      { kind: 'file', type: 'image/png', getAsFile: () => file1 },
+      { kind: 'file', type: 'image/png', getAsFile: () => file2 },
+      { kind: 'file', type: 'image/png', getAsFile: () => file3 }
+    ]
+
+    const pasteEvent = new Event('paste', { bubbles: true }) as any
+    pasteEvent.clipboardData = { items, getData: () => '' }
+
+    fireEvent(textarea, pasteEvent)
+
+    await vi.waitFor(() => {
+      expect((window as any).api.clipboardSaveImage).toHaveBeenCalledTimes(3)
+    })
+
+    await vi.waitFor(() => {
+      const removeBtns = screen.queryAllByLabelText('Remove attachment')
+      expect(removeBtns).toHaveLength(3)
+    })
+  })
+
+  it('appends to existing pending images when a second paste happens', async () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+
+    const fileA = new File(['a'], 'a.png', { type: 'image/png' })
+    const eventA = new Event('paste', { bubbles: true }) as any
+    eventA.clipboardData = {
+      items: [{ kind: 'file', type: 'image/png', getAsFile: () => fileA }],
+      getData: () => ''
+    }
+    fireEvent(textarea, eventA)
+
+    await vi.waitFor(() => {
+      expect(screen.queryAllByLabelText('Remove attachment')).toHaveLength(1)
+    })
+
+    const fileB = new File(['b'], 'b.png', { type: 'image/png' })
+    const fileC = new File(['c'], 'c.png', { type: 'image/png' })
+    const eventBC = new Event('paste', { bubbles: true }) as any
+    eventBC.clipboardData = {
+      items: [
+        { kind: 'file', type: 'image/png', getAsFile: () => fileB },
+        { kind: 'file', type: 'image/png', getAsFile: () => fileC }
+      ],
+      getData: () => ''
+    }
+    fireEvent(textarea, eventBC)
+
+    await vi.waitFor(() => {
+      expect(screen.queryAllByLabelText('Remove attachment')).toHaveLength(3)
     })
   })
 

@@ -192,16 +192,27 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
 
     const handlePaste = useCallback(
       async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-        // Check for file paste (images and other files)
+        // Collect all file blobs synchronously — clipboardData.items becomes
+        // inaccessible after the handler returns or awaits, so we must grab
+        // every File reference up front before any async work.
+        const fileBlobs: { blob: File; mimeType: string }[] = []
         const items = e.clipboardData.items
         for (let i = 0; i < items.length; i++) {
           const item = items[i]
           if (item.kind === 'file') {
-            e.preventDefault()
             const blob = item.getAsFile()
-            if (!blob) continue
+            if (blob) {
+              fileBlobs.push({ blob, mimeType: item.type || 'application/octet-stream' })
+            }
+          }
+        }
+
+        if (fileBlobs.length > 0) {
+          e.preventDefault()
+          const newAttachments: PendingAttachment[] = []
+          for (let i = 0; i < fileBlobs.length; i++) {
+            const { blob, mimeType } = fileBlobs[i]
             const arrayBuffer = await blob.arrayBuffer()
-            const mimeType = item.type || 'application/octet-stream'
 
             let tempPath: string
             let fileName: string
@@ -209,16 +220,17 @@ export const CreateTaskInput = forwardRef<CreateTaskInputHandle, CreateTaskInput
             if (mimeType.startsWith('image/')) {
               tempPath = await window.api.clipboardSaveImage(arrayBuffer, mimeType)
               const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
-              fileName = `paste-${Date.now()}.${ext}`
+              fileName = `paste-${Date.now()}-${i}.${ext}`
             } else {
               // Use the original file name from the blob, or generate one
-              fileName = blob.name || `paste-${Date.now()}`
+              fileName = blob.name || `paste-${Date.now()}-${i}`
               tempPath = await window.api.clipboardSaveFile(arrayBuffer, fileName)
             }
 
-            setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, size: blob.size }])
-            return
+            newAttachments.push({ tempPath, fileName, mimeType, size: blob.size })
           }
+          setPendingImages((prev) => [...prev, ...newAttachments])
+          return
         }
 
         // Check for large text paste
