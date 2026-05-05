@@ -288,13 +288,30 @@ export function SettingsPage(): React.JSX.Element {
                       onChange={(e) => handleUpdateAgent(agent.id, { name: e.target.value })}
                       placeholder="Agent name"
                     />
-                    <input
-                      style={{ ...styles.textInput, fontSize: 11, padding: '4px 8px', fontFamily: 'var(--font-mono, monospace)' }}
-                      type="text"
-                      value={agent.defaultCommand}
-                      onChange={(e) => handleUpdateAgent(agent.id, { defaultCommand: e.target.value })}
-                      placeholder="Default command"
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                      <input
+                        style={{ ...styles.textInput, fontSize: 11, padding: '4px 8px', fontFamily: 'var(--font-mono, monospace)', flex: 1 }}
+                        type="text"
+                        value={agent.defaultCommand}
+                        onChange={(e) => handleUpdateAgent(agent.id, { defaultCommand: e.target.value })}
+                        placeholder="Default command"
+                      />
+                      {AGENT_TYPE_DEFAULT_COMMANDS[agent.type] &&
+                        agent.defaultCommand !== AGENT_TYPE_DEFAULT_COMMANDS[agent.type] && (
+                          <button
+                            type="button"
+                            style={{ ...styles.actionButton, fontSize: 11, padding: '4px 8px', flexShrink: 0 }}
+                            onClick={() =>
+                              handleUpdateAgent(agent.id, {
+                                defaultCommand: AGENT_TYPE_DEFAULT_COMMANDS[agent.type]
+                              })
+                            }
+                            title={`Reset to: ${AGENT_TYPE_DEFAULT_COMMANDS[agent.type]}`}
+                          >
+                            Reset
+                          </button>
+                        )}
+                    </div>
                   </div>
                   <div
                     style={{
